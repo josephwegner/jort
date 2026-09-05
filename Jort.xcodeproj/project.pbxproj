@@ -1,0 +1,471 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		177B6718B72E98DE018EC3B3 /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19C3F79A7288B352B3FE11B5 /* EditorViewController.swift */; };
+		69622C4EC4948C0822A35623 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568357BD41435E0DC93FA4D1 /* PersistenceController.swift */; };
+		70AAFFA7A8A6AF15DAF8612A /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = E3DBF387D636608B0EB66605 /* AppIcon.icns */; };
+		7503DE98D418FB3D61281285 /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65866DDA6B6F721362281B0E /* SQLiteStore.swift */; };
+		7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD9032EA20B653B9CE85D00 /* JortApp.swift */; };
+		CDE5DC5EB76B2A12FE462454 /* JortCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65208674E5AC229AD296C811 /* JortCoreTests.swift */; };
+		EA35FED0C1223109A682D116 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
+		F52DFB681DF13C88A4B7FDA8 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5706AA31033E3598DECC53C5 /* DocumentState.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		FEDB0C16A70ACFF56025DB83 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 594DC212921BACAC61D70ED9;
+			remoteInfo = Jort;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		09CC489EDB03CBE82044DC9F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1978353FEB464E98985FE522 /* Jort.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jort.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		19C3F79A7288B352B3FE11B5 /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
+		568357BD41435E0DC93FA4D1 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		5706AA31033E3598DECC53C5 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
+		65208674E5AC229AD296C811 /* JortCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortCoreTests.swift; sourceTree = "<group>"; };
+		65866DDA6B6F721362281B0E /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
+		6DD9032EA20B653B9CE85D00 /* JortApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortApp.swift; sourceTree = "<group>"; };
+		836D2480566399F33F4D0E4B /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
+		E3DBF387D636608B0EB66605 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D131C9BA955FF2A9654B0A68 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA35FED0C1223109A682D116 /* libsqlite3.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		552DF7F9ADC8FC1AEF127A86 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				836D2480566399F33F4D0E4B /* libsqlite3.tbd */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		80A8D39A7920A2352F4766D7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1978353FEB464E98985FE522 /* Jort.app */,
+				EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9ED0A085387A3E2DA1499273 = {
+			isa = PBXGroup;
+			children = (
+				FEAA316E6D536F80DC64942E /* Jort */,
+				B1245B49A22D39827DBBD85A /* Tests */,
+				552DF7F9ADC8FC1AEF127A86 /* Frameworks */,
+				80A8D39A7920A2352F4766D7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AF494BD7B00A1F9DA2C7F648 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				19C3F79A7288B352B3FE11B5 /* EditorViewController.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		B1245B49A22D39827DBBD85A /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				65208674E5AC229AD296C811 /* JortCoreTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		E99FBE5D12430B9B706124DC /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				5706AA31033E3598DECC53C5 /* DocumentState.swift */,
+				568357BD41435E0DC93FA4D1 /* PersistenceController.swift */,
+				65866DDA6B6F721362281B0E /* SQLiteStore.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		F119097A8A89E62CE52222AC /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				E3DBF387D636608B0EB66605 /* AppIcon.icns */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		FEAA316E6D536F80DC64942E /* Jort */ = {
+			isa = PBXGroup;
+			children = (
+				09CC489EDB03CBE82044DC9F /* Info.plist */,
+				6DD9032EA20B653B9CE85D00 /* JortApp.swift */,
+				E99FBE5D12430B9B706124DC /* Core */,
+				F119097A8A89E62CE52222AC /* Resources */,
+				AF494BD7B00A1F9DA2C7F648 /* UI */,
+			);
+			path = Jort;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		594DC212921BACAC61D70ED9 /* Jort */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0DB9047E26FC3FB6B3A79210 /* Build configuration list for PBXNativeTarget "Jort" */;
+			buildPhases = (
+				4470161D7B7662FAB4F6ED1B /* Sources */,
+				D74EC58DF90F03A6BBCB39D1 /* Resources */,
+				D131C9BA955FF2A9654B0A68 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Jort;
+			packageProductDependencies = (
+			);
+			productName = Jort;
+			productReference = 1978353FEB464E98985FE522 /* Jort.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A03A46CE7D8CC8FA10D000EE /* JortCoreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2E9D2C72B1B89D60A37A92CC /* Build configuration list for PBXNativeTarget "JortCoreTests" */;
+			buildPhases = (
+				C0ED2BF08DC010A2807A68F8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9517E366117A67EE40964A08 /* PBXTargetDependency */,
+			);
+			name = JortCoreTests;
+			packageProductDependencies = (
+			);
+			productName = JortCoreTests;
+			productReference = EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8F339BE48AC542A95567BE86 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = FEEA15585FEE62BDB13BCA91 /* Build configuration list for PBXProject "Jort" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 9ED0A085387A3E2DA1499273;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 80A8D39A7920A2352F4766D7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				594DC212921BACAC61D70ED9 /* Jort */,
+				A03A46CE7D8CC8FA10D000EE /* JortCoreTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D74EC58DF90F03A6BBCB39D1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70AAFFA7A8A6AF15DAF8612A /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4470161D7B7662FAB4F6ED1B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F52DFB681DF13C88A4B7FDA8 /* DocumentState.swift in Sources */,
+				177B6718B72E98DE018EC3B3 /* EditorViewController.swift in Sources */,
+				7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */,
+				69622C4EC4948C0822A35623 /* PersistenceController.swift in Sources */,
+				7503DE98D418FB3D61281285 /* SQLiteStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0ED2BF08DC010A2807A68F8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CDE5DC5EB76B2A12FE462454 /* JortCoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9517E366117A67EE40964A08 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 594DC212921BACAC61D70ED9 /* Jort */;
+			targetProxy = FEDB0C16A70ACFF56025DB83 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1236F47D48B2238F6DDDF9FF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Jort/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Jort;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHighResolutionCapable = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		1441F057F142ABD1FD41CA70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Jort/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Jort;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHighResolutionCapable = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		21D4E65D1EFE190EAE93A8D0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Jort.app/Contents/MacOS/Jort";
+			};
+			name = Release;
+		};
+		309E5228B14369D014C14358 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		5E1DB323DE071F9535A8646E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		99825EC470C938F54C105C9C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Jort.app/Contents/MacOS/Jort";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0DB9047E26FC3FB6B3A79210 /* Build configuration list for PBXNativeTarget "Jort" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1236F47D48B2238F6DDDF9FF /* Debug */,
+				1441F057F142ABD1FD41CA70 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		2E9D2C72B1B89D60A37A92CC /* Build configuration list for PBXNativeTarget "JortCoreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				99825EC470C938F54C105C9C /* Debug */,
+				21D4E65D1EFE190EAE93A8D0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FEEA15585FEE62BDB13BCA91 /* Build configuration list for PBXProject "Jort" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E1DB323DE071F9535A8646E /* Debug */,
+				309E5228B14369D014C14358 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8F339BE48AC542A95567BE86 /* Project object */;
+}

@@ -1,0 +1,48 @@
+name: Jort
+options:
+  deploymentTarget:
+    macOS: '14.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    CODE_SIGNING_ALLOWED: NO
+    GENERATE_INFOPLIST_FILE: YES
+    MACOSX_DEPLOYMENT_TARGET: '14.0'
+targets:
+  Jort:
+    type: application
+    platform: macOS
+    sources: [Jort]
+    info:
+      path: Jort/Info.plist
+      properties:
+        CFBundleIconFile: AppIcon.icns
+        CFBundleDisplayName: Jort
+        LSApplicationCategoryType: public.app-category.productivity
+        NSHighResolutionCapable: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHighResolutionCapable: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Jort
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+    dependencies:
+      - sdk: libsqlite3.tbd
+  JortCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [Tests]
+    dependencies:
+      - target: Jort
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor.tests
+schemes:
+  Jort:
+    build:
+      targets:
+        Jort: all
+    test:
+      targets: [JortCoreTests]
