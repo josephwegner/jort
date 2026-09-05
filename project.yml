@@ -46,6 +46,15 @@ targets:
     sources:
       - path: Jort/JortApp.swift
       - path: Jort/Resources
+        excludes: [IconSources]
+    preBuildScripts:
+      - name: Generate application icon
+        script: 'bash "$SRCROOT/scripts/generate-icon.sh"'
+        inputFiles:
+          - $(SRCROOT)/Jort/Resources/IconSources/jort-color.png
+          - $(SRCROOT)/scripts/generate-icon.sh
+        outputFiles:
+          - $(SRCROOT)/Jort/Resources/AppIcon.icns
     info:
       path: Jort/Info.plist
       properties:

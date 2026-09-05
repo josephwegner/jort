@@ -31,7 +31,6 @@
 		8347474761FD76586ADA88DC /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E614086D89E52EFCC7DCED6 /* StorageTests.swift */; };
 		858E73367BB4DF9FA2DE6B18 /* LockProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD742A9E09AD22E1174BECA /* LockProbe.swift */; };
 		8C24806BE06A07370A75143A /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		9278A3937657819AC002718E /* jort-j-stitch-black.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F8138B5BD7A0811927D7E08 /* jort-j-stitch-black.svg */; };
 		94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7CAE479DACAAE1E87A1B412E /* AppIcon.icns */; };
 		963EF4108F717821D8675420 /* DocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 890A3B619F758EFE88D70C05 /* DocumentTests.swift */; };
 		96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
@@ -45,7 +44,6 @@
 		BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
-		D52B3394C15F754EFC1D0E8D /* jort-j-stitch-white.svg in Resources */ = {isa = PBXBuildFile; fileRef = FFC4C5D75184F780FE040DA9 /* jort-j-stitch-white.svg */; };
 		D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
 		D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */; };
 		DA78A33F7BEF6FB088516FDC /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -230,7 +228,6 @@
 		890A3B619F758EFE88D70C05 /* DocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTests.swift; sourceTree = "<group>"; };
 		8B90F41BD2015B26B477581A /* JortAppKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortAppKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E614086D89E52EFCC7DCED6 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
-		8F8138B5BD7A0811927D7E08 /* jort-j-stitch-black.svg */ = {isa = PBXFileReference; path = "jort-j-stitch-black.svg"; sourceTree = "<group>"; };
 		9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortFoundationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9F4448EA2A682199B4390618 /* JortDocument.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortDocument.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD6759F2DA71568CAF61B1BA /* v1.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v1.sqlite; sourceTree = "<group>"; };
@@ -240,7 +237,6 @@
 		C9136C288B97547D76167A45 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
 		D7391540700D5CC6E567E4A5 /* canvas-10000.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "canvas-10000.txt"; sourceTree = "<group>"; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FFC4C5D75184F780FE040DA9 /* jort-j-stitch-white.svg */ = {isa = PBXFileReference; path = "jort-j-stitch-white.svg"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -333,7 +329,6 @@
 			isa = PBXGroup;
 			children = (
 				7CAE479DACAAE1E87A1B412E /* AppIcon.icns */,
-				DC3F19CD23523722F7D77918 /* IconSources */,
 			);
 			name = Resources;
 			path = Jort/Resources;
@@ -419,15 +414,6 @@
 			);
 			name = JortDocument;
 			path = Sources/JortDocument;
-			sourceTree = "<group>";
-		};
-		DC3F19CD23523722F7D77918 /* IconSources */ = {
-			isa = PBXGroup;
-			children = (
-				8F8138B5BD7A0811927D7E08 /* jort-j-stitch-black.svg */,
-				FFC4C5D75184F780FE040DA9 /* jort-j-stitch-white.svg */,
-			);
-			path = IconSources;
 			sourceTree = "<group>";
 		};
 		FA9CC54BF590A437452C488B /* JortAppKit */ = {
@@ -522,6 +508,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0DB9047E26FC3FB6B3A79210 /* Build configuration list for PBXNativeTarget "Jort" */;
 			buildPhases = (
+				196C5AE130B2744EEB6A409D /* Generate application icon */,
 				4470161D7B7662FAB4F6ED1B /* Sources */,
 				D74EC58DF90F03A6BBCB39D1 /* Resources */,
 				D131C9BA955FF2A9654B0A68 /* Frameworks */,
@@ -688,12 +675,34 @@
 			buildActionMask = 2147483647;
 			files = (
 				94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */,
-				9278A3937657819AC002718E /* jort-j-stitch-black.svg in Resources */,
-				D52B3394C15F754EFC1D0E8D /* jort-j-stitch-white.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		196C5AE130B2744EEB6A409D /* Generate application icon */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Jort/Resources/IconSources/jort-color.png",
+				"$(SRCROOT)/scripts/generate-icon.sh",
+			);
+			name = "Generate application icon";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Jort/Resources/AppIcon.icns",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"$SRCROOT/scripts/generate-icon.sh\"";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		39BC388B0611919D5515BA82 /* Sources */ = {

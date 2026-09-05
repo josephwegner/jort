@@ -26,6 +26,8 @@ The UI smoke test uses `JORT_DATA_DIRECTORY` to isolate its text. It may require
 
 ## Editing
 
+The app target generates `AppIcon.icns` from `Jort/Resources/IconSources/jort-color.png` when the artwork changes, for both Xcode and script builds. Original artwork is excluded from the packaged resources.
+
 Type into the single canvas. Paste is plain text. Native selection, wrapping, Find/Replace, and scrolling remain available. Successful autosaves are silent. A failed save stays visibly actionable, retries three times, and then waits for manual retry. Quitting waits for the latest save and warns if changes remain unsaved.
 
 - **⌘S**: save or retry.

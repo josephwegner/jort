@@ -25,7 +25,8 @@ This document supersedes the original prototype implementation notes where they 
 - 19 headless tests passed, including real two-process races, crash/WAL reopening, all released migrations, injected recovery/migration failures, future/unknown refusal, typed save retries, concurrent flush waiters, actual SQLite busy errors, read-only snapshot failure, and oversize saves.
 - Those 19 headless tests passed under Thread Sanitizer with no reported races.
 - The AppKit framework builds with Swift 6 strict concurrency and passes static analysis.
-- Native adapter tests passed earlier in the refactor; they are being rechecked in an unhosted command-line test bundle after the user's restriction on modifying app/test-runner bundles.
+- All five unhosted native adapter tests passed, including randomized editing/undo, blank rows, selection mapping, large paste, and sustained 10k-line editing.
+- The enforced native 10k-line performance gate remains failing: edit p95 measured approximately 242 ms against a 100 ms ceiling. Navigation and scroll/gutter measured approximately 2.6 ms and 1.7 ms. Functional tests pass with performance enforcement disabled (the local default); CI enables the ceiling and will fail until this is addressed.
 - Deterministic generation and fresh packaging/failure preservation checks pass.
 - Full accessibility smoke testing was not completed: macOS rejected the original unsigned generated UI runner. The user canceled it and declined further runner modification. A separate user-run `scripts/test-ui.sh` now creates an ad-hoc-signed test build; security protections are not bypassed.
 - The final application/Release artifact has not been rebuilt or replaced after that restriction. Run `scripts/build.sh` yourself when ready. Existing installed applications and user data have not been migrated during the source refactor.

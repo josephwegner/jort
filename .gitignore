@@ -5,3 +5,5 @@ dist/
 xcuserdata/
 .build-*/
 __pycache__/
+.codex
+.opencode
