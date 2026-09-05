@@ -1,5 +1,7 @@
 #!/bin/bash
+# Normal checks build frameworks and command-line test bundles, never Jort.app.
 set -euo pipefail
 JORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-xcodebuild -project "$JORT_ROOT/Jort.xcodeproj" -scheme Jort -configuration Debug -derivedDataPath "$JORT_ROOT/.build" -destination 'platform=macOS' test
+"$JORT_ROOT/scripts/test-foundation.sh"
+"$JORT_ROOT/scripts/test-native.sh"
+python3 "$JORT_ROOT/scripts/test-packaging.py"

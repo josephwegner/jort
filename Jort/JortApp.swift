@@ -1,8 +1,11 @@
 import AppKit
+import JortDocument
+import JortPersistence
+import JortAppKit
 
 @main
 enum JortApp {
-    static func main() {
+    @MainActor static func main() {
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.setActivationPolicy(.regular)
@@ -11,7 +14,8 @@ enum JortApp {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    private var duplicate = false
     var window: NSWindow!
     var editor: EditorViewController!
     var persistence: PersistenceController!
@@ -40,8 +44,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.delegate = self
         if !window.setFrameUsingName("JortCanvas") { window.center() }
         window.setFrameAutosaveName("JortCanvas")
-        editor.saveStatus = { [weak self] message, failure in
-            self?.window.subtitle = failure ? "Save needs attention" : ""
+        editor.saveStatus = { [weak self] status in
+            self?.window.subtitle = status.requiresAttention ? "Save needs attention" : ""
+            if status == .ownershipConflict {
+                let owner = NSRunningApplication.runningApplications(withBundleIdentifier: "dev.jort.editor").first { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+                owner?.activate(options: [])
+                // The duplicate never offers recovery and exits without touching the store.
+                self?.duplicate = true
+                NSApp.terminate(nil)
+            }
         }
         buildMenu()
         window.makeKeyAndOrderFront(nil)
@@ -55,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         persistence.flush(); return true
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if duplicate { return .terminateNow }
         editor.textView.unmarkText()
         persistence.flush { saved in
             if saved { sender.reply(toApplicationShouldTerminate: true) }
@@ -106,8 +118,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         add(file, "Save Recovery Copy…", #selector(EditorViewController.saveRecoveryCopy), "", editor)
         add(file, "Close Window", #selector(NSWindow.performClose(_:)), "w")
         let edit = submenu("Edit")
-        add(edit, "Undo", Selector(("undo:")), "z")
-        let redo = NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        add(edit, "Undo", #selector(JortTextView.undo(_:)), "z")
+        let redo = NSMenuItem(title: "Redo", action: #selector(JortTextView.redo(_:)), keyEquivalent: "z")
         redo.keyEquivalentModifierMask = [.command, .shift]; edit.addItem(redo)
         edit.addItem(.separator())
         add(edit, "Cut", #selector(NSText.cut(_:)), "x")

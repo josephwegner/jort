@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Jort J-Stitch icon — white</title>
+  <desc id="desc">A transparent white line icon of a pointed jeans pocket with inset stitching and a hooked lowercase J.</desc>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <path
+      stroke-width="44"
+      d="M184 164 H840 Q864 164 860 192 L826 642 Q819 735 742 783 L512 918 L282 783 Q205 735 198 642 L164 192 Q160 164 184 164 Z"
+    />
+    <path
+      stroke-width="20"
+      stroke-dasharray="34 28"
+      d="M218 222 H806 M214 250 L244 626 Q250 696 310 733 L512 851 L714 733 Q774 696 780 626 L810 250"
+    />
+    <path
+      stroke-width="32"
+      d="M246 500 C374 497 444 544 518 662"
+    />
+    <path
+      stroke-width="32"
+      d="M692 424 C688 515 688 607 675 688 C666 747 629 778 581 774 C533 770 508 728 522 687 C531 660 548 635 570 610"
+    />
+  </g>
+  <g fill="#ffffff">
+    <circle cx="214" cy="222" r="24" />
+    <circle cx="810" cy="222" r="24" />
+    <circle cx="694" cy="342" r="25" />
+  </g>
+</svg>

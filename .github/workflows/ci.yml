@@ -1,0 +1,29 @@
+name: Native checks
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Check deterministic project
+        run: python3 scripts/check-project.py
+      - name: Tests (headless foundation and native adapters)
+        run: JORT_PERFORMANCE_ENFORCE=1 ./scripts/test.sh
+      - name: Accessibility smoke test (ad-hoc signed, isolated data)
+        run: ./scripts/test-ui.sh
+      - name: Static analysis
+        run: xcodebuild -project Jort.xcodeproj -scheme JortAdapters -configuration Debug -derivedDataPath .build-analysis analyze
+      - name: Thread Sanitizer
+        run: |
+          xcodebuild -project Jort.xcodeproj -scheme JortFoundation -configuration Debug -derivedDataPath .build-tsan -destination 'platform=macOS' -enableThreadSanitizer YES test
+          xcodebuild -project Jort.xcodeproj -scheme JortNativeTests -configuration Debug -derivedDataPath .build-native-tsan -destination 'platform=macOS' -enableThreadSanitizer YES test
+      - name: Release and packaging
+        run: ./scripts/build.sh && python3 scripts/test-packaging.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-logs
+          path: |
+            .build-*/Logs/Test

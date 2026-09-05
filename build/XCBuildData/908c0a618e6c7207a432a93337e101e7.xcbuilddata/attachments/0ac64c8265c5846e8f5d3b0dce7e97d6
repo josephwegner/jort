@@ -1,0 +1,29 @@
+{
+  "" : {
+    "diagnostics" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/JortDocument-primary.dia",
+    "emit-module-dependencies" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/JortDocument-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/JortDocument-primary-emit-module.dia",
+    "pch" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/JortDocument-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/JortDocument-primary.swiftdeps"
+  },
+  "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/Sources/JortDocument/DocumentState.swift" : {
+    "const-values" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState.swiftconstvalues",
+    "dependencies" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState.d",
+    "diagnostics" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState.dia",
+    "index-unit-output-path" : "/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState.o",
+    "llvm-bc" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState.bc",
+    "object" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState.o",
+    "swift-dependencies" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState.swiftdeps",
+    "swiftmodule" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/DocumentState~partial.swiftmodule"
+  },
+  "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/Sources/JortDocument/Transactions.swift" : {
+    "const-values" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions.swiftconstvalues",
+    "dependencies" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions.d",
+    "diagnostics" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions.dia",
+    "index-unit-output-path" : "/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions.o",
+    "llvm-bc" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions.bc",
+    "object" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions.o",
+    "swift-dependencies" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions.swiftdeps",
+    "swiftmodule" : "/Users/joseph.wegner/Code/Personal_Code/jort-astra-test/build/Jort.build/Debug/JortDocument.build/Objects-normal/arm64/Transactions~partial.swiftmodule"
+  }
+}

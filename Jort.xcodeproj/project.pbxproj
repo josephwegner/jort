@@ -7,52 +7,320 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		177B6718B72E98DE018EC3B3 /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19C3F79A7288B352B3FE11B5 /* EditorViewController.swift */; };
-		69622C4EC4948C0822A35623 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568357BD41435E0DC93FA4D1 /* PersistenceController.swift */; };
-		70AAFFA7A8A6AF15DAF8612A /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = E3DBF387D636608B0EB66605 /* AppIcon.icns */; };
-		7503DE98D418FB3D61281285 /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65866DDA6B6F721362281B0E /* SQLiteStore.swift */; };
+		01BF871E54FD37F0704A5882 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
+		037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF8341534A77B39BFA2904E /* PerformanceTests.swift */; };
+		0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACEB5981A7D1291606F22F4 /* EditorTests.swift */; };
+		105252729BE95E5A1F10E17D /* Transactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B872610ED836A61E96ED8DA /* Transactions.swift */; };
+		10958F2E0818D271D9BA9229 /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		12545FCDDE669EA9FAB9629A /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */; };
+		1D1A9E90F304A9C8687B5B34 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
+		240CD90C57FF86496999F525 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		2831200E41E8F68BDC00FBB8 /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		2FF7F79150A10933EDFDA5A0 /* v2.json in Resources */ = {isa = PBXBuildFile; fileRef = 160370B1CD4C448EA0BEF96F /* v2.json */; };
+		3719E1FCB30A684B366E033B /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		43B9CC41FB64E27E0135D251 /* JortUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73F5C254EE12140FB60EB69 /* JortUITests.swift */; };
+		4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECC95805D3B99275307225B /* EditorViewController.swift */; };
+		568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */; };
+		5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D58BDC7B59E9928134887E3 /* StoreLock.swift */; };
+		6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
+		7630238FB57057423175113F /* v1.json in Resources */ = {isa = PBXBuildFile; fileRef = 857FDC8BC95B6835BA5D1921 /* v1.json */; };
 		7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD9032EA20B653B9CE85D00 /* JortApp.swift */; };
-		CDE5DC5EB76B2A12FE462454 /* JortCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65208674E5AC229AD296C811 /* JortCoreTests.swift */; };
-		EA35FED0C1223109A682D116 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
-		F52DFB681DF13C88A4B7FDA8 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5706AA31033E3598DECC53C5 /* DocumentState.swift */; };
+		81441D90E3E254368424329B /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
+		818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9136C288B97547D76167A45 /* DocumentState.swift */; };
+		819E6BD9E4AFFEB2591D5934 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
+		8347474761FD76586ADA88DC /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E614086D89E52EFCC7DCED6 /* StorageTests.swift */; };
+		858E73367BB4DF9FA2DE6B18 /* LockProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD742A9E09AD22E1174BECA /* LockProbe.swift */; };
+		8C24806BE06A07370A75143A /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9278A3937657819AC002718E /* jort-j-stitch-black.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F8138B5BD7A0811927D7E08 /* jort-j-stitch-black.svg */; };
+		94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7CAE479DACAAE1E87A1B412E /* AppIcon.icns */; };
+		963EF4108F717821D8675420 /* DocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 890A3B619F758EFE88D70C05 /* DocumentTests.swift */; };
+		96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
+		9E38800E0A10A074F4B01726 /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
+		A020A276F50DFAC0CA7ACC27 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		A1F8D7ABEAC627BDB9EB4F29 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		A86E69A0E7D85AA789CDBC93 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AC7063A1F953D56D1002F25C /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		B8F124A8831203C5633B1E2E /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BADD1BD1890D8951172F6F65 /* v2.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = 4EBD819547F38AB24B0FD19F /* v2.sqlite */; };
+		BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
+		D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		D52B3394C15F754EFC1D0E8D /* jort-j-stitch-white.svg in Resources */ = {isa = PBXBuildFile; fileRef = FFC4C5D75184F780FE040DA9 /* jort-j-stitch-white.svg */; };
+		D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
+		D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */; };
+		DA78A33F7BEF6FB088516FDC /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		DB8A4FCD9426994D22AA3BA3 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
+		DD7AE91B690C6AEF939C5E42 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		EF5628B16F824A83A9A00909 /* v1.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = AD6759F2DA71568CAF61B1BA /* v1.sqlite */; };
+		F063CAE1A119DDA229FAC6AD /* PersistenceFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */; };
+		F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F66085B030452677C1BF9B8 /* ProcessTests.swift */; };
+		FF37B0DE9AA742722B31827F /* SchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		FEDB0C16A70ACFF56025DB83 /* PBXContainerItemProxy */ = {
+		058BEACC4D251AF683C7DEDC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
+			remoteInfo = JortPersistence;
+		};
+		517D72B211FBCD8D9C026BC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D7119C245676A4F069D25D44;
+			remoteInfo = StoreLockProbe;
+		};
+		5C741588383E9D2B22129ED9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 594DC212921BACAC61D70ED9;
 			remoteInfo = Jort;
 		};
+		7F9A306DBFE76ED9448FE617 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
+			remoteInfo = JortPersistence;
+		};
+		83B7C58201E077836D7C08B2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
+			remoteInfo = JortPersistence;
+		};
+		86898D1D2379E2A69AFAC166 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
+			remoteInfo = JortDocument;
+		};
+		901447BFBBD04FC8ADD7FF02 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
+			remoteInfo = JortDocument;
+		};
+		98DEFE7BBFE9968BDE86F2E0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
+			remoteInfo = JortDocument;
+		};
+		9D8FEF1C761D5F571C4EBE64 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
+			remoteInfo = JortPersistence;
+		};
+		A4381FE62B8B8C19572233F8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B386A86BE2EBA3E88CBB0142;
+			remoteInfo = JortAppKit;
+		};
+		E0C5807E9C55E31BC0BF8DBB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
+			remoteInfo = JortDocument;
+		};
+		F855D8F45E8EC5F89C0AA1B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
+			remoteInfo = JortDocument;
+		};
+		F95E9E3E512D43839455CAC6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
+			remoteInfo = JortDocument;
+		};
+		FBA2FE8E44E67AF7B0625B5E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
+			remoteInfo = JortPersistence;
+		};
+		FE875064B8EF691A0628E759 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B386A86BE2EBA3E88CBB0142;
+			remoteInfo = JortAppKit;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		7C38278F71C9E4457CAA1977 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				2831200E41E8F68BDC00FBB8 /* JortDocument.framework in Embed Frameworks */,
+				A86E69A0E7D85AA789CDBC93 /* JortPersistence.framework in Embed Frameworks */,
+				10958F2E0818D271D9BA9229 /* JortAppKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		99DE3EA2D93E7407284FF5F9 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				DA78A33F7BEF6FB088516FDC /* JortDocument.framework in Embed Frameworks */,
+				BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B12D0EF5FA994CE43A4457A5 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				8C24806BE06A07370A75143A /* JortDocument.framework in Embed Frameworks */,
+				B8F124A8831203C5633B1E2E /* JortPersistence.framework in Embed Frameworks */,
+				3719E1FCB30A684B366E033B /* JortAppKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		09CC489EDB03CBE82044DC9F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		02A0A8926B0C7313854C181A /* JortPersistence.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortPersistence.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceFormat.swift; sourceTree = "<group>"; };
+		0B872610ED836A61E96ED8DA /* Transactions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transactions.swift; sourceTree = "<group>"; };
+		0F66085B030452677C1BF9B8 /* ProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTests.swift; sourceTree = "<group>"; };
+		160370B1CD4C448EA0BEF96F /* v2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v2.json; sourceTree = "<group>"; };
 		1978353FEB464E98985FE522 /* Jort.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jort.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		19C3F79A7288B352B3FE11B5 /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
-		568357BD41435E0DC93FA4D1 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
-		5706AA31033E3598DECC53C5 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
-		65208674E5AC229AD296C811 /* JortCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortCoreTests.swift; sourceTree = "<group>"; };
-		65866DDA6B6F721362281B0E /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
+		1ECC95805D3B99275307225B /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
+		21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
+		3D58BDC7B59E9928134887E3 /* StoreLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreLock.swift; sourceTree = "<group>"; };
+		4EBD819547F38AB24B0FD19F /* v2.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v2.sqlite; sourceTree = "<group>"; };
+		59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
+		5EBF7CA0931124DB116AE610 /* JortUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5FF8341534A77B39BFA2904E /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
+		65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerTests.swift; sourceTree = "<group>"; };
+		6BD742A9E09AD22E1174BECA /* LockProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockProbe.swift; sourceTree = "<group>"; };
 		6DD9032EA20B653B9CE85D00 /* JortApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortApp.swift; sourceTree = "<group>"; };
+		7B13A1E275C9292115821584 /* StoreLockProbe */ = {isa = PBXFileReference; includeInIndex = 0; path = StoreLockProbe; sourceTree = BUILT_PRODUCTS_DIR; };
+		7CAE479DACAAE1E87A1B412E /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		836D2480566399F33F4D0E4B /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
-		E3DBF387D636608B0EB66605 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		857FDC8BC95B6835BA5D1921 /* v1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v1.json; sourceTree = "<group>"; };
+		890A3B619F758EFE88D70C05 /* DocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTests.swift; sourceTree = "<group>"; };
+		8B90F41BD2015B26B477581A /* JortAppKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortAppKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		8E614086D89E52EFCC7DCED6 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
+		8F8138B5BD7A0811927D7E08 /* jort-j-stitch-black.svg */ = {isa = PBXFileReference; path = "jort-j-stitch-black.svg"; sourceTree = "<group>"; };
+		9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortFoundationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F4448EA2A682199B4390618 /* JortDocument.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortDocument.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AD6759F2DA71568CAF61B1BA /* v1.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v1.sqlite; sourceTree = "<group>"; };
+		B73F5C254EE12140FB60EB69 /* JortUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortUITests.swift; sourceTree = "<group>"; };
+		BACEB5981A7D1291606F22F4 /* EditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTests.swift; sourceTree = "<group>"; };
+		BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		C9136C288B97547D76167A45 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
+		D7391540700D5CC6E567E4A5 /* canvas-10000.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "canvas-10000.txt"; sourceTree = "<group>"; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFC4C5D75184F780FE040DA9 /* jort-j-stitch-white.svg */ = {isa = PBXFileReference; path = "jort-j-stitch-white.svg"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0BB2C7E3415C0608C884A88C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */,
+				81441D90E3E254368424329B /* JortPersistence.framework in Frameworks */,
+				9E38800E0A10A074F4B01726 /* JortAppKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9DE31062993200DE860D95B5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC7063A1F953D56D1002F25C /* JortDocument.framework in Frameworks */,
+				96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B552135DD43155040D9CA69E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				240CD90C57FF86496999F525 /* JortDocument.framework in Frameworks */,
+				1D1A9E90F304A9C8687B5B34 /* libsqlite3.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D131C9BA955FF2A9654B0A68 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EA35FED0C1223109A682D116 /* libsqlite3.tbd in Frameworks */,
+				DD7AE91B690C6AEF939C5E42 /* JortDocument.framework in Frameworks */,
+				819E6BD9E4AFFEB2591D5934 /* JortPersistence.framework in Frameworks */,
+				D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E6DE782D1FD2E906B8D49313 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A020A276F50DFAC0CA7ACC27 /* JortDocument.framework in Frameworks */,
+				01BF871E54FD37F0704A5882 /* JortPersistence.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F9A6860B3C6A293AF8469912 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1F8D7ABEAC627BDB9EB4F29 /* JortDocument.framework in Frameworks */,
+				DB8A4FCD9426994D22AA3BA3 /* JortPersistence.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		044B86C9C8E05C227A7F9727 /* StoreLockProbe */ = {
+			isa = PBXGroup;
+			children = (
+				6BD742A9E09AD22E1174BECA /* LockProbe.swift */,
+			);
+			name = StoreLockProbe;
+			path = Tools/StoreLockProbe;
+			sourceTree = "<group>";
+		};
+		2855EA06D4096653BA9FB7A2 /* AppKit */ = {
+			isa = PBXGroup;
+			children = (
+				BACEB5981A7D1291606F22F4 /* EditorTests.swift */,
+			);
+			name = AppKit;
+			path = Tests/AppKit;
+			sourceTree = "<group>";
+		};
 		552DF7F9ADC8FC1AEF127A86 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -61,74 +329,195 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		5D35C8E11D14DF2114B2D1CA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7CAE479DACAAE1E87A1B412E /* AppIcon.icns */,
+				DC3F19CD23523722F7D77918 /* IconSources */,
+			);
+			name = Resources;
+			path = Jort/Resources;
+			sourceTree = "<group>";
+		};
+		7269BD467E1B32166BACFEA2 /* Foundation */ = {
+			isa = PBXGroup;
+			children = (
+				890A3B619F758EFE88D70C05 /* DocumentTests.swift */,
+				59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */,
+				5FF8341534A77B39BFA2904E /* PerformanceTests.swift */,
+				0F66085B030452677C1BF9B8 /* ProcessTests.swift */,
+				65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */,
+				8E614086D89E52EFCC7DCED6 /* StorageTests.swift */,
+			);
+			name = Foundation;
+			path = Tests/Foundation;
+			sourceTree = "<group>";
+		};
 		80A8D39A7920A2352F4766D7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				1978353FEB464E98985FE522 /* Jort.app */,
+				8B90F41BD2015B26B477581A /* JortAppKit.framework */,
 				EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */,
+				9F4448EA2A682199B4390618 /* JortDocument.framework */,
+				9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */,
+				02A0A8926B0C7313854C181A /* JortPersistence.framework */,
+				5EBF7CA0931124DB116AE610 /* JortUITests.xctest */,
+				7B13A1E275C9292115821584 /* StoreLockProbe */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		8FFEC407BEF526ED62B68E4A /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				D7391540700D5CC6E567E4A5 /* canvas-10000.txt */,
+				857FDC8BC95B6835BA5D1921 /* v1.json */,
+				AD6759F2DA71568CAF61B1BA /* v1.sqlite */,
+				160370B1CD4C448EA0BEF96F /* v2.json */,
+				4EBD819547F38AB24B0FD19F /* v2.sqlite */,
+			);
+			name = Fixtures;
+			path = Tests/Fixtures;
 			sourceTree = "<group>";
 		};
 		9ED0A085387A3E2DA1499273 = {
 			isa = PBXGroup;
 			children = (
+				2855EA06D4096653BA9FB7A2 /* AppKit */,
+				8FFEC407BEF526ED62B68E4A /* Fixtures */,
+				7269BD467E1B32166BACFEA2 /* Foundation */,
 				FEAA316E6D536F80DC64942E /* Jort */,
-				B1245B49A22D39827DBBD85A /* Tests */,
+				FA9CC54BF590A437452C488B /* JortAppKit */,
+				C77123F6C474CA61648A68C2 /* JortDocument */,
+				A7038EEFC224A9473B106BF9 /* JortPersistence */,
+				5D35C8E11D14DF2114B2D1CA /* Resources */,
+				044B86C9C8E05C227A7F9727 /* StoreLockProbe */,
+				FF94AAA1F97DED705A0BACBE /* UI */,
 				552DF7F9ADC8FC1AEF127A86 /* Frameworks */,
 				80A8D39A7920A2352F4766D7 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		AF494BD7B00A1F9DA2C7F648 /* UI */ = {
+		A7038EEFC224A9473B106BF9 /* JortPersistence */ = {
 			isa = PBXGroup;
 			children = (
-				19C3F79A7288B352B3FE11B5 /* EditorViewController.swift */,
+				BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */,
+				02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */,
+				21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */,
+				3D58BDC7B59E9928134887E3 /* StoreLock.swift */,
 			);
-			path = UI;
+			name = JortPersistence;
+			path = Sources/JortPersistence;
 			sourceTree = "<group>";
 		};
-		B1245B49A22D39827DBBD85A /* Tests */ = {
+		C77123F6C474CA61648A68C2 /* JortDocument */ = {
 			isa = PBXGroup;
 			children = (
-				65208674E5AC229AD296C811 /* JortCoreTests.swift */,
+				C9136C288B97547D76167A45 /* DocumentState.swift */,
+				0B872610ED836A61E96ED8DA /* Transactions.swift */,
 			);
-			path = Tests;
+			name = JortDocument;
+			path = Sources/JortDocument;
 			sourceTree = "<group>";
 		};
-		E99FBE5D12430B9B706124DC /* Core */ = {
+		DC3F19CD23523722F7D77918 /* IconSources */ = {
 			isa = PBXGroup;
 			children = (
-				5706AA31033E3598DECC53C5 /* DocumentState.swift */,
-				568357BD41435E0DC93FA4D1 /* PersistenceController.swift */,
-				65866DDA6B6F721362281B0E /* SQLiteStore.swift */,
+				8F8138B5BD7A0811927D7E08 /* jort-j-stitch-black.svg */,
+				FFC4C5D75184F780FE040DA9 /* jort-j-stitch-white.svg */,
 			);
-			path = Core;
+			path = IconSources;
 			sourceTree = "<group>";
 		};
-		F119097A8A89E62CE52222AC /* Resources */ = {
+		FA9CC54BF590A437452C488B /* JortAppKit */ = {
 			isa = PBXGroup;
 			children = (
-				E3DBF387D636608B0EB66605 /* AppIcon.icns */,
+				1ECC95805D3B99275307225B /* EditorViewController.swift */,
 			);
-			path = Resources;
+			name = JortAppKit;
+			path = Sources/JortAppKit;
 			sourceTree = "<group>";
 		};
 		FEAA316E6D536F80DC64942E /* Jort */ = {
 			isa = PBXGroup;
 			children = (
-				09CC489EDB03CBE82044DC9F /* Info.plist */,
 				6DD9032EA20B653B9CE85D00 /* JortApp.swift */,
-				E99FBE5D12430B9B706124DC /* Core */,
-				F119097A8A89E62CE52222AC /* Resources */,
-				AF494BD7B00A1F9DA2C7F648 /* UI */,
 			);
 			path = Jort;
+			sourceTree = "<group>";
+		};
+		FF94AAA1F97DED705A0BACBE /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				B73F5C254EE12140FB60EB69 /* JortUITests.swift */,
+			);
+			name = UI;
+			path = Tests/UI;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		07E5453287B9F8C62DA2C8CB /* JortDocument */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50679A2E1BF66CF96387C8DC /* Build configuration list for PBXNativeTarget "JortDocument" */;
+			buildPhases = (
+				8B48B694DEEAAAC702B23D40 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortDocument;
+			packageProductDependencies = (
+			);
+			productName = JortDocument;
+			productReference = 9F4448EA2A682199B4390618 /* JortDocument.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		1682C285DB657FDFCDFE3720 /* JortFoundationTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 281C731AB828477D429AEB0E /* Build configuration list for PBXNativeTarget "JortFoundationTests" */;
+			buildPhases = (
+				F5C684A3C972BBD25198C9AC /* Sources */,
+				D44EC727ED587A8250B06A2A /* Resources */,
+				9DE31062993200DE860D95B5 /* Frameworks */,
+				99DE3EA2D93E7407284FF5F9 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				16DFDB53FB80B86920225A46 /* PBXTargetDependency */,
+				178B15D7E6C44E714C2584A9 /* PBXTargetDependency */,
+				1B0C225A4DA616C088D779B1 /* PBXTargetDependency */,
+			);
+			name = JortFoundationTests;
+			packageProductDependencies = (
+			);
+			productName = JortFoundationTests;
+			productReference = 9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		4996422CDDDC50EC7CF340C1 /* JortPersistence */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 175C981AC4792D694F52A897 /* Build configuration list for PBXNativeTarget "JortPersistence" */;
+			buildPhases = (
+				AF542B93B127120AB9573704 /* Sources */,
+				B552135DD43155040D9CA69E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5C79C9D14A95632E3F8DF791 /* PBXTargetDependency */,
+			);
+			name = JortPersistence;
+			packageProductDependencies = (
+			);
+			productName = JortPersistence;
+			productReference = 02A0A8926B0C7313854C181A /* JortPersistence.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		594DC212921BACAC61D70ED9 /* Jort */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0DB9047E26FC3FB6B3A79210 /* Build configuration list for PBXNativeTarget "Jort" */;
@@ -136,10 +525,14 @@
 				4470161D7B7662FAB4F6ED1B /* Sources */,
 				D74EC58DF90F03A6BBCB39D1 /* Resources */,
 				D131C9BA955FF2A9654B0A68 /* Frameworks */,
+				7C38278F71C9E4457CAA1977 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				5C825CC66BE72226B320C674 /* PBXTargetDependency */,
+				2DFFC8B86931BDC9F75C09D8 /* PBXTargetDependency */,
+				A00B56163EF247574386A3A5 /* PBXTargetDependency */,
 			);
 			name = Jort;
 			packageProductDependencies = (
@@ -153,11 +546,16 @@
 			buildConfigurationList = 2E9D2C72B1B89D60A37A92CC /* Build configuration list for PBXNativeTarget "JortCoreTests" */;
 			buildPhases = (
 				C0ED2BF08DC010A2807A68F8 /* Sources */,
+				284B6BB2AB6EC30561C20931 /* Resources */,
+				0BB2C7E3415C0608C884A88C /* Frameworks */,
+				B12D0EF5FA994CE43A4457A5 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				9517E366117A67EE40964A08 /* PBXTargetDependency */,
+				4A18F14B7B0579E364EF983D /* PBXTargetDependency */,
+				968769EF85DC7E26938015E0 /* PBXTargetDependency */,
+				8050A09A9F120B48DEAB05A3 /* PBXTargetDependency */,
 			);
 			name = JortCoreTests;
 			packageProductDependencies = (
@@ -165,6 +563,64 @@
 			productName = JortCoreTests;
 			productReference = EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B386A86BE2EBA3E88CBB0142 /* JortAppKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A380A3883F53A1A516F0B99 /* Build configuration list for PBXNativeTarget "JortAppKit" */;
+			buildPhases = (
+				4062D606B3E890293B07EBFF /* Sources */,
+				F9A6860B3C6A293AF8469912 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0D282B9AA469450BECF62371 /* PBXTargetDependency */,
+				CBB330185D75F7B221E6E150 /* PBXTargetDependency */,
+			);
+			name = JortAppKit;
+			packageProductDependencies = (
+			);
+			productName = JortAppKit;
+			productReference = 8B90F41BD2015B26B477581A /* JortAppKit.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		BA58B83CB23F64711B793776 /* JortUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 258EF1860FF14613454BCFA5 /* Build configuration list for PBXNativeTarget "JortUITests" */;
+			buildPhases = (
+				39BC388B0611919D5515BA82 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CA7722869FC5D0A3D36C36F4 /* PBXTargetDependency */,
+			);
+			name = JortUITests;
+			packageProductDependencies = (
+			);
+			productName = JortUITests;
+			productReference = 5EBF7CA0931124DB116AE610 /* JortUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		D7119C245676A4F069D25D44 /* StoreLockProbe */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DB912028270E94BFF8149F90 /* Build configuration list for PBXNativeTarget "StoreLockProbe" */;
+			buildPhases = (
+				66CC7CF540DC8AEBB0F2CB3B /* Sources */,
+				E6DE782D1FD2E906B8D49313 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8E90AFA9DCE6EE4EE631A5E7 /* PBXTargetDependency */,
+				D32ED6B70C0406E861786C4F /* PBXTargetDependency */,
+			);
+			name = StoreLockProbe;
+			packageProductDependencies = (
+			);
+			productName = StoreLockProbe;
+			productReference = 7B13A1E275C9292115821584 /* StoreLockProbe */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -175,6 +631,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					BA58B83CB23F64711B793776 = {
+						TestTargetID = 594DC212921BACAC61D70ED9;
+					};
 				};
 			};
 			buildConfigurationList = FEEA15585FEE62BDB13BCA91 /* Build configuration list for PBXProject "Jort" */;
@@ -191,33 +650,101 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				07E5453287B9F8C62DA2C8CB /* JortDocument */,
+				4996422CDDDC50EC7CF340C1 /* JortPersistence */,
+				B386A86BE2EBA3E88CBB0142 /* JortAppKit */,
 				594DC212921BACAC61D70ED9 /* Jort */,
+				D7119C245676A4F069D25D44 /* StoreLockProbe */,
+				1682C285DB657FDFCDFE3720 /* JortFoundationTests */,
 				A03A46CE7D8CC8FA10D000EE /* JortCoreTests */,
+				BA58B83CB23F64711B793776 /* JortUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		284B6BB2AB6EC30561C20931 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D44EC727ED587A8250B06A2A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */,
+				7630238FB57057423175113F /* v1.json in Resources */,
+				EF5628B16F824A83A9A00909 /* v1.sqlite in Resources */,
+				2FF7F79150A10933EDFDA5A0 /* v2.json in Resources */,
+				BADD1BD1890D8951172F6F65 /* v2.sqlite in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D74EC58DF90F03A6BBCB39D1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70AAFFA7A8A6AF15DAF8612A /* AppIcon.icns in Resources */,
+				94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */,
+				9278A3937657819AC002718E /* jort-j-stitch-black.svg in Resources */,
+				D52B3394C15F754EFC1D0E8D /* jort-j-stitch-white.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		39BC388B0611919D5515BA82 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				43B9CC41FB64E27E0135D251 /* JortUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4062D606B3E890293B07EBFF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4470161D7B7662FAB4F6ED1B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F52DFB681DF13C88A4B7FDA8 /* DocumentState.swift in Sources */,
-				177B6718B72E98DE018EC3B3 /* EditorViewController.swift in Sources */,
 				7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */,
-				69622C4EC4948C0822A35623 /* PersistenceController.swift in Sources */,
-				7503DE98D418FB3D61281285 /* SQLiteStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		66CC7CF540DC8AEBB0F2CB3B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				858E73367BB4DF9FA2DE6B18 /* LockProbe.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8B48B694DEEAAAC702B23D40 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */,
+				105252729BE95E5A1F10E17D /* Transactions.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AF542B93B127120AB9573704 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				12545FCDDE669EA9FAB9629A /* PersistenceController.swift in Sources */,
+				F063CAE1A119DDA229FAC6AD /* PersistenceFormat.swift in Sources */,
+				D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */,
+				5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,36 +752,131 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CDE5DC5EB76B2A12FE462454 /* JortCoreTests.swift in Sources */,
+				0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5C684A3C972BBD25198C9AC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				963EF4108F717821D8675420 /* DocumentTests.swift in Sources */,
+				568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */,
+				037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */,
+				F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */,
+				FF37B0DE9AA742722B31827F /* SchedulerTests.swift in Sources */,
+				8347474761FD76586ADA88DC /* StorageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		9517E366117A67EE40964A08 /* PBXTargetDependency */ = {
+		0D282B9AA469450BECF62371 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
+			targetProxy = F95E9E3E512D43839455CAC6 /* PBXContainerItemProxy */;
+		};
+		16DFDB53FB80B86920225A46 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
+			targetProxy = 86898D1D2379E2A69AFAC166 /* PBXContainerItemProxy */;
+		};
+		178B15D7E6C44E714C2584A9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
+			targetProxy = 7F9A306DBFE76ED9448FE617 /* PBXContainerItemProxy */;
+		};
+		1B0C225A4DA616C088D779B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D7119C245676A4F069D25D44 /* StoreLockProbe */;
+			targetProxy = 517D72B211FBCD8D9C026BC8 /* PBXContainerItemProxy */;
+		};
+		2DFFC8B86931BDC9F75C09D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
+			targetProxy = 83B7C58201E077836D7C08B2 /* PBXContainerItemProxy */;
+		};
+		4A18F14B7B0579E364EF983D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
+			targetProxy = F855D8F45E8EC5F89C0AA1B9 /* PBXContainerItemProxy */;
+		};
+		5C79C9D14A95632E3F8DF791 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
+			targetProxy = 98DEFE7BBFE9968BDE86F2E0 /* PBXContainerItemProxy */;
+		};
+		5C825CC66BE72226B320C674 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
+			targetProxy = E0C5807E9C55E31BC0BF8DBB /* PBXContainerItemProxy */;
+		};
+		8050A09A9F120B48DEAB05A3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B386A86BE2EBA3E88CBB0142 /* JortAppKit */;
+			targetProxy = A4381FE62B8B8C19572233F8 /* PBXContainerItemProxy */;
+		};
+		8E90AFA9DCE6EE4EE631A5E7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
+			targetProxy = 901447BFBBD04FC8ADD7FF02 /* PBXContainerItemProxy */;
+		};
+		968769EF85DC7E26938015E0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
+			targetProxy = 058BEACC4D251AF683C7DEDC /* PBXContainerItemProxy */;
+		};
+		A00B56163EF247574386A3A5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B386A86BE2EBA3E88CBB0142 /* JortAppKit */;
+			targetProxy = FE875064B8EF691A0628E759 /* PBXContainerItemProxy */;
+		};
+		CA7722869FC5D0A3D36C36F4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 594DC212921BACAC61D70ED9 /* Jort */;
-			targetProxy = FEDB0C16A70ACFF56025DB83 /* PBXContainerItemProxy */;
+			targetProxy = 5C741588383E9D2B22129ED9 /* PBXContainerItemProxy */;
+		};
+		CBB330185D75F7B221E6E150 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
+			targetProxy = FBA2FE8E44E67AF7B0625B5E /* PBXContainerItemProxy */;
+		};
+		D32ED6B70C0406E861786C4F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
+			targetProxy = 9D8FEF1C761D5F571C4EBE64 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		08AFB3BE070DF457C1EEC4F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = Jort;
+			};
+			name = Debug;
+		};
 		1236F47D48B2238F6DDDF9FF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Jort/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Jort;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSHighResolutionCapable = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor;
 				SDKROOT = macosx;
 			};
@@ -265,16 +887,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Jort/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Jort;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSHighResolutionCapable = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor;
 				SDKROOT = macosx;
 			};
@@ -290,16 +908,25 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editortests;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Jort.app/Contents/MacOS/Jort";
 			};
 			name = Release;
+		};
+		2A18FEB15836FBB3290C435E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path";
+				SDKROOT = macosx;
+			};
+			name = Debug;
 		};
 		309E5228B14369D014C14358 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -331,6 +958,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = NO;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -344,13 +972,67 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		545AD457DE36FEA98A5343FE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.foundationtests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		5B45BFE5DFA2F9A90E12BAE1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.foundationtests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		5C171DE19473AE6DAA8687E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.persistence;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -358,6 +1040,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -389,6 +1072,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = NO;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -408,6 +1092,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -415,9 +1100,63 @@
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
+		};
+		651C24A7701FB83A9F900FDE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.appkit;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		6A025A7815EC1E16AEC689B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.document;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		73258C3CEC07ECB9015571EF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path";
+				SDKROOT = macosx;
+			};
+			name = Release;
 		};
 		99825EC470C938F54C105C9C /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -429,9 +1168,90 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editortests;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Jort.app/Contents/MacOS/Jort";
+			};
+			name = Debug;
+		};
+		B14FF4B896A19FC0E7D2DD9E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = Jort;
+			};
+			name = Release;
+		};
+		BF2AC12798EA53C2F326931A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.appkit;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		C7A7A9B25A79FF2443CAB910 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.persistence;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		EA68912979EDCF0434539AF1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.document;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -447,11 +1267,65 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		175C981AC4792D694F52A897 /* Build configuration list for PBXNativeTarget "JortPersistence" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C7A7A9B25A79FF2443CAB910 /* Debug */,
+				5C171DE19473AE6DAA8687E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		258EF1860FF14613454BCFA5 /* Build configuration list for PBXNativeTarget "JortUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				08AFB3BE070DF457C1EEC4F1 /* Debug */,
+				B14FF4B896A19FC0E7D2DD9E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		281C731AB828477D429AEB0E /* Build configuration list for PBXNativeTarget "JortFoundationTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				545AD457DE36FEA98A5343FE /* Debug */,
+				5B45BFE5DFA2F9A90E12BAE1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		2E9D2C72B1B89D60A37A92CC /* Build configuration list for PBXNativeTarget "JortCoreTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				99825EC470C938F54C105C9C /* Debug */,
 				21D4E65D1EFE190EAE93A8D0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		50679A2E1BF66CF96387C8DC /* Build configuration list for PBXNativeTarget "JortDocument" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EA68912979EDCF0434539AF1 /* Debug */,
+				6A025A7815EC1E16AEC689B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5A380A3883F53A1A516F0B99 /* Build configuration list for PBXNativeTarget "JortAppKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BF2AC12798EA53C2F326931A /* Debug */,
+				651C24A7701FB83A9F900FDE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DB912028270E94BFF8149F90 /* Build configuration list for PBXNativeTarget "StoreLockProbe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A18FEB15836FBB3290C435E /* Debug */,
+				73258C3CEC07ECB9015571EF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

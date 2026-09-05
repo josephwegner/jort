@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "text": "fixture",
+  "revision": 3,
+  "lines": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "location": 0,
+      "length": 7,
+      "createdAt": 100,
+      "lastEditedAt": 101
+    }
+  ]
+}

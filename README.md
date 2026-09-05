@@ -1,51 +1,62 @@
 # Jort
 
-A native macOS scratch canvas. One app-owned plain-text document, ready to type, saved on this Mac. No accounts, providers, network, folders, or setup.
+A native, dark macOS scratch canvas: one app-owned plain-text document, local persistence, no account or network requirement. This is the Crawl MVP; landmarks and automation remain later product phases.
 
-This implementation targets the **Crawl MVP** described in `build-jort-v1/README.md`, which supersedes the archived V1 umbrella specification.
+## Build and test
 
-## Run
-
-Open `dist/Jort.app` after building, or open `Jort.xcodeproj` in Xcode and run the **Jort** scheme. Requires macOS 14 or newer and full Xcode for development. The generated Xcode project is included; XcodeGen is only needed after editing `project.yml`.
+Requires macOS 14+, full Xcode with Swift 6, and XcodeGen **2.46.0**. `project.yml` is the configuration source of truth; `.xcodegen-version` pins the generator. Generated project/plist files are included and checked for drift.
 
 ```sh
-./scripts/build.sh
-open dist/Jort.app
+python3 scripts/check-project.py
 ./scripts/test.sh
 ```
 
-The local build is unsigned and is intended for this Mac. Public distribution, Developer ID signing, and notarization are not configured.
+Normal tests build only frameworks and command-line test bundles. Document/persistence tests do not construct AppKit objects; separate native adapter tests exercise their own AppKit views inside `xctest`. Neither suite builds or modifies an installed Jort application. Computer Use is not part of the test workflow.
 
-## Use
+These commands are intentionally separate and should be run by the user when desired:
 
-- Type immediately into the single canvas. Rich clipboard content pastes as plain text.
-- Changes save in the background every half second while typing, and on deactivation or quit. There is no need to pick a file.
-- **⌘S** saves immediately or retries a failed save.
-- **⌘Z / ⇧⌘Z** undo and redo text together with line metadata.
-- **⌘F** opens native Find, including Replace.
-- **⌘W** hides the window; **⌘0** reopens it. **⌘Q** quits after flushing changes.
-- **File → Save Recovery Copy…** writes a separate JSON backup of the current in-memory text and line metadata, including when the canonical store cannot be opened.
+```sh
+./scripts/test-ui.sh  # Builds and ad-hoc signs an isolated accessibility test app/runner
+./scripts/build.sh    # Produces dist/Jort.app, unsigned and local-only
+```
 
-Successful autosaves are silent. A failed save shows a title-bar alert and displays a nonmodal message and keeps editing available. Jort retries three times, then waits for manual retry. If quitting would lose unsaved edits, it asks whether to keep the app open.
+The UI smoke test uses `JORT_DATA_DIRECTORY` to isolate its text. It may require normal macOS developer/accessibility permissions. Do not disable Gatekeeper or remove security attributes to run it. Signing/notarization for public distribution remain deferred.
 
-## Storage and recovery
+**Quit older Jort builds before launching version 0.2.** The new process lock cannot constrain the old 0.1 binary, which did not implement locking. On first 0.2 launch, the old store migrates without deleting its original files.
 
-The canonical state lives in `~/Library/Application Support/Jort/Jort.sqlite`, using SQLite WAL and full synchronous commits on a serial background queue. `Recovery.json` is a separately atomic snapshot from the most recent successful save. Normal crashes may lose the latest fraction of a second of typing; the target is a loss window under one second on healthy local storage, not a guarantee under stalled or failing storage.
+## Editing
 
-When SQLite is corrupt, Jort first copies the database and WAL companions into a uniquely named `Damaged-*` directory. It replaces the damaged database only after validating a recovery snapshot. If no valid snapshot exists, the damaged originals remain untouched, editing continues in memory, and Save Recovery Copy can preserve new work separately. Recovery copies are JSON backups, not a second document format or a document library; this MVP does not include an import UI. A future store schema is refused without downgrading it.
+Type into the single canvas. Paste is plain text. Native selection, wrapping, Find/Replace, and scrolling remain available. Successful autosaves are silent. A failed save stays visibly actionable, retries three times, and then waits for manual retry. Quitting waits for the latest save and warns if changes remain unsaved.
 
-For isolated development runs, set `JORT_DATA_DIRECTORY` to an absolute directory before launching the executable. Tests use temporary stores.
+- **⌘S**: save or retry.
+- **⌘Z / ⇧⌘Z**: undo/redo text and metadata as one transaction.
+- **⌘F**: native Find/Replace.
+- **⌘W / ⌘0**: close/reopen the one window.
+- **File → Save Recovery Copy…**: save a separate versioned JSON snapshot when needed.
 
-## What shipped
+Saving is best-effort and runs off the typing path. The internal scheduler targets frequent saves during continuous typing; it is not a strict half-second deadline or a guarantee under stalled/failing storage.
 
-- AppKit window and NSTextView with TextKit 2, dark appearance, plain-text paste, native selection, Find/Replace, wrapping, scrolling, and immediate focus after the local read.
-- A fixed-width, viewport-driven logical-line gutter and a custom app icon.
-- Stable line UUIDs, UTF-16 ranges, creation/edit timestamps, deterministic split/join rules, and metadata-aware undo/redo.
-- Incremental reconciliation of the edited line neighborhood. Unaffected trailing offsets shift without reparsing their text. IME composition stays provisional until commit.
-- Background autosave, atomic SQLite transactions, recovery snapshots, bounded retry, emergency backups, and unsaved-quit protection.
+## Local data and migration
 
-## Deliberately deferred
+The data root is `~/Library/Application Support/Jort`, or an explicit `JORT_DATA_DIRECTORY` for development. A process holds a nonblocking OS advisory lock on `Jort.lock` for its store lifetime. A second process cannot open, recover, or write that store; different roots can run independently.
 
-Landmarks, command palette, local version history, invocation decoration, agents/providers, scripting, external commands, capture, and integrations remain later roadmap phases. The native Find bar is included because it is standard NSTextView behavior.
+Version 0.2 uses:
 
-See `docs/implementation.md` for architecture, validation, and remaining limits. The original specification files remain unchanged.
+- `Store/Jort.sqlite` plus SQLite WAL/SHM companions.
+- `Store/Recovery.json`, updated as part of a successful save.
+- `PreMigration-*` and `Damaged-*` diagnostic backups.
+
+The legacy root-level `Jort.sqlite`/`Recovery.json` files are preserved during migration. SQLite schema version 2 and payload envelope version 2 are separate, explicitly decoded formats. Released v1 fixtures and v2 fixtures are committed. Unknown schemas and future versions are refused without modifying the originals.
+
+Migration/recovery builds a sibling store, closes and reopens it for validation, then atomically swaps the whole directory. This keeps SQLite, WAL, SHM, and recovery state together. An old generation may also remain in `.Replacement-*` after a swap for diagnostic safety. A damaged store is never removed before a valid replacement exists.
+
+The maximum serialized payload is **64 MiB**. Oversize, busy, permissions, disk, and recovery-snapshot errors remain failed saves. Any failure in the save operation keeps the live document dirty, even if SQLite itself already committed. Unsafe initial-load editing and recovery-copy import retain their previous limitations and are deferred product-design work.
+
+## Architecture and validation
+
+- `JortDocument`: authoritative main-actor coordinator, immutable Sendable snapshots, typed transactions, line lineage, anchors, and revisions. No AppKit dependency.
+- `JortPersistence`: storage actor, locking, versioned codecs, atomic migration/recovery, typed main-actor scheduling.
+- `JortAppKit`: native text, gutter, coordinator-backed undo, selection/viewport mapping, localized status presentation.
+- `Jort`: composition, menus, and lifecycle.
+
+See [review implementation status](docs/review-status.md), [normative line identity](docs/line-identity.md), and [performance budgets](docs/performance.md). CI configuration includes clean generation checks, tests, static analysis, sanitizer checks, accessibility smoke testing, and a fresh Release package. This workspace is not yet a Git repository, so remote CI has not been executed here.
