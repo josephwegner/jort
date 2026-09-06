@@ -542,6 +542,30 @@ import JortPersistence
         XCTAssertTrue(ruler.landmarkMode)
         XCTAssertEqual(controller.textView.accessibilityValue(), "first\nsecond")
     }
+    func testWalkAccessibilityActionsAndDisplayAccommodationsPreservePlainText() throws {
+        let (controller, window) = try editor(); defer { window.orderOut(nil) }
+        insert("first\nsecond", range: NSRange(location: 0, length: 0), into: controller)
+        controller.mutateLandmark(.landmark(Landmark(lineID: controller.state.lines[0].id, emoji: "🌲")))
+        let ruler = try XCTUnwrap(controller.scroll.verticalRulerView as? LineRuler)
+
+        // Full Keyboard Access activates controls without pointer-only behavior.
+        controller.footer.landmarks.performClick(nil)
+        XCTAssertTrue(ruler.landmarkMode)
+        let entry = try XCTUnwrap(ruler.subviews.compactMap { $0 as? NSButton }.first { $0.title == "🌲" })
+        XCTAssertEqual(entry.accessibilityLabel(), "🌲, line 1, navigate")
+        entry.performClick(nil)
+        XCTAssertFalse(ruler.landmarkMode)
+        XCTAssertEqual(controller.textView.selectedRange().location, controller.state.lines[0].location)
+        XCTAssertTrue(window.firstResponder === controller.textView)
+
+        // Walk has no animations and keeps its controls usable at enlarged text sizes.
+        controller.textView.font = .monospacedSystemFont(ofSize: 32, weight: .regular)
+        controller.view.layoutSubtreeIfNeeded()
+        controller.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+        ruler.refreshControls()
+        XCTAssertTrue(controller.footer.landmarks.isEnabled)
+        XCTAssertEqual(controller.textView.accessibilityValue(), "first\nsecond")
+    }
     func testEmojiPickerValidationAndDetachedResolutionActions() throws {
         let (controller, window) = try editor(); defer { window.orderOut(nil) }
         let picker = EmojiPicker(parent: window, emoji: nil)

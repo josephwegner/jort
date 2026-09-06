@@ -34,7 +34,7 @@
 ## 5. Accessibility and release gates
 
 - [x] 5.1 Expose landmark gutter controls, entries, detached-state actions, palette dialog, query, results, and action states through AppKit accessibility.
-- [ ] 5.2 Add keyboard-only, Full Keyboard Access, VoiceOver-style, Increase Contrast, Reduce Motion, scaling, and enlarged-font tests.
+- [x] 5.2 Add keyboard-only, Full Keyboard Access, VoiceOver-style, Increase Contrast, Reduce Motion, scaling, and enlarged-font tests.
 - [x] 5.3 Benchmark normal and landmark gutter scrolling and navigation with `CrawlLargeDocument` and verify no whole-document TextKit layout is forced.
-- [ ] 5.4 Re-run Crawl launch, typing, scrolling, persistence-latency, crash-loss, storage-growth, recovery, IME, and accessibility gates with landmarks enabled.
-- [ ] 5.5 Audit the finished Walk application to confirm canonical copy/find text excludes landmark metadata and no history, indexed search, command execution, agent, provider, script, capture, or connector subsystem is present.
+- [x] 5.4 Re-run Crawl launch, typing, scrolling, persistence-latency, crash-loss, storage-growth, recovery, IME, and accessibility gates with landmarks enabled.
+- [x] 5.5 Audit the finished Walk application to confirm canonical copy/find text excludes landmark metadata and no history, indexed search, command execution, agent, provider, script, capture, or connector subsystem is present.
