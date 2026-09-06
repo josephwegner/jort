@@ -6,7 +6,7 @@ Jort's dependable editor and Walk navigation affordances currently sit in an und
 
 - Give the document window distinct title-bar, gutter, canvas, and footer regions while keeping the editor as the dominant product surface.
 - Keep the native traffic lights at the left and the existing Pocket control at the right of an otherwise quiet title bar; do not add a second Jort logo, document title, Queue, History, or overflow placeholders.
-- Visually separate the fixed-width landmark/line-number gutter from the canvas without changing canonical text, line numbering, or the current rectangular landmark-mode control.
+- Visually separate the fixed-width landmark/line-number gutter from the canvas without changing canonical text or line numbering; use the footer landmark status as the mode control rather than duplicating it in the gutter.
 - Add a visually separated footer with a left-aligned Option-key landmark hint and count, while leaving the center and right free of speculative activity or Ask Jort controls.
 - Temporarily reveal landmark navigation while Option is held and restore the prior gutter mode when it is released, without consuming Option-modified typing or shortcuts.
 - Introduce a viewport-bounded layout contract for future UI anchored to a logical line: an accessory expands only its anchor line's vertical band, subsequent canonical lines keep real consecutive line numbers, and actions for that accessory remain inside the same expanded band.

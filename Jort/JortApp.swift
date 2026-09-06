@@ -31,6 +31,7 @@ enum JortApp {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 680), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.title = "Jort"
+        window.titleVisibility = .hidden
         window.subtitle = ""
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let icon = NSImage(contentsOf: iconURL) {
@@ -39,7 +40,7 @@ enum JortApp {
         }
         window.minSize = NSSize(width: 460, height: 300)
         window.appearance = NSAppearance(named: .darkAqua)
-        window.titlebarAppearsTransparent = true
+        window.titlebarAppearsTransparent = false
         window.backgroundColor = NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1)
         window.contentViewController = editor
         let paletteAccessory = NSTitlebarAccessoryViewController()
@@ -58,7 +59,6 @@ enum JortApp {
         if !window.setFrameUsingName("JortCanvas") { window.center() }
         window.setFrameAutosaveName("JortCanvas")
         editor.saveStatus = { [weak self] status in
-            self?.window.subtitle = status.requiresAttention ? "Save needs attention" : ""
             if status == .ownershipConflict {
                 let owner = NSRunningApplication.runningApplications(withBundleIdentifier: "dev.jort.editor").first { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
                 owner?.activate(options: [])

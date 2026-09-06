@@ -17,7 +17,7 @@ Jort SHALL present a native title bar above a content region divided into a fixe
 #### Scenario: Separators render on a scaled display
 - **WHEN** the shell renders at any supported backing scale factor
 - **THEN** the gutter trailing edge and footer top edge render as aligned one-device-pixel separators
-- **AND** the footer continues the gutter boundary without a visible gap or doubled stroke
+- **AND** the footer does not continue that boundary between the Option symbol and landmark label
 
 ### Requirement: The title bar remains quiet and native
 Jort SHALL retain the native macOS title bar and traffic-light controls, SHALL keep Pocket as the sole right-side product action, and SHALL not visibly render an app logo, app/document title, Queue, History, overflow, or other roadmap placeholder.
@@ -68,7 +68,7 @@ Jort SHALL show landmark navigation for as long as Option is held, SHALL restore
 - **THEN** the landmark index remains visible throughout and after the hold
 
 #### Scenario: User changes the latch while holding Option
-- **WHEN** the user activates the existing rectangular gutter control while Option is held
+- **WHEN** the user activates the footer landmark status while Option is held
 - **THEN** Jort updates the latched preference while the effective landmark index remains visible
 - **AND** release reveals the newly selected latched state
 
@@ -90,4 +90,3 @@ Jort SHALL expose the Pocket control, gutter mode, footer landmark status, persi
 - **THEN** shell controls have distinct descriptive labels and current values
 - **AND** the document text area exposes only canonical document text
 - **AND** traversal follows title bar, editor region, and footer in a stable order
-

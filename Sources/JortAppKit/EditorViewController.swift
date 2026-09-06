@@ -15,6 +15,10 @@ import JortPersistence
     @objc public func undo(_ sender: Any?) { history.undo() }
     @objc public func redo(_ sender: Any?) { history.redo() }
     var onCompositionCommit: (() -> Void)?
+    var lineAccessibilityChildren: (() -> [Any]?)?
+    public override func accessibilityChildren() -> [Any]? {
+        lineAccessibilityChildren?() ?? super.accessibilityChildren()
+    }
     public override func unmarkText() {
         super.unmarkText()
         onCompositionCommit?()
@@ -27,12 +31,15 @@ import JortPersistence
     public let textView = JortTextView(usingTextLayoutManager: true)
     let notice = NSTextField(wrappingLabelWithString: "")
     let retry = NSButton(title: "Retry save", target: nil, action: nil)
+    let footer = EditorFooter(frame: .zero)
+    private(set) var modifierMonitor: Any?
     private let unloaded = DocumentSnapshot()
     public private(set) var coordinator: DocumentCoordinator!
     public var state: DocumentSnapshot { coordinator?.snapshot ?? unloaded }
     private var ready = false
     private var pendingEdit: (NSRange, Int)?
     private var ruler: LineRuler!
+    private(set) var linePresentation: LinePresentationLayout!
     private(set) var palette: CommandPalette?
     private var emojiPicker: EmojiPicker?
     public var saveStatus: ((PersistenceState) -> Void)?
@@ -42,6 +49,10 @@ import JortPersistence
 
     public override func loadView() {
         view = NSView()
+        footer.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(footer)
+        footer.landmarks.target = self
+        footer.landmarks.action = #selector(toggleLandmarkMode)
         scroll.translatesAutoresizingMaskIntoConstraints = false
         scroll.hasVerticalScroller = true
         scroll.findBarPosition = .aboveContent
@@ -67,7 +78,7 @@ import JortPersistence
         textView.backgroundColor = NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1)
         textView.insertionPointColor = NSColor(calibratedRed: 0.66, green: 0.80, blue: 0.66, alpha: 1)
         textView.selectedTextAttributes = [.backgroundColor: NSColor(calibratedRed: 0.24, green: 0.34, blue: 0.30, alpha: 1)]
-        textView.textContainerInset = NSSize(width: 24, height: 28)
+        textView.textContainerInset = EditorMetrics.contentInset
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width]
@@ -89,7 +100,11 @@ import JortPersistence
         textView.isEditable = true
         ready = true
         scroll.documentView = textView
+        linePresentation = LinePresentationLayout(editor: textView)
+        textView.lineAccessibilityChildren = { [weak self] in self?.linePresentation?.accessibilityChildren() }
         ruler = LineRuler(scrollView: scroll, textView: textView)
+        ruler.presentation = linePresentation
+        ruler.onModeChange = { [weak self] in self?.updateFooter() }
         ruler.onEdit = { [weak self] id in self?.chooseLandmark(on: id) }
         ruler.onNavigate = { [weak self] id in self?.navigate(to: id) }
         ruler.onClear = { [weak self] id in
@@ -115,16 +130,22 @@ import JortPersistence
         retry.bezelStyle = .rounded
         retry.target = self; retry.action = #selector(save)
         retry.isHidden = true
-        view.addSubview(notice); view.addSubview(retry)
+        notice.maximumNumberOfLines = 1
+        notice.lineBreakMode = .byTruncatingTail
+        footer.addSubview(notice); footer.addSubview(retry)
         NSLayoutConstraint.activate([
             scroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scroll.topAnchor.constraint(equalTo: view.topAnchor),
-            scroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            notice.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 70),
+            scroll.bottomAnchor.constraint(equalTo: footer.topAnchor),
+            footer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            footer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            footer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            footer.heightAnchor.constraint(equalToConstant: EditorMetrics.footerHeight),
+            notice.leadingAnchor.constraint(equalTo: footer.landmarks.trailingAnchor, constant: 12),
             notice.trailingAnchor.constraint(lessThanOrEqualTo: retry.leadingAnchor, constant: -12),
-            notice.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
-            retry.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            notice.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            retry.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -8),
             retry.centerYAnchor.constraint(equalTo: notice.centerYAnchor)
         ])
         textView.onCompositionCommit = { [weak self] in self?.commitText() }
@@ -151,20 +172,24 @@ import JortPersistence
                 if self.textView.string != result.after.text {
                     self.display(result, selection: self.textView.selectedRange(), preserveAnchors: true)
                 }
+                self.linePresentation.update(lines: result.after.lines)
                 self.ruler.lines = result.after.lines
                 self.ruler.landmarks = result.after.landmarks
+                self.updateFooter()
                 self.palette?.actions = self.paletteActions()
                 self.palette?.reload()
                 self.persistence.changed(result.after)
                 if result.before.landmarks != result.after.landmarks, self.persistence.status.failure == nil { self.persistence.flush() }
             }
+            self.linePresentation.update(lines: self.state.lines)
             self.ruler.lines = self.state.lines
             self.ruler.landmarks = self.state.landmarks
+            self.updateFooter()
             self.textView.history.removeAllActions()
             self.view.window?.makeFirstResponder(self.textView)
         }
     }
-    private func present(_ status: PersistenceState) {
+    func present(_ status: PersistenceState) {
         let message: String?
         switch status {
         case .loadBlockedFuture: message = String(localized: "This store needs a newer version of Jort. Existing files are unchanged.")
@@ -173,6 +198,7 @@ import JortPersistence
         default: message = status.failure == nil ? nil : String(localized: "Couldn’t save. Your text is still here. Retry with ⌘S.")
         }
         notice.stringValue = message ?? ""
+        notice.toolTip = message
         notice.isHidden = message == nil
         retry.isHidden = message == nil || status == .ownershipConflict
         retry.title = status.permitsRetry ? String(localized: "Retry save") : String(localized: "Save Recovery Copy…")
@@ -180,7 +206,32 @@ import JortPersistence
 
     public override func viewDidAppear() {
         super.viewDidAppear()
+        if modifierMonitor == nil {
+            modifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+                MainActor.assumeIsolated {
+                    guard let self, self.view.window?.isKeyWindow == true else { return }
+                    self.ruler.optionHeld = event.modifierFlags.contains(.option)
+                }
+                return event
+            }
+            NotificationCenter.default.addObserver(self, selector: #selector(clearHeldOption), name: NSApplication.didResignActiveNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(windowResigned(_:)), name: NSWindow.didResignKeyNotification, object: nil)
+        }
         if ready { view.window?.makeFirstResponder(textView) }
+    }
+    public override func viewDidDisappear() {
+        super.viewDidDisappear()
+        if let modifierMonitor { NSEvent.removeMonitor(modifierMonitor) }
+        modifierMonitor = nil
+        NotificationCenter.default.removeObserver(self)
+        clearHeldOption()
+    }
+    @objc private func clearHeldOption() { ruler?.optionHeld = false }
+    @objc private func windowResigned(_ notification: Notification) {
+        if notification.object as? NSWindow === view.window { clearHeldOption() }
+    }
+    private func updateFooter() {
+        footer.update(count: state.landmarks.filter { !$0.detached }.count, mode: ruler.modeState)
     }
     public func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
         if ready, !textView.hasMarkedText(), textView.string == state.text, let replacementString {
@@ -194,7 +245,10 @@ import JortPersistence
     }
     public func textViewDidChangeSelection(_ notification: Notification) { refreshGutterAfterLayout() }
     private func refreshGutterAfterLayout() {
-        DispatchQueue.main.async { [weak self] in self?.ruler?.needsDisplay = true }
+        DispatchQueue.main.async { [weak self] in
+            self?.ruler?.needsDisplay = true
+            self?.linePresentation?.refreshViews()
+        }
     }
     private func commitText() {
         guard ready, !textView.hasMarkedText(), textView.string != state.text else { return }
@@ -242,23 +296,14 @@ import JortPersistence
             }
             let start = mapped(selection.location), end = mapped(NSMaxRange(selection))
             selected = NSRange(location: min(start, end), length: abs(end - start))
-            if let manager = textView.textLayoutManager, let content = manager.textContentManager,
-               let visible = manager.textViewportLayoutController.viewportRange,
-               let fragment = manager.textLayoutFragment(for: visible.location) {
-                let offset = content.offset(from: content.documentRange.location, to: visible.location)
-                if let line = result.before.lines.last(where: { $0.location <= offset }) {
-                    topAnchor = (line.id, viewport.y - fragment.layoutFragmentFrame.minY)
-                }
-            }
+            topAnchor = linePresentation.viewportAnchor()
         }
+        linePresentation.update(lines: result.after.lines)
         textView.string = result.after.text
         textView.setSelectedRange(NSRange(location: min(selected.location, result.after.text.utf16.count), length: min(selected.length, max(0, result.after.text.utf16.count - selected.location))))
         var position = viewport
-        if let (id, relativeY) = topAnchor, let line = result.after.lines.first(where: { $0.id == id }),
-           let manager = textView.textLayoutManager, let content = manager.textContentManager,
-           let location = content.location(content.documentRange.location, offsetBy: line.location) {
-            manager.ensureLayout(for: NSTextRange(location: location))
-            if let fragment = manager.textLayoutFragment(for: location) { position.y = fragment.layoutFragmentFrame.minY + relativeY }
+        if let (id, relativeY) = topAnchor, let band = linePresentation.band(for: id) {
+            position.y = band.frame.minY + relativeY
         }
         scroll.contentView.scroll(to: position)
         ruler.lines = result.after.lines
@@ -290,7 +335,7 @@ import JortPersistence
             self.palette = nil
         }
     }
-    @objc public func toggleLandmarkMode() { ruler.landmarkMode.toggle() }
+    @objc public func toggleLandmarkMode() { ruler.toggleLatchedMode() }
     @objc public func addOrChangeLandmark() { if let id = currentLineID { chooseLandmark(on: id) } }
     @objc public func clearCurrentLandmark() {
         guard let id = currentLineID, let landmark = state.landmarks.first(where: { !$0.detached && $0.lineID == id }) else { return }
@@ -332,6 +377,7 @@ import JortPersistence
         guard !textView.hasMarkedText(), let line = state.lines.first(where: { $0.id == id }) else { return }
         let range = NSRange(location: line.location, length: 0)
         textView.setSelectedRange(range); textView.scrollRangeToVisible(range)
+        linePresentation.refreshViews()
         view.window?.makeFirstResponder(textView)
     }
     @objc public func nextLandmark() { navigateLandmark(direction: 1) }
@@ -395,9 +441,22 @@ import JortPersistence
 /// Uses TextKit 2's already-visible fragments; scrolling never forces whole-document layout.
 @MainActor public final class LineRuler: NSRulerView {
     weak var editor: NSTextView?
+    weak var presentation: LinePresentationLayout?
     var lines: [LineMeta] = [] { didSet { needsDisplay = true } }
     var landmarks: [Landmark] = [] { didSet { rebuildIndex(); refreshControls(); needsDisplay = true } }
-    var landmarkMode = false { didSet { indexOffset = 0; scrollAccumulator = 0; modeButton.isActive = landmarkMode; refreshControls(); needsDisplay = true } }
+    var modeState = LandmarkModeState() { didSet {
+        refreshControls(); needsDisplay = true; onModeChange?()
+    } }
+    var landmarkMode: Bool {
+        get { modeState.isVisible }
+        set { modeState.latched = newValue }
+    }
+    var optionHeld: Bool {
+        get { modeState.optionHeld }
+        set { if modeState.optionHeld != newValue { modeState.optionHeld = newValue } }
+    }
+    var onModeChange: (() -> Void)?
+    func toggleLatchedMode() { modeState.latched.toggle() }
     var onEdit: ((UUID) -> Void)?
     var onNavigate: ((UUID) -> Void)?
     var onClear: ((UUID) -> Void)?
@@ -407,7 +466,6 @@ import JortPersistence
     private var emojiByLine: [UUID: String] = [:]
     private var indexOffset = 0
     private var scrollAccumulator: CGFloat = 0
-    private let modeButton = LandmarkModeButton(title: "", target: nil, action: nil)
     private let clearButton = LandmarkClearButton(title: "Clear", target: nil, action: nil)
     private var entryButtons: [NSButton] = []
     private var hits: [(id: UUID, frame: NSRect)] = []
@@ -415,13 +473,8 @@ import JortPersistence
         editor = textView
         super.init(scrollView: scrollView, orientation: .verticalRuler)
         clientView = textView
-        ruleThickness = 48
+        ruleThickness = EditorMetrics.gutterWidth
         clipsToBounds = true
-        modeButton.target = self; modeButton.action = #selector(toggleMode)
-        modeButton.isBordered = false
-        modeButton.setAccessibilityLabel("Toggle landmark navigation mode")
-        modeButton.toolTip = "Toggle landmark navigation mode"
-        addSubview(modeButton)
         clearButton.target = self; clearButton.action = #selector(clearAll)
         clearButton.isBordered = false
         clearButton.font = .systemFont(ofSize: 10)
@@ -434,9 +487,8 @@ import JortPersistence
     }
     public required init(coder: NSCoder) { fatalError() }
     deinit { NotificationCenter.default.removeObserver(self) }
-    @objc private func update() { refreshControls(); needsDisplay = true }
+    @objc private func update() { refreshControls(); presentation?.refreshViews(); needsDisplay = true }
     public override func layout() { super.layout(); refreshControls() }
-    @objc private func toggleMode() { landmarkMode.toggle() }
     @objc private func clearAll() {
         onClearAll?()
         landmarkMode = false
@@ -449,7 +501,7 @@ import JortPersistence
         guard landmarkMode else { super.scrollWheel(with: event); return }
         guard event.momentumPhase.isEmpty else { return }
         if event.phase == .began { scrollAccumulator = 0 }
-        let capacity = max(1, Int((bounds.height - 52) / 28))
+        let capacity = max(1, Int((bounds.height - 24) / 28))
         let delta = event.hasPreciseScrollingDeltas ? -event.scrollingDeltaY : -event.scrollingDeltaY * 28
         scrollAccumulator += delta
         let rows = Int(scrollAccumulator / 28)
@@ -495,6 +547,9 @@ import JortPersistence
     @objc private func moveEntry(_ item: NSMenuItem) { if let id = item.representedObject as? UUID { onMove?(id) } }
     /// Coordinates are in the text container; include the extra, zero-length EOF row.
     public func visibleRows() -> [(number: Int, y: CGFloat)] {
+        if let presentation, !presentation.lines.isEmpty {
+            return presentation.visibleBands().map { ($0.number, $0.textY) }
+        }
         guard let editor else { return [] }
         if editor.string.isEmpty { return [(1, 0)] }
         guard let manager = editor.textLayoutManager, let content = manager.textContentManager,
@@ -519,15 +574,18 @@ import JortPersistence
         return rows
     }
     public override func drawHashMarksAndLabels(in rect: NSRect) {
-        NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1).setFill()
+        EditorMetrics.chrome.setFill()
         NSRect(x: 0, y: rect.minY, width: ruleThickness, height: rect.height).fill()
+        EditorMetrics.separator.setFill()
+        let pixel = EditorMetrics.pixel(in: self)
+        NSRect(x: ruleThickness - pixel, y: rect.minY, width: pixel, height: rect.height).fill()
         refreshControls()
         guard !landmarkMode, let editor else { return }
         let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular), .foregroundColor: NSColor.secondaryLabelColor]
         for row in visibleRows() {
             guard lines.indices.contains(row.number - 1), emojiByLine[lines[row.number - 1].id] == nil else { continue }
             let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
-            guard point.y >= bounds.minY + 24 else { continue }
+            guard point.y >= bounds.minY else { continue }
             let label = "\(row.number)" as NSString
             let size = label.size(withAttributes: attrs)
             label.draw(at: NSPoint(x: (ruleThickness - size.width) / 2, y: point.y + 7), withAttributes: attrs)
@@ -535,24 +593,22 @@ import JortPersistence
     }
     func refreshControls() {
         guard let editor else { return }
-        modeButton.frame = NSRect(x: 4, y: bounds.minY + 5, width: 40, height: 14)
-        modeButton.setAccessibilityValue(landmarkMode ? "Landmark index" : "Line numbers")
         clearButton.frame = NSRect(x: 4, y: bounds.maxY - 24, width: 40, height: 20)
         clearButton.isHidden = !landmarkMode
         clearButton.isEnabled = !landmarks.isEmpty
         var entries: [(id: UUID, label: String, number: Int, frame: NSRect)] = []
         hits = []
         if landmarkMode {
-            let capacity = max(1, Int((bounds.height - 52) / 28))
+            let capacity = max(1, Int((bounds.height - 24) / 28))
             indexOffset = min(indexOffset, max(0, index.count - capacity))
             for (offset, row) in index.dropFirst(indexOffset).prefix(capacity).enumerated() {
-                entries.append((row.id, row.emoji, row.number, NSRect(x: 4, y: bounds.minY + 28 + CGFloat(offset * 28), width: 40, height: 28)))
+                entries.append((row.id, row.emoji, row.number, NSRect(x: 4, y: bounds.minY + CGFloat(offset * 28), width: 40, height: 28)))
             }
         }
         for row in landmarkMode ? [] : visibleRows() {
             guard lines.indices.contains(row.number - 1) else { continue }
             let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
-            guard point.y >= bounds.minY + 24 else { continue }
+            guard point.y >= bounds.minY else { continue }
             let id = lines[row.number - 1].id
             let frame = NSRect(x: (ruleThickness - 24) / 2, y: point.y + 2, width: 24, height: 24)
             if let emoji = emojiByLine[id] { entries.append((id, emoji, row.number, frame)); continue }
@@ -582,24 +638,6 @@ import JortPersistence
         }
     }
     func frame(for id: UUID) -> NSRect? { hits.first(where: { $0.id == id })?.frame }
-}
-
-@MainActor private final class LandmarkModeButton: NSButton {
-    var isActive = false { didSet { needsDisplay = true } }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        let outline = bounds.insetBy(dx: 0.5, dy: 0.5)
-        let path = NSBezierPath(roundedRect: outline, xRadius: 5, yRadius: 5)
-        if isActive {
-            NSColor.secondaryLabelColor.withAlphaComponent(0.8).setFill()
-            path.fill()
-        } else {
-            NSColor.secondaryLabelColor.withAlphaComponent(0.65).setStroke()
-            path.lineWidth = 1
-            path.stroke()
-        }
-    }
 }
 
 @MainActor private final class LandmarkEntryButton: NSButton {

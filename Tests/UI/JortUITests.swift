@@ -1,6 +1,30 @@
 import XCTest
 
 @MainActor final class JortUITests: XCTestCase {
+    func testShellOptionRevealAndPocket() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["JORT_DATA_DIRECTORY"] = FileManager.default.temporaryDirectory.appendingPathComponent("ShellUI-\(UUID())").path
+        app.launch(); defer { app.terminate() }
+        let editor = app.textViews["Jort document"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        editor.click(); editor.typeText("First thought\nSecond thought")
+        let status = app.buttons["Landmarks"]
+        XCTAssertTrue(status.exists)
+        XCUIElement.perform(withKeyModifiers: .option) {
+            editor.typeKey(.leftArrow, modifierFlags: .option)
+            XCTAssertTrue((status.value as? String ?? "").contains("Option held"))
+        }
+        XCTAssertTrue((status.value as? String ?? "").contains("Line numbers"))
+        XCTAssertEqual(editor.value as? String, "First thought\nSecond thought")
+        app.buttons["Open Pocket"].click()
+        XCTAssertTrue(app.searchFields["Search actions"].waitForExistence(timeout: 3))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertFalse(app.buttons["Queue"].exists)
+        XCTAssertFalse(app.buttons["Ask Jort"].exists)
+        let shot = app.windows.firstMatch.screenshot()
+        let attachment = XCTAttachment(screenshot: shot); attachment.name = "Editor shell"; attachment.lifetime = .keepAlways; add(attachment)
+        try shot.pngRepresentation.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("jort-shell-window.png"))
+    }
     func testKeyboardFindUndoAndRelaunchInIsolatedStore() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("JortUITest-\(UUID())")
         let app = XCUIApplication()

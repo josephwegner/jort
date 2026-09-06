@@ -12,7 +12,7 @@ The editor remains AppKit/TextKit 2, the document remains plain text, and `Docum
 
 - Make title bar, gutter, canvas, and footer read as intentional, stable regions of one editor workspace.
 - Keep the visible title bar quiet and unambiguous: native traffic lights on the left, Pocket on the right, and no duplicated Jort identity.
-- Preserve the existing rectangular gutter-mode control and add an Option-key status affordance in the footer.
+- Replace the rectangular gutter-mode control with an Option-key status affordance in the footer.
 - Make holding Option a reversible, focus-neutral way to inspect the landmark index.
 - Establish one geometry source for line numbers, landmarks, navigation, viewport anchoring, and future line-anchored accessories.
 - Preserve native text input, Option-modified characters, IME, selection, scrolling, accessibility, persistence, and large-document performance.
@@ -20,7 +20,7 @@ The editor remains AppKit/TextKit 2, the document remains plain text, and `Docum
 **Non-Goals:**
 
 - Queue, History, capture queue, run status, Ask Jort, tool/agent result content, merge/dismiss controls, or an overflow menu.
-- A visible document/app title, a centered logo, changes to Pocket behavior, or replacement of the rectangular gutter toggle.
+- A visible document/app title, a centered logo, or changes to Pocket behavior.
 - Persisting accessory layout records or adding widget data to `DocumentSnapshot` before a feature owns that data.
 - Rich text, block semantics, fake document lines, arbitrary accessory placement between character offsets, or a general-purpose panel framework.
 - Redesigning the emoji picker, landmark lifecycle, command palette, document storage, or Run feature plans.
@@ -29,7 +29,7 @@ The editor remains AppKit/TextKit 2, the document remains plain text, and `Docum
 
 ### 1. Compose the window from explicit shell regions
 
-`EditorViewController` will own a root shell containing a fixed footer and a content region above it. The existing text scroll view remains the canvas; its vertical ruler remains the gutter. Shared `EditorMetrics` and palette values define the 48-point gutter, footer height, canvas inset, divider color, and one-device-pixel strokes. The gutter draws a distinct surface plus a trailing divider, and the footer draws a top divider and a vertical continuation at the gutter boundary.
+`EditorViewController` will own a root shell containing a fixed footer and a content region above it. The existing text scroll view remains the canvas; its vertical ruler remains the gutter. Shared `EditorMetrics` and palette values define the 48-point gutter, footer height, canvas inset, divider color, and one-device-pixel strokes. The gutter draws a distinct surface plus a trailing divider, and the footer draws only a top divider so its Option symbol and landmark label read as one status control.
 
 The native title bar remains the window title bar so traffic lights, dragging, full screen, and accessibility retain standard macOS behavior. `window.title` stays "Jort" for system/window identity, while `titleVisibility` hides the visible title. The Pocket accessory remains at the right with its current icon, label, tooltip, and Command-K behavior. No placeholder views are installed for future title-bar actions.
 
@@ -39,7 +39,7 @@ Alternative considered: draw separators inside one edge-to-edge scroll view. Tha
 
 ### 2. Separate latched landmark mode from the Option-held override
 
-Landmark presentation will derive from two inputs: a user-controlled `latchedLandmarkMode` and a transient `optionHeld` flag. The effective mode is their logical OR. Clicking the existing rectangular control toggles the latched input. Pressing Option alone sets the transient input; releasing the final Option key clears it. Therefore release returns a previously unlatched gutter to line numbers, while a previously latched gutter stays open. A click made while Option is held updates the latched preference and becomes visible when Option is released.
+Landmark presentation will derive from two inputs: a user-controlled `latchedLandmarkMode` and a transient `optionHeld` flag. The effective mode is their logical OR. Clicking the footer landmark status toggles the latched input. Pressing Option alone sets the transient input; releasing the final Option key clears it. Therefore release returns a previously unlatched gutter to line numbers, while a previously latched gutter stays open. A click made while Option is held updates the latched preference and becomes visible when Option is released.
 
 A small injectable modifier-state controller will observe local `flagsChanged` events and relevant application/window activation notifications. The event monitor returns every event unchanged and never installs a key equivalent for Option, so Option-modified characters, navigation, menu access, and IME remain native. Loss of key-window/app-active state clears stale held state. Pressing or releasing Option does not change selection, focus, viewport, or the landmark index's independent scroll offset.
 

@@ -28,6 +28,7 @@
 		6B61C12EF1097CD68EA35E5E /* jort-white.svg in Resources */ = {isa = PBXBuildFile; fileRef = 07D77C5D4902A6B038E693AC /* jort-white.svg */; };
 		6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		7630238FB57057423175113F /* v1.json in Resources */ = {isa = PBXBuildFile; fileRef = 857FDC8BC95B6835BA5D1921 /* v1.json */; };
+		79B717601414FF7180172417 /* EditorShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3468DC421F7F54BE19537C /* EditorShell.swift */; };
 		7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD9032EA20B653B9CE85D00 /* JortApp.swift */; };
 		7E9EC478181E19848A20CBBA /* emoji.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E4A736D729EC93F968914D1 /* emoji.json */; };
 		81441D90E3E254368424329B /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
@@ -51,6 +52,7 @@
 		BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
+		D32F25240A7053CD4C2C4D9E /* LinePresentationLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */; };
 		D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
 		D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */; };
@@ -251,6 +253,8 @@
 		C9136C288B97547D76167A45 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
 		CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPalette.swift; sourceTree = "<group>"; };
 		D7391540700D5CC6E567E4A5 /* canvas-10000.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "canvas-10000.txt"; sourceTree = "<group>"; };
+		DE3468DC421F7F54BE19537C /* EditorShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorShell.swift; sourceTree = "<group>"; };
+		E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinePresentationLayout.swift; sourceTree = "<group>"; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -457,8 +461,10 @@
 			isa = PBXGroup;
 			children = (
 				CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */,
+				DE3468DC421F7F54BE19537C /* EditorShell.swift */,
 				1ECC95805D3B99275307225B /* EditorViewController.swift */,
 				49680FE93D310BAFEC1043AE /* EmojiPicker.swift */,
+				E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */,
 			);
 			name = JortAppKit;
 			path = Sources/JortAppKit;
@@ -759,8 +765,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				44A382E1159D0FD45E33BA6E /* CommandPalette.swift in Sources */,
+				79B717601414FF7180172417 /* EditorShell.swift in Sources */,
 				4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */,
 				4B8B663D3C060E790F4FE4A7 /* EmojiPicker.swift in Sources */,
+				D32F25240A7053CD4C2C4D9E /* LinePresentationLayout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -28,6 +28,183 @@ import JortPersistence
         controller.textView.insertText(text, replacementRange: range)
         controller.textView.history.endUndoGrouping()
     }
+    func testShellAndMomentaryLandmarksPreserveEditorState() throws {
+        let (controller, window) = try editor(); defer { window.orderOut(nil) }
+        insert("one\ntwo", range: NSRange(location: 0, length: 0), into: controller)
+        let ruler = try XCTUnwrap(controller.scroll.verticalRulerView as? LineRuler)
+        let before = controller.state, selection = controller.textView.selectedRange()
+        for size in [NSSize(width: 460, height: 300), NSSize(width: 920, height: 680)] {
+            window.setContentSize(size); controller.view.layoutSubtreeIfNeeded()
+            XCTAssertEqual(controller.footer.frame.height, EditorMetrics.footerHeight)
+            XCTAssertEqual(controller.scroll.frame.minY, controller.footer.frame.maxY, accuracy: 0.5)
+            XCTAssertEqual(ruler.ruleThickness, 48)
+        }
+        ruler.optionHeld = true
+        XCTAssertTrue(ruler.landmarkMode)
+        controller.toggleLandmarkMode()
+        ruler.optionHeld = false
+        XCTAssertTrue(ruler.landmarkMode)
+        controller.toggleLandmarkMode()
+        XCTAssertFalse(ruler.landmarkMode)
+        XCTAssertEqual(controller.state, before)
+        XCTAssertEqual(controller.textView.selectedRange(), selection)
+        XCTAssertTrue(window.firstResponder === controller.textView)
+        XCTAssertEqual(controller.footer.landmarks.title, "⌥ Landmarks 0")
+    }
+    func testAccessoryExpandsCanonicalLineWithoutTextMutation() throws {
+        let (controller, window) = try editor(); defer { window.orderOut(nil) }
+        insert("one\ntwo\nthree\nfour\nfive\nDecision: content\nNext: content\neight", range: NSRange(location: 0, length: 0), into: controller)
+        let layout = try XCTUnwrap(controller.linePresentation)
+        controller.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+        let before = controller.state
+        let original = try XCTUnwrap(layout.band(for: before.lines[5].id))
+        let originalX = controller.scroll.contentView.bounds.minX
+        let title = NSTextField(labelWithString: "Test explanation")
+        let actions = NSButton(title: "Test action", target: nil, action: nil)
+        layout.setAccessories([
+            LineAccessory(lineID: before.lines[4].id, height: 64, view: title),
+            LineAccessory(lineID: before.lines[6].id, height: 32, view: actions)
+        ])
+        let moved = try XCTUnwrap(layout.band(for: before.lines[5].id))
+        XCTAssertEqual(moved.textY - original.textY, 64, accuracy: 0.5)
+        XCTAssertEqual(moved.number, 6)
+        XCTAssertEqual(controller.scroll.contentView.bounds.minX, originalX)
+        XCTAssertEqual(controller.state, before)
+        XCTAssertEqual(controller.textView.string, before.text)
+        XCTAssertEqual(title.superview, controller.textView)
+        layout.setAccessories([])
+        XCTAssertEqual(try XCTUnwrap(layout.band(for: before.lines[5].id)).textY, original.textY, accuracy: 0.5)
+        XCTAssertNil(title.superview)
+    }
+    func testHeldOptionInputLifecycleAndAccessibility() throws {
+        let (controller, window) = try editor(); defer { window.orderOut(nil) }
+        let ruler = try XCTUnwrap(controller.scroll.verticalRulerView as? LineRuler)
+        controller.viewDidAppear()
+        XCTAssertNotNil(controller.modifierMonitor)
+        ruler.optionHeld = true; ruler.optionHeld = true
+        XCTAssertTrue(ruler.landmarkMode)
+        insert("café first second", range: NSRange(location: 0, length: 0), into: controller)
+        controller.textView.moveWordBackward(nil)
+        XCTAssertLessThan(controller.textView.selectedRange().location, controller.state.text.utf16.count)
+        controller.textView.history.beginUndoGrouping()
+        controller.textView.setMarkedText("日本", selectedRange: NSRange(location: 2, length: 0), replacementRange: controller.textView.selectedRange())
+        let beforeCommit = controller.state
+        XCTAssertFalse(beforeCommit.text.contains("日本"))
+        controller.textView.unmarkText()
+        controller.textView.history.endUndoGrouping()
+        XCTAssertTrue(controller.state.text.contains("日本"))
+        XCTAssertTrue(ruler.landmarkMode)
+        controller.textView.undo(nil)
+        XCTAssertEqual(controller.state.text, beforeCommit.text)
+        NotificationCenter.default.post(name: NSApplication.didResignActiveNotification, object: NSApplication.shared)
+        XCTAssertFalse(ruler.optionHeld)
+        ruler.modeState.latched = true; ruler.optionHeld = true
+        NotificationCenter.default.post(name: NSWindow.didResignKeyNotification, object: window)
+        XCTAssertFalse(ruler.optionHeld); XCTAssertTrue(ruler.landmarkMode)
+        XCTAssertEqual(controller.footer.landmarks.accessibilityLabel(), "Landmarks")
+        XCTAssertTrue((controller.footer.landmarks.accessibilityValue() as? String ?? "").contains("latched"))
+        controller.viewDidDisappear()
+        XCTAssertNil(controller.modifierMonitor)
+    }
+    func testWrappedAccessoriesEditingAndAccessibleOrder() throws {
+        let (controller, window) = try editor(); defer { window.orderOut(nil) }
+        let wrapped = String(repeating: "wrapped content ", count: 20)
+        insert("first\n\(wrapped)\nlast", range: NSRange(location: 0, length: 0), into: controller)
+        let layout = try XCTUnwrap(controller.linePresentation)
+        let id = controller.state.lines[1].id
+        let label = NSTextField(labelWithString: "Explanation")
+        layout.setAccessories([LineAccessory(lineID: id, height: 72, view: label)])
+        let band = try XCTUnwrap(layout.band(for: id))
+        XCTAssertGreaterThan(try XCTUnwrap(band.accessoryFrame).minY - band.textY, 24)
+        let children = try XCTUnwrap(layout.accessibilityChildren())
+        let index = try XCTUnwrap(children.firstIndex { ($0 as? NSView) === label })
+        XCTAssertEqual((children[index - 1] as? NSAccessibilityElement)?.accessibilityLabel(), "Line 2")
+        XCTAssertEqual((children[index + 1] as? NSAccessibilityElement)?.accessibilityLabel(), "Line 3")
+        let attrs = controller.textView.typingAttributes
+        insert("prefix\n", range: NSRange(location: 0, length: 0), into: controller)
+        controller.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+        XCTAssertNotNil(layout.accessories[id])
+        XCTAssertEqual(try XCTUnwrap(layout.band(for: id)).number, 3)
+        XCTAssertEqual(controller.textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle, attrs[.paragraphStyle] as? NSParagraphStyle)
+        let line = try XCTUnwrap(controller.state.lines.first { $0.id == id })
+        insert("", range: NSRange(location: line.location, length: line.length), into: controller)
+        XCTAssertNil(layout.accessories[id])
+        XCTAssertNil(label.superview)
+    }
+    func testShellRenderedStates() throws {
+        let (controller, window) = try editor(); defer { window.orderOut(nil) }
+        window.appearance = NSAppearance(named: .darkAqua)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("jort-shell-snapshots")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        func capture(_ name: String) throws {
+            controller.view.layoutSubtreeIfNeeded()
+            controller.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+            let image = try XCTUnwrap(controller.view.bitmapImageRepForCachingDisplay(in: controller.view.bounds))
+            controller.view.cacheDisplay(in: controller.view.bounds, to: image)
+            try XCTUnwrap(image.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent("\(name).png"))
+            let attachment = XCTAttachment(image: NSImage(cgImage: try XCTUnwrap(image.cgImage), size: controller.view.bounds.size))
+            attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        }
+        try capture("empty")
+        insert("First thought\nSecond thought\nThird thought", range: NSRange(location: 0, length: 0), into: controller)
+        controller.mutateLandmark(.landmark(Landmark(lineID: controller.state.lines[1].id, emoji: "🌲")))
+        try capture("landmarks")
+        let ruler = try XCTUnwrap(controller.scroll.verticalRulerView as? LineRuler)
+        ruler.optionHeld = true; try capture("option-held"); ruler.optionHeld = false
+        controller.present(.loadFailed(.injected("snapshot")))
+        try capture("storage-attention")
+        window.setContentSize(NSSize(width: 460, height: 300)); try capture("small")
+        XCTAssertFalse(controller.notice.isHidden)
+        XCTAssertLessThanOrEqual(controller.notice.frame.maxY, controller.footer.bounds.maxY)
+        let footerBitmap = try XCTUnwrap(controller.footer.bitmapImageRepForCachingDisplay(in: controller.footer.bounds))
+        controller.footer.cacheDisplay(in: controller.footer.bounds, to: footerBitmap)
+        let scale = CGFloat(footerBitmap.pixelsWide) / controller.footer.bounds.width
+        let dividerX = Int(EditorMetrics.gutterWidth * scale) - 1
+        let formerDivider = try XCTUnwrap(footerBitmap.colorAt(x: dividerX, y: footerBitmap.pixelsHigh / 2)?.usingColorSpace(.deviceRGB))
+        let background = try XCTUnwrap(footerBitmap.colorAt(x: dividerX + 2, y: footerBitmap.pixelsHigh / 2)?.usingColorSpace(.deviceRGB))
+        XCTAssertEqual(formerDivider.redComponent, background.redComponent, accuracy: 0.01)
+        window.setContentSize(NSSize(width: 920, height: 680))
+        let view = NSTextField(labelWithString: "A test-only explanation anchored to line 2")
+        controller.linePresentation.setAccessories([LineAccessory(lineID: controller.state.lines[1].id, height: 64, view: view)])
+        try capture("expanded")
+    }
+    func testAccessoryViewportAnchorAndLargeDocumentBudget() throws {
+        let (controller, window) = try editor(); defer { window.orderOut(nil) }
+        let fixture = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "canvas-10000", withExtension: "txt"))
+        insert(try String(contentsOf: fixture, encoding: .utf8), range: NSRange(location: 0, length: 0), into: controller)
+        let layout = try XCTUnwrap(controller.linePresentation)
+        let ruler = try XCTUnwrap(controller.scroll.verticalRulerView as? LineRuler)
+        let descriptors = stride(from: 0, to: 10000, by: 20).map { index in
+            LineAccessory(lineID: controller.state.lines[index].id, height: 48, view: NSTextField(labelWithString: "Fixture \(index)"))
+        }
+        let selection = controller.textView.selectedRange()
+        layout.setAccessories(descriptors)
+        var samples: [Double] = []
+        for index in 0..<30 {
+            controller.navigate(to: controller.state.lines[(index * 197) % 10000].id)
+            controller.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+            let start = ProcessInfo.processInfo.systemUptime
+            ruler.optionHeld = index.isMultiple(of: 2)
+            _ = ruler.visibleRows()
+            layout.refreshViews()
+            samples.append((ProcessInfo.processInfo.systemUptime - start) * 1000)
+            XCTAssertLessThan(layout.visibleBands().count, 100)
+            XCTAssertLessThan(controller.textView.subviews.count, 100)
+        }
+        samples.sort()
+        let p95 = samples[Int(Double(samples.count - 1) * 0.95)]
+        print("PERF shell: 10k lines / 500 accessories, visible layout + Option p95=\(p95)ms")
+        XCTAssertLessThan(p95, 100)
+        let anchor = try XCTUnwrap(layout.viewportAnchor())
+        let selected = controller.textView.selectedRange()
+        layout.setAccessories([])
+        let restored = try XCTUnwrap(layout.viewportAnchor())
+        XCTAssertEqual(restored.0, anchor.0)
+        XCTAssertEqual(restored.1, anchor.1, accuracy: 1)
+        XCTAssertEqual(controller.textView.selectedRange(), selected)
+        XCTAssertTrue(window.firstResponder === controller.textView)
+        controller.textView.setSelectedRange(selection)
+    }
     func testNativeRandomUndoRedoUsesCoordinator() throws {
         let (controller, window) = try editor()
         defer { window.orderOut(nil) }
@@ -235,10 +412,11 @@ import JortPersistence
         ruler.display()
         XCTAssertTrue(ruler.clipsToBounds)
         XCTAssertEqual(controller.textView.textContainerInset.width, 24)
+        XCTAssertEqual(controller.textView.textContainerInset.height, 0)
         let buttons = ruler.subviews.compactMap { $0 as? NSButton }
-        let modeButton = try XCTUnwrap(buttons.first { $0.accessibilityLabel() == "Toggle landmark navigation mode" })
+        XCTAssertFalse(buttons.contains { $0.accessibilityLabel() == "Toggle landmark navigation mode" })
         let landmarkButton = try XCTUnwrap(buttons.first { $0.title == "🌲" })
-        XCTAssertEqual(landmarkButton.frame.midX, modeButton.frame.midX, accuracy: 0.5)
+        XCTAssertEqual(landmarkButton.frame.midX, EditorMetrics.gutterWidth / 2, accuracy: 0.5)
 
         let bitmap = try XCTUnwrap(controller.view.bitmapImageRepForCachingDisplay(in: controller.view.bounds))
         controller.view.cacheDisplay(in: controller.view.bounds, to: bitmap)
@@ -358,8 +536,10 @@ import JortPersistence
         controller.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
         let ruler = try XCTUnwrap(controller.scroll.verticalRulerView as? LineRuler)
         ruler.refreshControls()
-        let mode = try XCTUnwrap(ruler.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "Toggle landmark navigation mode" })
-        XCTAssertTrue(mode.isEnabled); mode.performClick(nil); XCTAssertTrue(ruler.landmarkMode)
+        XCTAssertFalse(ruler.subviews.compactMap { $0 as? NSButton }.contains { $0.accessibilityLabel() == "Toggle landmark navigation mode" })
+        XCTAssertTrue(controller.footer.landmarks.isEnabled)
+        controller.footer.landmarks.performClick(nil)
+        XCTAssertTrue(ruler.landmarkMode)
         XCTAssertEqual(controller.textView.accessibilityValue(), "first\nsecond")
     }
     func testEmojiPickerValidationAndDetachedResolutionActions() throws {

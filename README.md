@@ -35,7 +35,9 @@ Type into the single canvas. Paste is plain text. Native selection, wrapping, Fi
 - **⌘F**: native Find/Replace.
 - **⌘K**: search application and landmark actions, including moving or deleting detached landmarks.
 - Click a gutter line to add/change its emoji using the native character picker; right-click a landmark for change, clear, or move actions.
-- The fixed gutter control toggles a compact landmark index. Its entries navigate by stable line identity; scrolling the index does not scroll the document.
+- The footer landmark button toggles a compact landmark index. Its entries navigate by stable line identity; scrolling the index does not scroll the document.
+- Hold **Option (⌥)** to reveal the landmark index temporarily. Release restores the previous mode; the footer landmark button can latch it open. The footer shows the attached landmark count and any actionable storage notice.
+- The native title bar keeps Pocket at the right. The gutter and footer have distinct surfaces and dividers. Future tool and agent accessories can expand an individual line without adding artificial line numbers; no Run controls are displayed yet.
 - **⌘W / ⌘0**: close/reopen the one window.
 - **File → Save Recovery Copy…**: save a separate versioned JSON snapshot when needed.
 
