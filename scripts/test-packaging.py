@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory() as temp:
     root = Path(temp); source = root / 'Build/Jort.app'; destination = root / 'dist/Jort.app'
     for sub in ['MacOS', 'Resources', 'Frameworks']:
         (source / 'Contents' / sub).mkdir(parents=True)
-    (source / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleShortVersionString': '0.2.0', 'CFBundleVersion': '2', 'CFBundleExecutable': 'Jort', 'CFBundleIconFile': 'AppIcon.icns'}))
+    (source / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleShortVersionString': '0.3.0', 'CFBundleVersion': '3', 'CFBundleExecutable': 'Jort', 'CFBundleIconFile': 'AppIcon.icns'}))
     binary = source / 'Contents/MacOS/Jort'; binary.write_text('fixture'); binary.chmod(0o755)
     (source / 'Contents/Resources/AppIcon.icns').write_text('fixture')
     for name in ['JortDocument', 'JortPersistence', 'JortAppKit']:

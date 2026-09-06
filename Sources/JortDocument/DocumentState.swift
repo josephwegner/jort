@@ -56,6 +56,7 @@ struct DocumentState: Equatable {
             prefix = head; oldEnd = old.count - tail; newEnd = new.count - tail
         }
         let delta = source.length - oldSource.length
+        let directJoin = oldEnd == prefix + 1 && newEnd == prefix && oldSource.character(at: prefix) == 10
         func index(containing offset: Int) -> Int {
             var low = 0, high = lines.count
             while low < high {
@@ -85,7 +86,7 @@ struct DocumentState: Equatable {
             } else if range.location == lines[leading].location {
                 let leadingEnd = lines[leading].location + lines[leading].length
                 let endsWithSeparator = leadingEnd > 0 && [10, 13].contains(Int(oldSource.character(at: leadingEnd - 1)))
-                let deletedWholeLeading = endsWithSeparator && prefix == lines[leading].location && oldEnd >= leadingEnd && oldEnd > prefix
+                let deletedWholeLeading = !directJoin && endsWithSeparator && prefix == lines[leading].location && oldEnd >= leadingEnd && oldEnd > prefix
                 let insertedBefore = oldSource.length > 0 && oldEnd == prefix && prefix == lines[leading].location && newEnd > prefix && [10, 13].contains(Int(source.character(at: newEnd - 1)))
                 if insertedBefore { inherited = nil }
                 else if deletedWholeLeading && newEnd == prefix {
@@ -119,12 +120,31 @@ struct DocumentState: Equatable {
             line.location += delta
             result.append(line)
         }
+        let surviving = Set(result.map(\.id))
+        let destination = lines[leading].id
+        let occupied = landmarks.contains { !$0.detached && $0.lineID == destination }
+        landmarks = landmarks.map { landmark in
+            guard !landmark.detached, !surviving.contains(landmark.lineID) else { return landmark }
+            if directJoin, !occupied, leading + 1 < lines.count,
+               landmark.lineID == lines[leading + 1].id, surviving.contains(destination) {
+                return landmark.attaching(to: destination)
+            }
+            return landmark.detaching()
+        }
         text = newText
         lines = result
     }
 
     func validate() throws {
         guard revision >= 0, Set(landmarks.map(\.id)).count == landmarks.count else { throw DocumentError.invalidState }
+        let lineIDs = Set(lines.map(\.id))
+        var attached = Set<UUID>()
+        for landmark in landmarks {
+            guard Landmark.isValidEmoji(landmark.emoji) else { throw DocumentError.invalidState }
+            if !landmark.detached {
+                guard lineIDs.contains(landmark.lineID), attached.insert(landmark.lineID).inserted else { throw DocumentError.invalidState }
+            }
+        }
         let source = text as NSString
         for line in lines {
             guard line.location >= 0, line.length >= 0, line.location <= source.length,

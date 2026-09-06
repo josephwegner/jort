@@ -1,6 +1,6 @@
 # Jort
 
-A native, dark macOS scratch canvas: one app-owned plain-text document, local persistence, no account or network requirement. This is the Crawl MVP; landmarks and automation remain later product phases.
+A native, dark macOS scratch canvas: one app-owned plain-text document, local persistence, no account or network requirement. Walk adds emoji landmarks and Pocket; automation remains a later product phase. See [Walk validation](docs/walk-validation.md) for current release gates.
 
 ## Build and test
 
@@ -33,6 +33,9 @@ Type into the single canvas. Paste is plain text. Native selection, wrapping, Fi
 - **⌘S**: save or retry.
 - **⌘Z / ⇧⌘Z**: undo/redo text and metadata as one transaction.
 - **⌘F**: native Find/Replace.
+- **⌘K**: search application and landmark actions, including moving or deleting detached landmarks.
+- Click a gutter line to add/change its emoji using the native character picker; right-click a landmark for change, clear, or move actions.
+- The fixed gutter control toggles a compact landmark index. Its entries navigate by stable line identity; scrolling the index does not scroll the document.
 - **⌘W / ⌘0**: close/reopen the one window.
 - **File → Save Recovery Copy…**: save a separate versioned JSON snapshot when needed.
 
@@ -42,15 +45,15 @@ Saving is best-effort and runs off the typing path. The internal scheduler targe
 
 The data root is `~/Library/Application Support/Jort`, or an explicit `JORT_DATA_DIRECTORY` for development. A process holds a nonblocking OS advisory lock on `Jort.lock` for its store lifetime. A second process cannot open, recover, or write that store; different roots can run independently.
 
-Version 0.2 uses:
+Version 0.3 uses:
 
 - `Store/Jort.sqlite` plus SQLite WAL/SHM companions.
-- `Store/Recovery.json`, updated as part of a successful save.
+- `Store/Recovery-0.json` and `Store/Recovery-1.json`, with `Recovery-manifest.json` advertising verified snapshots. Each publication replaces the inactive slot and retains the prior verified slot.
 - `PreMigration-*` and `Damaged-*` diagnostic backups.
 
-The legacy root-level `Jort.sqlite`/`Recovery.json` files are preserved during migration. SQLite schema version 2 and payload envelope version 2 are separate, explicitly decoded formats. Released v1 fixtures and v2 fixtures are committed. Unknown schemas and future versions are refused without modifying the originals.
+Legacy `Jort.sqlite`/`Recovery.json` files are preserved during migration. SQLite schema version 3 and payload envelope version 3 are separate, explicitly decoded formats. Version 3 includes sorted JSON keys, a SHA-256 payload checksum, and validated attached/detached landmark records. Released v1/v2 fixtures are committed. Migration preserves valid prototype landmarks and their identities. Unknown schemas and future versions are refused without modifying the originals.
 
-Migration/recovery builds a sibling store, closes and reopens it for validation, then atomically swaps the whole directory. This keeps SQLite, WAL, SHM, and recovery state together. An old generation may also remain in `.Replacement-*` after a swap for diagnostic safety. A damaged store is never removed before a valid replacement exists.
+Migration/recovery builds a sibling store, closes and reopens it for validation, then atomically swaps the whole directory. This keeps SQLite, WAL, SHM, and recovery state together. Recovery verifies advertised checkpoints newest first and falls back to the prior slot when needed. An old generation may also remain in `.Replacement-*` after a swap for diagnostic safety. A damaged store is never removed before a valid replacement exists.
 
 The maximum serialized payload is **64 MiB**. Oversize, busy, permissions, disk, and recovery-snapshot errors remain failed saves. Any failure in the save operation keeps the live document dirty, even if SQLite itself already committed. Unsafe initial-load editing and recovery-copy import retain their previous limitations and are deferred product-design work.
 

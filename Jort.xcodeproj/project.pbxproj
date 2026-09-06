@@ -17,20 +17,26 @@
 		240CD90C57FF86496999F525 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		2831200E41E8F68BDC00FBB8 /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2FF7F79150A10933EDFDA5A0 /* v2.json in Resources */ = {isa = PBXBuildFile; fileRef = 160370B1CD4C448EA0BEF96F /* v2.json */; };
+		326DA487B403FA6E4B990AFA /* RecoveryCheckpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */; };
 		3719E1FCB30A684B366E033B /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		43B9CC41FB64E27E0135D251 /* JortUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73F5C254EE12140FB60EB69 /* JortUITests.swift */; };
+		44A382E1159D0FD45E33BA6E /* CommandPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */; };
 		4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECC95805D3B99275307225B /* EditorViewController.swift */; };
+		4B8B663D3C060E790F4FE4A7 /* EmojiPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49680FE93D310BAFEC1043AE /* EmojiPicker.swift */; };
 		568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */; };
 		5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D58BDC7B59E9928134887E3 /* StoreLock.swift */; };
+		6B61C12EF1097CD68EA35E5E /* jort-white.svg in Resources */ = {isa = PBXBuildFile; fileRef = 07D77C5D4902A6B038E693AC /* jort-white.svg */; };
 		6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		7630238FB57057423175113F /* v1.json in Resources */ = {isa = PBXBuildFile; fileRef = 857FDC8BC95B6835BA5D1921 /* v1.json */; };
 		7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD9032EA20B653B9CE85D00 /* JortApp.swift */; };
+		7E9EC478181E19848A20CBBA /* emoji.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E4A736D729EC93F968914D1 /* emoji.json */; };
 		81441D90E3E254368424329B /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9136C288B97547D76167A45 /* DocumentState.swift */; };
 		819E6BD9E4AFFEB2591D5934 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		8347474761FD76586ADA88DC /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E614086D89E52EFCC7DCED6 /* StorageTests.swift */; };
 		858E73367BB4DF9FA2DE6B18 /* LockProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD742A9E09AD22E1174BECA /* LockProbe.swift */; };
 		8C24806BE06A07370A75143A /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8F36CF2DD3DBB3F6CBF38AC3 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7CAE479DACAAE1E87A1B412E /* AppIcon.icns */; };
 		963EF4108F717821D8675420 /* DocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 890A3B619F758EFE88D70C05 /* DocumentTests.swift */; };
 		96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
@@ -39,10 +45,12 @@
 		A1F8D7ABEAC627BDB9EB4F29 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		A86E69A0E7D85AA789CDBC93 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AC7063A1F953D56D1002F25C /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		B695B5BD3B553B1747430083 /* LandmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72C38DD691618F20FA27AD87 /* LandmarkTests.swift */; };
 		B8F124A8831203C5633B1E2E /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BADD1BD1890D8951172F6F65 /* v2.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = 4EBD819547F38AB24B0FD19F /* v2.sqlite */; };
 		BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
+		D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
 		D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */; };
@@ -207,13 +215,16 @@
 /* Begin PBXFileReference section */
 		02A0A8926B0C7313854C181A /* JortPersistence.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortPersistence.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceFormat.swift; sourceTree = "<group>"; };
+		07D77C5D4902A6B038E693AC /* jort-white.svg */ = {isa = PBXFileReference; path = "jort-white.svg"; sourceTree = "<group>"; };
 		0B872610ED836A61E96ED8DA /* Transactions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transactions.swift; sourceTree = "<group>"; };
 		0F66085B030452677C1BF9B8 /* ProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTests.swift; sourceTree = "<group>"; };
 		160370B1CD4C448EA0BEF96F /* v2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v2.json; sourceTree = "<group>"; };
 		1978353FEB464E98985FE522 /* Jort.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jort.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCheckpoints.swift; sourceTree = "<group>"; };
 		1ECC95805D3B99275307225B /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
 		21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
 		3D58BDC7B59E9928134887E3 /* StoreLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreLock.swift; sourceTree = "<group>"; };
+		49680FE93D310BAFEC1043AE /* EmojiPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiPicker.swift; sourceTree = "<group>"; };
 		4EBD819547F38AB24B0FD19F /* v2.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v2.sqlite; sourceTree = "<group>"; };
 		59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		5EBF7CA0931124DB116AE610 /* JortUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -221,8 +232,10 @@
 		65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerTests.swift; sourceTree = "<group>"; };
 		6BD742A9E09AD22E1174BECA /* LockProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockProbe.swift; sourceTree = "<group>"; };
 		6DD9032EA20B653B9CE85D00 /* JortApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortApp.swift; sourceTree = "<group>"; };
+		72C38DD691618F20FA27AD87 /* LandmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandmarkTests.swift; sourceTree = "<group>"; };
 		7B13A1E275C9292115821584 /* StoreLockProbe */ = {isa = PBXFileReference; includeInIndex = 0; path = StoreLockProbe; sourceTree = BUILT_PRODUCTS_DIR; };
 		7CAE479DACAAE1E87A1B412E /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		7E4A736D729EC93F968914D1 /* emoji.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = emoji.json; sourceTree = "<group>"; };
 		836D2480566399F33F4D0E4B /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		857FDC8BC95B6835BA5D1921 /* v1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v1.json; sourceTree = "<group>"; };
 		890A3B619F758EFE88D70C05 /* DocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTests.swift; sourceTree = "<group>"; };
@@ -230,11 +243,13 @@
 		8E614086D89E52EFCC7DCED6 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
 		9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortFoundationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9F4448EA2A682199B4390618 /* JortDocument.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortDocument.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrawlLargeDocument.swift; sourceTree = "<group>"; };
 		AD6759F2DA71568CAF61B1BA /* v1.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v1.sqlite; sourceTree = "<group>"; };
 		B73F5C254EE12140FB60EB69 /* JortUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortUITests.swift; sourceTree = "<group>"; };
 		BACEB5981A7D1291606F22F4 /* EditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTests.swift; sourceTree = "<group>"; };
 		BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		C9136C288B97547D76167A45 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
+		CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPalette.swift; sourceTree = "<group>"; };
 		D7391540700D5CC6E567E4A5 /* canvas-10000.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "canvas-10000.txt"; sourceTree = "<group>"; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -317,6 +332,15 @@
 			path = Tests/AppKit;
 			sourceTree = "<group>";
 		};
+		46BD048FEACAE591BBF3CB93 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */,
+			);
+			name = Support;
+			path = Tests/Support;
+			sourceTree = "<group>";
+		};
 		552DF7F9ADC8FC1AEF127A86 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -329,6 +353,8 @@
 			isa = PBXGroup;
 			children = (
 				7CAE479DACAAE1E87A1B412E /* AppIcon.icns */,
+				7E4A736D729EC93F968914D1 /* emoji.json */,
+				DC3F19CD23523722F7D77918 /* IconSources */,
 			);
 			name = Resources;
 			path = Jort/Resources;
@@ -338,6 +364,7 @@
 			isa = PBXGroup;
 			children = (
 				890A3B619F758EFE88D70C05 /* DocumentTests.swift */,
+				72C38DD691618F20FA27AD87 /* LandmarkTests.swift */,
 				59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */,
 				5FF8341534A77B39BFA2904E /* PerformanceTests.swift */,
 				0F66085B030452677C1BF9B8 /* ProcessTests.swift */,
@@ -388,6 +415,7 @@
 				A7038EEFC224A9473B106BF9 /* JortPersistence */,
 				5D35C8E11D14DF2114B2D1CA /* Resources */,
 				044B86C9C8E05C227A7F9727 /* StoreLockProbe */,
+				46BD048FEACAE591BBF3CB93 /* Support */,
 				FF94AAA1F97DED705A0BACBE /* UI */,
 				552DF7F9ADC8FC1AEF127A86 /* Frameworks */,
 				80A8D39A7920A2352F4766D7 /* Products */,
@@ -399,6 +427,7 @@
 			children = (
 				BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */,
 				02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */,
+				1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */,
 				21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */,
 				3D58BDC7B59E9928134887E3 /* StoreLock.swift */,
 			);
@@ -416,10 +445,20 @@
 			path = Sources/JortDocument;
 			sourceTree = "<group>";
 		};
+		DC3F19CD23523722F7D77918 /* IconSources */ = {
+			isa = PBXGroup;
+			children = (
+				07D77C5D4902A6B038E693AC /* jort-white.svg */,
+			);
+			path = IconSources;
+			sourceTree = "<group>";
+		};
 		FA9CC54BF590A437452C488B /* JortAppKit */ = {
 			isa = PBXGroup;
 			children = (
+				CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */,
 				1ECC95805D3B99275307225B /* EditorViewController.swift */,
+				49680FE93D310BAFEC1043AE /* EmojiPicker.swift */,
 			);
 			name = JortAppKit;
 			path = Sources/JortAppKit;
@@ -675,6 +714,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */,
+				7E9EC478181E19848A20CBBA /* emoji.json in Resources */,
+				6B61C12EF1097CD68EA35E5E /* jort-white.svg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -717,7 +758,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				44A382E1159D0FD45E33BA6E /* CommandPalette.swift in Sources */,
 				4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */,
+				4B8B663D3C060E790F4FE4A7 /* EmojiPicker.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -752,6 +795,7 @@
 			files = (
 				12545FCDDE669EA9FAB9629A /* PersistenceController.swift in Sources */,
 				F063CAE1A119DDA229FAC6AD /* PersistenceFormat.swift in Sources */,
+				326DA487B403FA6E4B990AFA /* RecoveryCheckpoints.swift in Sources */,
 				D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */,
 				5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */,
 			);
@@ -761,6 +805,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */,
 				0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -769,7 +814,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8F36CF2DD3DBB3F6CBF38AC3 /* CrawlLargeDocument.swift in Sources */,
 				963EF4108F717821D8675420 /* DocumentTests.swift in Sources */,
+				B695B5BD3B553B1747430083 /* LandmarkTests.swift in Sources */,
 				568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */,
 				037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */,
 				F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */,
@@ -967,7 +1014,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = NO;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -981,7 +1028,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1081,7 +1128,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = NO;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -1101,7 +1148,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

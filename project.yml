@@ -9,8 +9,8 @@ settings:
     CODE_SIGNING_ALLOWED: NO
     GENERATE_INFOPLIST_FILE: YES
     MACOSX_DEPLOYMENT_TARGET: '14.0'
-    MARKETING_VERSION: 0.2.0
-    CURRENT_PROJECT_VERSION: 2
+    MARKETING_VERSION: 0.3.0
+    CURRENT_PROJECT_VERSION: 3
     ARCHS: '$(ARCHS_STANDARD)'
 targets:
   JortDocument:
@@ -46,7 +46,11 @@ targets:
     sources:
       - path: Jort/JortApp.swift
       - path: Jort/Resources
-        excludes: [IconSources]
+        excludes:
+          - IconSources/jort-black.svg
+          - IconSources/jort-color.png
+          - IconSources/jort-j-stitch-black.svg
+          - IconSources/jort-j-stitch-white.svg
     preBuildScripts:
       - name: Generate application icon
         script: 'bash "$SRCROOT/scripts/generate-icon.sh"'
@@ -90,6 +94,7 @@ targets:
     platform: macOS
     sources:
       - path: Tests/Foundation
+      - path: Tests/Support
       - path: Tests/Fixtures
         buildPhase: resources
     dependencies:
@@ -105,6 +110,7 @@ targets:
     platform: macOS
     sources:
       - path: Tests/AppKit
+      - path: Tests/Support
       - path: Tests/Fixtures/canvas-10000.txt
         buildPhase: resources
     dependencies:

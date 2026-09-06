@@ -3,11 +3,52 @@ import Foundation
 public enum DocumentError: Error, Equatable, Sendable {
     case invalidState, staleRevision(expected: Int64, actual: Int64), missingAnchor, invalidRange
 }
+public struct LandmarkID: Codable, Hashable, Sendable {
+    public let rawValue: UUID
+    public init(_ rawValue: UUID = UUID()) { self.rawValue = rawValue }
+    public init(from decoder: Decoder) throws { rawValue = try decoder.singleValueContainer().decode(UUID.self) }
+    public func encode(to encoder: Encoder) throws { var value = encoder.singleValueContainer(); try value.encode(rawValue) }
+}
 public struct Landmark: Codable, Equatable, Sendable {
-    public let id: UUID
+    public let id: LandmarkID
     public let lineID: UUID
     public let emoji: String
-    public init(id: UUID = UUID(), lineID: UUID, emoji: String) { self.id = id; self.lineID = lineID; self.emoji = emoji }
+    public let detached: Bool
+    public init(id: LandmarkID = LandmarkID(), lineID: UUID, emoji: String, detached: Bool = false) {
+        self.id = id; self.lineID = lineID; self.emoji = emoji.precomposedStringWithCanonicalMapping; self.detached = detached
+    }
+    public func attaching(to lineID: UUID) -> Landmark { Landmark(id: id, lineID: lineID, emoji: emoji) }
+    public func detaching() -> Landmark { Landmark(id: id, lineID: lineID, emoji: emoji, detached: true) }
+
+    /// Accept one presenting emoji, including keycaps, flags, modifiers and joined sequences.
+    public static func isValidEmoji(_ value: String) -> Bool {
+        guard value.count == 1 else { return false }
+        let scalars = Array(value.unicodeScalars)
+        let numbers = scalars.map(\.value)
+        if numbers.contains(0xFE0E) { return false }
+        if numbers.allSatisfy({ (0x1F1E6...0x1F1FF).contains($0) }) { return numbers.count == 2 }
+        if numbers.last == 0x20E3 {
+            return (numbers.count == 2 || numbers.count == 3 && numbers[1] == 0xFE0F) &&
+                (numbers[0] == 35 || numbers[0] == 42 || (48...57).contains(numbers[0]))
+        }
+        guard let first = scalars.first, first.properties.isEmoji || (0x1FA70...0x1FAFF).contains(first.value),
+              !(0x1F3FB...0x1F3FF).contains(first.value), !(48...57).contains(first.value), first.value != 35, first.value != 42 else { return false }
+        let parts = scalars.split(omittingEmptySubsequences: false) { $0.value == 0x200D }
+        return parts.allSatisfy { part in
+            let s = Array(part)
+            guard let base = s.first, base.properties.isEmoji || (0x1FA70...0x1FAFF).contains(base.value),
+                  !(0x1F3FB...0x1F3FF).contains(base.value),
+                  base.properties.isEmojiPresentation || (0x1FA70...0x1FAFF).contains(base.value) || s.dropFirst().first?.value == 0xFE0F else { return false }
+            var modifier = false, variation = false
+            for scalar in s.dropFirst() {
+                if scalar.value == 0xFE0F, !variation, !modifier { variation = true }
+                else if (0x1F3FB...0x1F3FF).contains(scalar.value), base.properties.isEmojiModifierBase, !modifier { modifier = true }
+                else if base.value == 0x1F3F4, (0xE0020...0xE007F).contains(scalar.value), s.last?.value == 0xE007F { continue }
+                else { return false }
+            }
+            return true
+        }
+    }
 }
 public struct DocumentSnapshot: Equatable, Sendable {
     public let documentID: UUID
@@ -16,11 +57,20 @@ public struct DocumentSnapshot: Equatable, Sendable {
     public let lines: [LineMeta]
     public let landmarks: [Landmark]
     public init(documentID: UUID = UUID(), text: String = "", revision: Int64 = 0, lines: [LineMeta] = [LineMeta(location: 0, length: 0)], landmarks: [Landmark] = []) {
-        self.documentID = documentID; self.text = text; self.revision = revision; self.lines = lines; self.landmarks = landmarks
+        self.documentID = documentID; self.text = text; self.revision = revision; self.lines = lines
+        if landmarks.isEmpty { self.landmarks = []; return }
+        var order: [UUID: Int] = [:]
+        for (index, line) in lines.enumerated() { order[line.id] = index }
+        self.landmarks = landmarks.sorted {
+            let a = $0.detached ? Int.max : order[$0.lineID] ?? Int.max
+            let b = $1.detached ? Int.max : order[$1.lineID] ?? Int.max
+            return a == b ? $0.id.rawValue.uuidString < $1.id.rawValue.uuidString : a < b
+        }
     }
     public func validate() throws { try liveState.validate() }
     var liveState: DocumentState { DocumentState(documentID: documentID, landmarks: landmarks, text: text, revision: revision, lines: lines) }
-    public func isDetached(_ landmark: Landmark) -> Bool { !lines.contains { $0.id == landmark.lineID } }
+    public func isDetached(_ landmark: Landmark) -> Bool { landmark.detached || !lines.contains { $0.id == landmark.lineID } }
+    public var orderedLandmarks: [Landmark] { landmarks }
 }
 public enum MutationOrigin: String, Sendable { case native, undo, redo, metadata, restore, automation }
 public enum UndoPolicy: Sendable { case register, replay, none }
@@ -28,7 +78,8 @@ public enum DocumentMutation: Sendable {
     case edit(text: String, range: NSRange?, replacementLength: Int?)
     case restore(DocumentSnapshot)
     case landmark(Landmark)
-    case removeLandmark(UUID)
+    case removeLandmark(LandmarkID)
+    case clearLandmarks
     case insertAfter(lineID: UUID, text: String)
 }
 public struct DocumentTransaction: Sendable {
@@ -84,9 +135,10 @@ public struct TransactionResult: Sendable {
             guard snapshot.documentID == state.documentID else { throw DocumentError.invalidState }
             next = snapshot.liveState
         case .landmark(let landmark):
-            guard state.lines.contains(where: { $0.id == landmark.lineID }) else { throw DocumentError.missingAnchor }
+            guard !landmark.detached, state.lines.contains(where: { $0.id == landmark.lineID }) else { throw DocumentError.missingAnchor }
             next.landmarks.removeAll { $0.id == landmark.id }; next.landmarks.append(landmark)
         case .removeLandmark(let id): next.landmarks.removeAll { $0.id == id }
+        case .clearLandmarks: next.landmarks.removeAll()
         case .insertAfter(let id, let text):
             guard let line = state.lines.first(where: { $0.id == id }) else { throw DocumentError.missingAnchor }
             let offset = line.location + line.length

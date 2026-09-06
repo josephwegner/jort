@@ -35,12 +35,13 @@ final class SchedulerTests: XCTestCase {
         controller.onState = nil
         let count = await store.writes; XCTAssertEqual(count, 4)
         try owner.apply(.init(baseRevision: 1, origin: .native, mutation: .edit(text: "keep newest", range: nil, replacementLength: nil)))
+        try owner.apply(.init(baseRevision: 2, origin: .metadata, mutation: .landmark(Landmark(lineID: owner.snapshot.lines[0].id, emoji: "🌲"))))
         controller.changed(owner.snapshot)
         try await Task.sleep(for: .milliseconds(650))
         let quietCount = await store.writes; XCTAssertEqual(quietCount, 4)
         await store.setFailing(false)
         let saved = expectation(description: "Manual retry")
-        controller.onState = { if case .clean(committed: 2) = $0 { saved.fulfill() } }
+        controller.onState = { if case .clean(committed: 3) = $0 { saved.fulfill() } }
         controller.retry(); await fulfillment(of: [saved], timeout: 5)
         let actual = await store.saved; XCTAssertEqual(actual, owner.snapshot)
     }

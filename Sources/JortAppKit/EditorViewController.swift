@@ -33,6 +33,8 @@ import JortPersistence
     private var ready = false
     private var pendingEdit: (NSRange, Int)?
     private var ruler: LineRuler!
+    private(set) var palette: CommandPalette?
+    private var emojiPicker: EmojiPicker?
     public var saveStatus: ((PersistenceState) -> Void)?
 
     public init(persistence: PersistenceController) { self.persistence = persistence; super.init(nibName: nil, bundle: nil) }
@@ -81,10 +83,26 @@ import JortPersistence
         textView.typingAttributes = [.font: textView.font!, .foregroundColor: textView.textColor!, .paragraphStyle: paragraph]
         textView.setAccessibilityLabel("Jort document")
         textView.setAccessibilityHelp("Your private plain text canvas. Changes save automatically on this Mac.")
+        coordinator = try! DocumentCoordinator(snapshot: unloaded)
         textView.delegate = self
-        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isEditable = true
+        ready = true
         scroll.documentView = textView
         ruler = LineRuler(scrollView: scroll, textView: textView)
+        ruler.onEdit = { [weak self] id in self?.chooseLandmark(on: id) }
+        ruler.onNavigate = { [weak self] id in self?.navigate(to: id) }
+        ruler.onClear = { [weak self] id in
+            guard let self, let landmark = self.state.landmarks.first(where: { !$0.detached && $0.lineID == id }) else { return }
+            self.mutateLandmark(.removeLandmark(landmark.id))
+        }
+        ruler.onClearAll = { [weak self] in self?.mutateLandmark(.clearLandmarks) }
+        ruler.onMove = { [weak self] id in
+            guard let self, let target = self.currentLineID,
+                  !self.state.landmarks.contains(where: { !$0.detached && $0.lineID == target }),
+                  let landmark = self.state.landmarks.first(where: { !$0.detached && $0.lineID == id }) else { return }
+            self.mutateLandmark(.landmark(landmark.attaching(to: target)))
+        }
         scroll.verticalRulerView = ruler
         scroll.hasVerticalRuler = true
         scroll.rulersVisible = true
@@ -118,9 +136,13 @@ import JortPersistence
         persistence.load { [weak self] result in
             guard let self else { return }
             if case .success(let snapshot) = result {
-                self.coordinator = try! DocumentCoordinator(snapshot: snapshot, committed: true)
-                self.textView.string = snapshot.text
-            } else { self.coordinator = try! DocumentCoordinator(snapshot: self.unloaded) }
+                if self.state == self.unloaded {
+                    self.coordinator = try! DocumentCoordinator(snapshot: snapshot, committed: true)
+                    self.textView.string = snapshot.text
+                } else {
+                    self.persistence.changed(self.state)
+                }
+            }
             self.coordinator.onTransaction = { [weak self] result in
                 guard let self else { return }
                 if result.transaction.origin != .native && result.transaction.undoPolicy == .register {
@@ -130,11 +152,14 @@ import JortPersistence
                     self.display(result, selection: self.textView.selectedRange(), preserveAnchors: true)
                 }
                 self.ruler.lines = result.after.lines
+                self.ruler.landmarks = result.after.landmarks
+                self.palette?.actions = self.paletteActions()
+                self.palette?.reload()
                 self.persistence.changed(result.after)
+                if result.before.landmarks != result.after.landmarks, self.persistence.status.failure == nil { self.persistence.flush() }
             }
             self.ruler.lines = self.state.lines
-            self.textView.isEditable = true
-            self.ready = true
+            self.ruler.landmarks = self.state.landmarks
             self.textView.history.removeAllActions()
             self.view.window?.makeFirstResponder(self.textView)
         }
@@ -243,6 +268,108 @@ import JortPersistence
         if persistence.status.permitsRetry { persistence.retry() }
         else { saveRecoveryCopy() }
     }
+    var currentLineID: UUID? {
+        guard ready else { return nil }
+        return state.lines.last { $0.location <= textView.selectedRange().location }?.id
+    }
+    private var canPresent: Bool {
+        ready && !textView.hasMarkedText() && (view.window?.firstResponder as? NSTextView)?.hasMarkedText() != true &&
+            emojiPicker == nil && view.window?.attachedSheet == nil
+    }
+    @objc public func showCommandPalette() {
+        guard canPresent, palette == nil, let window = view.window else { return }
+        let selection = textView.selectedRange(), viewport = scroll.contentView.bounds.origin
+        let responder = window.firstResponder
+        let palette = CommandPalette(parent: window); self.palette = palette
+        palette.present(actions: paletteActions()) { [weak self, weak window, weak responder] in
+            guard let self else { return }
+            self.textView.setSelectedRange(selection)
+            self.scroll.contentView.scroll(to: viewport)
+            window?.makeKeyAndOrderFront(nil)
+            window?.makeFirstResponder(responder ?? self.textView)
+            self.palette = nil
+        }
+    }
+    @objc public func toggleLandmarkMode() { ruler.landmarkMode.toggle() }
+    @objc public func addOrChangeLandmark() { if let id = currentLineID { chooseLandmark(on: id) } }
+    @objc public func clearCurrentLandmark() {
+        guard let id = currentLineID, let landmark = state.landmarks.first(where: { !$0.detached && $0.lineID == id }) else { return }
+        mutateLandmark(.removeLandmark(landmark.id))
+    }
+    func mutateLandmark(_ mutation: DocumentMutation) {
+        guard ready, !textView.hasMarkedText() else { return }
+        textView.history.beginUndoGrouping()
+        defer { textView.history.endUndoGrouping() }
+        do { try apply(.init(baseRevision: state.revision, origin: .metadata, mutation: mutation)) }
+        catch { notice.stringValue = "This landmark is no longer available. Choose a current line."; notice.isHidden = false }
+    }
+    func chooseLandmark(on id: UUID) {
+        guard canPresent, let window = view.window, state.lines.contains(where: { $0.id == id }) else { return }
+        let landmark = state.landmarks.first { !$0.detached && $0.lineID == id }
+        let selection = textView.selectedRange(), viewport = scroll.contentView.bounds.origin
+        let picker = EmojiPicker(parent: window, emoji: landmark?.emoji); emojiPicker = picker
+        picker.commit = { [weak self] emoji in
+            guard let self else { return }
+            self.mutateLandmark(.landmark(Landmark(id: landmark?.id ?? LandmarkID(), lineID: id, emoji: emoji)))
+            self.ruler.refreshControls()
+            self.ruler.needsDisplay = true
+        }
+        picker.clear = { [weak self] in
+            guard let self, let landmark else { return }
+            self.mutateLandmark(.removeLandmark(landmark.id))
+            self.ruler.refreshControls()
+            self.ruler.needsDisplay = true
+        }
+        picker.finished = { [weak self] in
+            guard let self else { return }; self.emojiPicker = nil
+            self.textView.setSelectedRange(selection); self.scroll.contentView.scroll(to: viewport)
+            self.view.window?.makeFirstResponder(self.textView)
+        }
+        let anchor = ruler.frame(for: id) ?? NSRect(x: 0, y: ruler.bounds.minY + 24, width: ruler.ruleThickness, height: 24)
+        picker.present(relativeTo: anchor, in: ruler)
+    }
+    func navigate(to id: UUID) {
+        guard !textView.hasMarkedText(), let line = state.lines.first(where: { $0.id == id }) else { return }
+        let range = NSRange(location: line.location, length: 0)
+        textView.setSelectedRange(range); textView.scrollRangeToVisible(range)
+        view.window?.makeFirstResponder(textView)
+    }
+    @objc public func nextLandmark() { navigateLandmark(direction: 1) }
+    @objc public func previousLandmark() { navigateLandmark(direction: -1) }
+    private func navigateLandmark(direction: Int) {
+        let ids = Set(state.landmarks.filter { !$0.detached }.map(\.lineID))
+        let lines = state.lines.filter { ids.contains($0.id) }, location = textView.selectedRange().location
+        let destination = direction > 0 ? (lines.first { $0.location > location } ?? lines.first) : (lines.last { $0.location < location } ?? lines.last)
+        if let destination { navigate(to: destination.id) }
+    }
+    func paletteActions() -> [PaletteAction] {
+        var actions = [
+            PaletteAction(id: "landmark.edit", title: "Add or Change Landmark", keywords: "emoji bookmark", enabled: { [weak self] in self?.currentLineID != nil }, execute: { [weak self] in self?.addOrChangeLandmark() }),
+            PaletteAction(id: "landmark.clear", title: "Clear Landmark at Current Line", enabled: { [weak self] in
+                guard let self, let id = self.currentLineID else { return false }; return self.state.landmarks.contains { !$0.detached && $0.lineID == id }
+            }, execute: { [weak self] in self?.clearCurrentLandmark() }),
+            PaletteAction(id: "landmark.next", title: "Scroll to Next Landmark", enabled: { [weak self] in self?.state.landmarks.contains { !$0.detached } == true }, execute: { [weak self] in self?.nextLandmark() }),
+            PaletteAction(id: "landmark.previous", title: "Scroll to Last Landmark", keywords: "previous", enabled: { [weak self] in self?.state.landmarks.contains { !$0.detached } == true }, execute: { [weak self] in self?.previousLandmark() })
+        ]
+        let ordinals = Dictionary(uniqueKeysWithValues: state.lines.enumerated().map { ($0.element.id, $0.offset + 1) })
+        for landmark in state.orderedLandmarks {
+            let identity = landmark.id.rawValue.uuidString
+            let label = landmark.detached ? "\(landmark.emoji) detached \(identity.prefix(8))" : "\(landmark.emoji) line \(ordinals[landmark.lineID] ?? 0)"
+            if !landmark.detached {
+                actions.append(PaletteAction(id: "navigate.\(identity)", title: "Go to \(label)", keywords: "landmark", execute: { [weak self] in self?.navigate(to: landmark.lineID) }))
+            }
+            actions.append(PaletteAction(id: "move.\(identity)", title: "Move \(label) to Current Line", keywords: "resolve repair landmark", enabled: { [weak self] in
+                guard let self, let id = self.currentLineID else { return false }
+                return self.state.landmarks.contains { $0.id == landmark.id } && !self.state.landmarks.contains { !$0.detached && $0.lineID == id }
+            }, execute: { [weak self] in
+                guard let self, let id = self.currentLineID else { return }; self.mutateLandmark(.landmark(landmark.attaching(to: id)))
+            }))
+            if landmark.detached {
+                actions.append(PaletteAction(id: "delete.\(identity)", title: "Delete \(label)", keywords: "resolve clear landmark", execute: { [weak self] in self?.mutateLandmark(.removeLandmark(landmark.id)) }))
+            }
+        }
+        return actions
+    }
     @objc public func saveRecoveryCopy() {
         guard let window = view.window else { return }
         let panel = NSSavePanel()
@@ -269,17 +396,103 @@ import JortPersistence
 @MainActor public final class LineRuler: NSRulerView {
     weak var editor: NSTextView?
     var lines: [LineMeta] = [] { didSet { needsDisplay = true } }
+    var landmarks: [Landmark] = [] { didSet { rebuildIndex(); refreshControls(); needsDisplay = true } }
+    var landmarkMode = false { didSet { indexOffset = 0; scrollAccumulator = 0; modeButton.isActive = landmarkMode; refreshControls(); needsDisplay = true } }
+    var onEdit: ((UUID) -> Void)?
+    var onNavigate: ((UUID) -> Void)?
+    var onClear: ((UUID) -> Void)?
+    var onClearAll: (() -> Void)?
+    var onMove: ((UUID) -> Void)?
+    private var index: [(id: UUID, emoji: String, number: Int)] = []
+    private var emojiByLine: [UUID: String] = [:]
+    private var indexOffset = 0
+    private var scrollAccumulator: CGFloat = 0
+    private let modeButton = LandmarkModeButton(title: "", target: nil, action: nil)
+    private let clearButton = LandmarkClearButton(title: "Clear", target: nil, action: nil)
+    private var entryButtons: [NSButton] = []
+    private var hits: [(id: UUID, frame: NSRect)] = []
     init(scrollView: NSScrollView, textView: NSTextView) {
         editor = textView
         super.init(scrollView: scrollView, orientation: .verticalRuler)
         clientView = textView
         ruleThickness = 48
+        clipsToBounds = true
+        modeButton.target = self; modeButton.action = #selector(toggleMode)
+        modeButton.isBordered = false
+        modeButton.setAccessibilityLabel("Toggle landmark navigation mode")
+        modeButton.toolTip = "Toggle landmark navigation mode"
+        addSubview(modeButton)
+        clearButton.target = self; clearButton.action = #selector(clearAll)
+        clearButton.isBordered = false
+        clearButton.font = .systemFont(ofSize: 10)
+        clearButton.setAccessibilityLabel("Clear all landmarks")
+        clearButton.toolTip = "Clear all landmarks"
+        clearButton.isHidden = true
+        addSubview(clearButton)
         scrollView.contentView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(self, selector: #selector(update), name: NSView.boundsDidChangeNotification, object: scrollView.contentView)
     }
     public required init(coder: NSCoder) { fatalError() }
     deinit { NotificationCenter.default.removeObserver(self) }
-    @objc private func update() { needsDisplay = true }
+    @objc private func update() { refreshControls(); needsDisplay = true }
+    public override func layout() { super.layout(); refreshControls() }
+    @objc private func toggleMode() { landmarkMode.toggle() }
+    @objc private func clearAll() {
+        onClearAll?()
+        landmarkMode = false
+    }
+    private func rebuildIndex() {
+        emojiByLine = Dictionary(uniqueKeysWithValues: landmarks.filter { !$0.detached }.map { ($0.lineID, $0.emoji) })
+        index = lines.enumerated().compactMap { position, line in emojiByLine[line.id].map { (line.id, $0, position + 1) } }
+    }
+    public override func scrollWheel(with event: NSEvent) {
+        guard landmarkMode else { super.scrollWheel(with: event); return }
+        guard event.momentumPhase.isEmpty else { return }
+        if event.phase == .began { scrollAccumulator = 0 }
+        let capacity = max(1, Int((bounds.height - 52) / 28))
+        let delta = event.hasPreciseScrollingDeltas ? -event.scrollingDeltaY : -event.scrollingDeltaY * 28
+        scrollAccumulator += delta
+        let rows = Int(scrollAccumulator / 28)
+        guard rows != 0 else { return }
+        scrollAccumulator -= CGFloat(rows * 28)
+        indexOffset = max(0, min(max(0, index.count - capacity), indexOffset + rows))
+        refreshControls(); needsDisplay = true
+    }
+    public override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        if let hit = hits.first(where: { $0.frame.contains(point) }) {
+            if landmarkMode {
+                landmarkMode = false
+                onNavigate?(hit.id)
+            } else { onEdit?(hit.id) }
+        }
+    }
+    @objc private func activateEntry(_ sender: NSButton) {
+        guard hits.indices.contains(sender.tag) else { return }
+        let id = hits[sender.tag].id
+        if landmarkMode {
+            landmarkMode = false
+            onNavigate?(id)
+        } else { onEdit?(id) }
+    }
+    public override func menu(for event: NSEvent) -> NSMenu? {
+        let point = convert(event.locationInWindow, from: nil)
+        guard let hit = hits.first(where: { $0.frame.contains(point) }) else { return nil }
+        return menu(for: hit.id)
+    }
+    private func menu(for id: UUID) -> NSMenu {
+        let menu = NSMenu()
+        let marked = emojiByLine[id] != nil
+        for (title, action) in [(marked ? "Change Landmark…" : "Add Landmark…", #selector(editEntry(_:)))] +
+            (marked ? [("Clear Landmark", #selector(clearEntry(_:))), ("Move Landmark to Current Line", #selector(moveEntry(_:)))] : []) {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            item.target = self; item.representedObject = id; menu.addItem(item)
+        }
+        return menu
+    }
+    @objc private func editEntry(_ item: NSMenuItem) { if let id = item.representedObject as? UUID { onEdit?(id) } }
+    @objc private func clearEntry(_ item: NSMenuItem) { if let id = item.representedObject as? UUID { onClear?(id) } }
+    @objc private func moveEntry(_ item: NSMenuItem) { if let id = item.representedObject as? UUID { onMove?(id) } }
     /// Coordinates are in the text container; include the extra, zero-length EOF row.
     public func visibleRows() -> [(number: Int, y: CGFloat)] {
         guard let editor else { return [] }
@@ -308,13 +521,111 @@ import JortPersistence
     public override func drawHashMarksAndLabels(in rect: NSRect) {
         NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1).setFill()
         NSRect(x: 0, y: rect.minY, width: ruleThickness, height: rect.height).fill()
-        guard let editor else { return }
+        refreshControls()
+        guard !landmarkMode, let editor else { return }
         let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular), .foregroundColor: NSColor.secondaryLabelColor]
         for row in visibleRows() {
+            guard lines.indices.contains(row.number - 1), emojiByLine[lines[row.number - 1].id] == nil else { continue }
             let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
+            guard point.y >= bounds.minY + 24 else { continue }
             let label = "\(row.number)" as NSString
             let size = label.size(withAttributes: attrs)
-            label.draw(at: NSPoint(x: ruleThickness - size.width - 10, y: point.y + 5), withAttributes: attrs)
+            label.draw(at: NSPoint(x: (ruleThickness - size.width) / 2, y: point.y + 7), withAttributes: attrs)
         }
+    }
+    func refreshControls() {
+        guard let editor else { return }
+        modeButton.frame = NSRect(x: 4, y: bounds.minY + 5, width: 40, height: 14)
+        modeButton.setAccessibilityValue(landmarkMode ? "Landmark index" : "Line numbers")
+        clearButton.frame = NSRect(x: 4, y: bounds.maxY - 24, width: 40, height: 20)
+        clearButton.isHidden = !landmarkMode
+        clearButton.isEnabled = !landmarks.isEmpty
+        var entries: [(id: UUID, label: String, number: Int, frame: NSRect)] = []
+        hits = []
+        if landmarkMode {
+            let capacity = max(1, Int((bounds.height - 52) / 28))
+            indexOffset = min(indexOffset, max(0, index.count - capacity))
+            for (offset, row) in index.dropFirst(indexOffset).prefix(capacity).enumerated() {
+                entries.append((row.id, row.emoji, row.number, NSRect(x: 4, y: bounds.minY + 28 + CGFloat(offset * 28), width: 40, height: 28)))
+            }
+        }
+        for row in landmarkMode ? [] : visibleRows() {
+            guard lines.indices.contains(row.number - 1) else { continue }
+            let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
+            guard point.y >= bounds.minY + 24 else { continue }
+            let id = lines[row.number - 1].id
+            let frame = NSRect(x: (ruleThickness - 24) / 2, y: point.y + 2, width: 24, height: 24)
+            if let emoji = emojiByLine[id] { entries.append((id, emoji, row.number, frame)); continue }
+            hits.append((id, frame))
+        }
+        while entryButtons.count > entries.count { entryButtons.removeLast().removeFromSuperview() }
+        while entryButtons.count < entries.count {
+            let button = LandmarkEntryButton(title: "", target: self, action: #selector(activateEntry(_:)))
+            button.isBordered = false; button.font = .systemFont(ofSize: 11)
+            addSubview(button); entryButtons.append(button)
+        }
+        for (position, entry) in entries.enumerated() {
+            let button = entryButtons[position]
+            button.frame = entry.frame; button.title = entry.label
+            button.menu = menu(for: entry.id)
+            button.tag = hits.count; hits.append((entry.id, entry.frame))
+            let name = "\(entry.label), line \(entry.number), \(landmarkMode ? "navigate" : "change landmark")"
+            button.setAccessibilityLabel(name)
+            if landmarkMode, lines.indices.contains(entry.number - 1) {
+                let line = lines[entry.number - 1]
+                button.toolTip = (editor.string as NSString)
+                    .substring(with: NSRange(location: line.location, length: line.length))
+                    .trimmingCharacters(in: .newlines)
+            } else {
+                button.toolTip = name
+            }
+        }
+    }
+    func frame(for id: UUID) -> NSRect? { hits.first(where: { $0.id == id })?.frame }
+}
+
+@MainActor private final class LandmarkModeButton: NSButton {
+    var isActive = false { didSet { needsDisplay = true } }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        let outline = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let path = NSBezierPath(roundedRect: outline, xRadius: 5, yRadius: 5)
+        if isActive {
+            NSColor.secondaryLabelColor.withAlphaComponent(0.8).setFill()
+            path.fill()
+        } else {
+            NSColor.secondaryLabelColor.withAlphaComponent(0.65).setStroke()
+            path.lineWidth = 1
+            path.stroke()
+        }
+    }
+}
+
+@MainActor private final class LandmarkEntryButton: NSButton {
+    override func draw(_ dirtyRect: NSRect) {
+        let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: 11)]
+        let label = title as NSString
+        let size = label.size(withAttributes: attributes)
+        label.draw(at: NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2), withAttributes: attributes)
+    }
+}
+
+@MainActor private final class LandmarkClearButton: NSButton {
+    override func draw(_ dirtyRect: NSRect) {
+        let warning = NSColor(srgbRed: 0xCD / 255, green: 0xA9 / 255, blue: 0x77 / 255, alpha: isEnabled ? 1 : 0.4)
+        let outline = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let path = NSBezierPath(roundedRect: outline, xRadius: 4, yRadius: 4)
+        warning.setStroke()
+        path.lineWidth = 1
+        path.stroke()
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font ?? NSFont.systemFont(ofSize: 10),
+            .foregroundColor: warning
+        ]
+        let label = title as NSString
+        let size = label.size(withAttributes: attributes)
+        label.draw(at: NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2), withAttributes: attributes)
     }
 }

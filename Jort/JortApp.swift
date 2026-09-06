@@ -23,7 +23,9 @@ enum JortApp {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
         let override = ProcessInfo.processInfo.environment["JORT_DATA_DIRECTORY"]
-        let directory = override.map { URL(fileURLWithPath: $0) } ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Jort", isDirectory: true)
+        let installed = Bundle.main.bundleURL.path.hasPrefix("/Applications/")
+        let storeName = installed ? "Jort" : "Jort Development"
+        let directory = override.map { URL(fileURLWithPath: $0) } ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(storeName, isDirectory: true)
         persistence = PersistenceController(directory: directory)
         editor = EditorViewController(persistence: persistence)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 680), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
@@ -40,6 +42,17 @@ enum JortApp {
         window.titlebarAppearsTransparent = true
         window.backgroundColor = NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1)
         window.contentViewController = editor
+        let paletteAccessory = NSTitlebarAccessoryViewController()
+        let paletteButton = NSButton(image: commandPaletteIcon(), target: editor, action: #selector(EditorViewController.showCommandPalette))
+        paletteButton.isBordered = false
+        paletteButton.setAccessibilityLabel("Open Pocket")
+        paletteButton.toolTip = "Pocket (⌘K)"
+        paletteButton.imageScaling = .scaleProportionallyDown
+        paletteButton.frame = NSRect(x: 0, y: 0, width: 38, height: 28)
+        let paletteContainer = NSView(frame: NSRect(x: 0, y: 0, width: 46, height: 28))
+        paletteContainer.addSubview(paletteButton)
+        paletteAccessory.view = paletteContainer; paletteAccessory.layoutAttribute = .right
+        window.addTitlebarAccessoryViewController(paletteAccessory)
         window.setContentSize(NSSize(width: 920, height: 680))
         window.delegate = self
         if !window.setFrameUsingName("JortCanvas") { window.center() }
@@ -114,8 +127,6 @@ enum JortApp {
         app.addItem(.separator())
         add(app, "Quit Jort", #selector(NSApplication.terminate(_:)), "q")
         let file = submenu("File")
-        add(file, "Save Now", #selector(EditorViewController.save), "s", editor)
-        add(file, "Save Recovery Copy…", #selector(EditorViewController.saveRecoveryCopy), "", editor)
         add(file, "Close Window", #selector(NSWindow.performClose(_:)), "w")
         let edit = submenu("Edit")
         add(edit, "Undo", #selector(JortTextView.undo(_:)), "z")
@@ -128,10 +139,23 @@ enum JortApp {
         add(edit, "Select All", #selector(NSText.selectAll(_:)), "a")
         edit.addItem(.separator())
         add(edit, "Find…", #selector(find), "f", self)
+        let navigation = submenu("Navigate")
+        add(navigation, "Pocket…", #selector(EditorViewController.showCommandPalette), "k", editor)
+        add(navigation, "Add or Change Landmark…", #selector(EditorViewController.addOrChangeLandmark), "", editor)
+        add(navigation, "Clear Landmark", #selector(EditorViewController.clearCurrentLandmark), "", editor)
+        add(navigation, "Scroll to Next Landmark", #selector(EditorViewController.nextLandmark), "", editor)
+        add(navigation, "Scroll to Last Landmark", #selector(EditorViewController.previousLandmark), "", editor)
         let windowMenu = submenu("Window")
         add(windowMenu, "Show Jort", #selector(showWindow), "0", self)
         add(windowMenu, "Minimize", #selector(NSWindow.performMiniaturize(_:)), "m")
         NSApp.windowsMenu = windowMenu
         NSApp.mainMenu = main
+    }
+    private func commandPaletteIcon() -> NSImage {
+        guard let url = Bundle.main.url(forResource: "jort-white", withExtension: "svg"), let image = NSImage(contentsOf: url) else {
+            return NSImage(systemSymbolName: "command", accessibilityDescription: "Open Pocket")!
+        }
+        image.size = NSSize(width: 20, height: 21)
+        return image
     }
 }

@@ -4,7 +4,7 @@ Crawl provides one canonical LF plain-text document, stable `LineID` values, met
 
 Landmarks are the first durable metadata beyond timestamps. Their main risk is not emoji rendering; it is preserving user intent when edits split, join, replace, delete, undo, or redo the anchored line. The palette is deliberately a small application-action surface so later changes can register history, search, tools, and agents without adding permanent chrome.
 
-This change depends on the completed and archived `build-jort-crawl-editor` change.
+This change builds on the shipped Crawl implementation. Its older planning checklist and release qualification are not treated as evidence that every original Crawl gate passed.
 
 ## Goals / Non-Goals
 
@@ -58,7 +58,11 @@ Alternative considered: hard-coding palette rows in the view. A registry is only
 
 ### 5. Migrate current-state persistence without creating history
 
-The snapshot schema gains ordered landmark records, including detached state. Migration from Crawl creates an empty landmark collection and retains the same document and line identities. Text, line metadata, and landmarks commit and verify as one current generation; the two rotating operational checkpoints include the same complete state. Landmark mutations force an immediate persistence request but do not create retained revisions.
+The snapshot schema gains validated, ordered landmark records, including explicit detached state. Migration from Crawl retains document and line identities and preserves existing valid prototype landmarks; a store without landmarks starts with an empty collection. Invalid legacy metadata is refused with its originals preserved. Text, line metadata, and landmarks commit and verify as one current generation. Walk introduces two rotating operational checkpoints in place of the shipped single `Recovery.json`: publish and sync the inactive slot, verify it, then atomically publish and sync its manifest entry. Recovery considers only advertised, verified slots, newest first, and can fall back to the prior slot. Legacy recovery files remain readable during migration. Landmark mutations force an immediate persistence request but do not create retained revisions.
+
+Checkpoint publication remains part of successful saving, preserving the shipped rule that a failure at any save stage leaves the live generation dirty and retryable. This deliberately supersedes the original Crawl proposal's independent checkpoint-failure policy. Checkpoints are serialized on the storage actor with coalesced saves; Walk does not add an independent checkpoint timer.
+
+The landmark index scrolls independently when its rows exceed the viewport. Moving or resolving a landmark targets the current caret line and is disabled when another landmark occupies that line. Detached entries offer explicit move-to-current-line and delete actions, identified by emoji and original line identity when needed to distinguish duplicates.
 
 Unsupported newer schemas and migration failures follow Crawl's preservation and recovery rules. No palette registry data is persisted.
 
@@ -68,11 +72,11 @@ Unsupported newer schemas and migration failures follow Crawl's preservation and
 - **Split/join behavior can surprise users** -> Use `LineID` inheritance, explicit detachment for ambiguity, and exact undo/redo tests rather than nearest-line guessing.
 - **Landmark mode can trigger whole-document layout** -> Order landmarks from document metadata and resolve only the selected line; never enumerate TextKit layout for the entire document.
 - **Palette focus can interfere with native Find or IME** -> Do not open during active marked-text composition; preserve and restore the previous responder and selection.
-- **Snapshot growth increases write cost** -> Landmark records are bounded by logical-line count and remain in coalesced current-state writes; retain Crawl storage and latency benchmarks.
+- **Snapshot growth increases write cost** -> Attached records are bounded by logical-line count; detached records remain until explicit deletion. The existing 64 MiB envelope limit applies to the complete state. Retain coalesced writes and Crawl storage and latency benchmarks.
 
 ## Migration Plan
 
-1. Require a completed Crawl store and add a versioned migration that introduces an empty landmark collection without changing text or `LineID` values.
+1. Add a versioned migration from the shipped Crawl store that validates and preserves prototype landmarks without changing text or `LineID` values.
 2. Deploy landmark model and persistence support before enabling gutter mutation controls.
 3. Enable gutter modes and palette actions after migration, undo, accessibility, and performance tests pass.
 4. On rollback, an older build must preserve and refuse the newer schema rather than dropping landmark metadata.

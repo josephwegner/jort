@@ -1,7 +1,7 @@
 import XCTest
 import Foundation
 import Darwin
-import JortPersistence
+@testable import JortPersistence
 
 final class ProcessTests: XCTestCase {
     private var executable: URL {
@@ -31,8 +31,8 @@ final class ProcessTests: XCTestCase {
         afterCrash.waitUntilExit(); XCTAssertEqual(afterCrash.terminationStatus, 0)
         let (reopened, reopenedOutput) = try launch(root, mode: "store")
         XCTAssertTrue(String(decoding: reopenedOutput.fileHandleForReading.availableData, as: UTF8.self).contains("OWNED"))
-        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("Store/Recovery.json"))) as? [String: Any])
-        XCTAssertEqual((json["document"] as? [String: Any])?["content"] as? String, "process save")
+        let checkpoint = try RecoveryCheckpoints(directory: root.appendingPathComponent("Store"), inject: { _ in }).recover()
+        XCTAssertEqual(checkpoint.text, "process save")
         kill(reopened.processIdentifier, SIGKILL); reopened.waitUntilExit()
     }
     func testDifferentStoresHaveIndependentProcessOwners() throws {
@@ -41,5 +41,26 @@ final class ProcessTests: XCTestCase {
         let (b, _) = try launch(base.appendingPathComponent("OwnerB-\(UUID())"), mode: "lock")
         a.waitUntilExit(); b.waitUntilExit()
         XCTAssertEqual(a.terminationStatus, 0); XCTAssertEqual(b.terminationStatus, 0)
+    }
+    func testOneHundredCheckpointWriterCrashes() async throws {
+        for iteration in 0..<100 {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("WalkCrash-\(UUID())")
+            let (writer, pipe) = try launch(root, mode: "crash")
+            var acknowledged: Int64 = 0
+            for _ in 0..<(1 + (iteration * 37) % 7) {
+                var bytes = Data()
+                while let byte = try pipe.fileHandleForReading.read(upToCount: 1), !byte.isEmpty {
+                    if byte[0] == 10 { break }; bytes.append(byte)
+                }
+                acknowledged = try XCTUnwrap(Int64(String(decoding: bytes, as: UTF8.self)))
+            }
+            kill(writer.processIdentifier, SIGKILL); writer.waitUntilExit()
+            let store = SQLiteStore(directory: root)
+            let restored = try await store.load()
+            XCTAssertGreaterThanOrEqual(restored.revision, acknowledged)
+            XCTAssertEqual(restored.landmarks.count, 1)
+            try restored.validate()
+            try await store.close()
+        }
     }
 }

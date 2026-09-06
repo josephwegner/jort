@@ -93,6 +93,21 @@ Jort SHALL include attached and detached landmark records in the versioned curre
 - **WHEN** Jort first opens a verified Crawl schema that contains no landmark collection
 - **THEN** it migrates to an empty landmark collection without changing canonical text, document identity, or line identities
 
+#### Scenario: Crawl contains prototype landmarks
+- **WHEN** a Crawl store contains valid prototype landmark records
+- **THEN** migration preserves their identities, emoji, and attachments, including detached references
+- **AND** malformed metadata causes preservation and refusal rather than silent removal
+
+#### Scenario: The newest recovery checkpoint is damaged
+- **WHEN** the primary store cannot be recovered and the newest advertised checkpoint fails verification
+- **THEN** Jort attempts the previous advertised checkpoint with complete text, line, and landmark validation
+- **AND** preserves the damaged store before installing a verified replacement
+
+#### Scenario: Checkpoint publication fails
+- **WHEN** publishing a checkpoint fails after the primary write
+- **THEN** the save remains failed and retryable under the shipped save contract
+- **AND** the previous verified checkpoint remains available
+
 #### Scenario: Landmark mutation overlaps a write failure
 - **WHEN** a landmark changes while storage is unavailable
 - **THEN** the in-memory landmark state remains authoritative and usable

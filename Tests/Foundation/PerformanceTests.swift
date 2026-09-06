@@ -39,5 +39,24 @@ final class PerformanceTests: XCTestCase {
             XCTAssertLessThan(percentile(saves, 0.95), 250)
             XCTAssertLessThan(paste, 2)
         }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("WalkSavePerformance-\(UUID())")
+        let store = SQLiteStore(directory: root)
+        _ = try await store.load()
+        let landmark = Landmark(lineID: owner.snapshot.lines[0].id, emoji: "🌲")
+        var durable: [Double] = []
+        for iteration in 0..<12 {
+            try owner.apply(.init(baseRevision: owner.snapshot.revision, origin: .metadata, mutation: .landmark(Landmark(id: landmark.id, lineID: landmark.lineID, emoji: iteration.isMultiple(of: 2) ? "🌲" : "🦊"))))
+            let snapshot = owner.snapshot, start = ProcessInfo.processInfo.systemUptime
+            _ = try await store.save(snapshot)
+            durable.append(ProcessInfo.processInfo.systemUptime - start)
+        }
+        try await store.close()
+        let files = try FileManager.default.contentsOfDirectory(at: root.appendingPathComponent("Store"), includingPropertiesForKeys: [.fileSizeKey])
+        let total = try files.reduce(0) { try $0 + ($1.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) }
+        let payloadSize = try PersistenceFormat.encode(owner.snapshot).count
+        XCTAssertLessThan(total, payloadSize * 5 + 100_000)
+        XCTAssertEqual(files.filter { ["Recovery-0.json", "Recovery-1.json"].contains($0.lastPathComponent) }.count, 2)
+        print("PERF Walk 10k: complete save p95=\(percentile(durable, 0.95))ms closed-store bytes=\(total) payload bytes=\(payloadSize)")
+        if ProcessInfo.processInfo.environment["JORT_PERFORMANCE_ENFORCE"] == "1" { XCTAssertLessThan(percentile(durable, 0.95), 250) }
     }
 }

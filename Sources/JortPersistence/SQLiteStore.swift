@@ -10,6 +10,7 @@ public protocol DocumentStore: Sendable {
 }
 public enum StoreStage: String, CaseIterable, Sendable {
     case backup, create, write, validate, replace, snapshot, bind, close
+    case checkpointWrite, checkpointFileSync, checkpointRename, checkpointDirectorySync, checkpointVerify, checkpointManifest, checkpointPublished
 }
 
 /// Connection and filesystem state never leave this actor.
@@ -46,6 +47,7 @@ public actor SQLiteStore: DocumentStore {
             }
         } else {
             // Unknown version-zero schemas are never treated as new databases.
+            guard source != active, !FileManager.default.fileExists(atPath: source.appendingPathComponent("Recovery.json").path) else { throw StoreError.invalidPayload }
             state = DocumentSnapshot()
             try install(state, preserving: nil, prefix: "Initial")
         }
@@ -58,17 +60,17 @@ public actor SQLiteStore: DocumentStore {
         guard let connection else { throw StoreError.io("Store has not loaded safely") }
         let data = try PersistenceFormat.encode(snapshot)
         try connection.write(data, inject: inject)
+        guard try connection.read().snapshot == snapshot else { throw StoreError.invalidPayload }
         try inject(.snapshot)
         // This failure deliberately remains a failed save, even after SQLite commits.
-        try data.write(to: active.appendingPathComponent("Recovery.json"), options: .atomic)
+        try RecoveryCheckpoints(directory: active, inject: inject).publish(data, snapshot: snapshot)
         return snapshot.revision
     }
     public func recover() throws -> DocumentSnapshot {
         try own()
         try connection?.close(); connection = nil
         let source = FileManager.default.fileExists(atPath: active.path) ? active : directory
-        let data = try Data(contentsOf: source.appendingPathComponent("Recovery.json"))
-        let snapshot = try PersistenceFormat.decode(data).snapshot
+        let snapshot = try RecoveryCheckpoints(directory: source, inject: inject).recover()
         try install(snapshot, preserving: source, prefix: "Damaged")
         connection = try Connection(directory: active, create: false)
         try connection!.configureWrites()
@@ -76,7 +78,7 @@ public actor SQLiteStore: DocumentStore {
     }
     private func copyFiles(from source: URL, to target: URL) throws {
         try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
-        for name in ["Jort.sqlite", "Jort.sqlite-wal", "Jort.sqlite-shm", "Recovery.json"] {
+        for name in ["Jort.sqlite", "Jort.sqlite-wal", "Jort.sqlite-shm", "Recovery.json"] + RecoveryCheckpoints.names {
             let file = source.appendingPathComponent(name)
             if FileManager.default.fileExists(atPath: file.path) {
                 guard try file.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else { throw StoreError.malformedSchema }
@@ -100,7 +102,7 @@ public actor SQLiteStore: DocumentStore {
             try inject(.write)
             let data = try PersistenceFormat.encode(snapshot)
             try writer.write(data, inject: inject)
-            try data.write(to: stage.appendingPathComponent("Recovery.json"), options: .atomic)
+            try RecoveryCheckpoints(directory: stage, inject: inject).publish(data, snapshot: snapshot)
             try inject(.close)
             try writer.close()
         } catch { try? writer.close(); throw error }
@@ -108,7 +110,8 @@ public actor SQLiteStore: DocumentStore {
         let reader = try Connection(directory: stage, create: false)
         let decoded = try reader.read()
         try reader.close()
-        guard decoded.snapshot == snapshot, decoded.sqlVersion == 2 else { throw StoreError.invalidPayload }
+        guard decoded.snapshot == snapshot, decoded.sqlVersion == PersistenceFormat.sqliteVersion,
+              try RecoveryCheckpoints(directory: stage, inject: inject).recover() == snapshot else { throw StoreError.invalidPayload }
         try inject(.replace)
         // A directory swap atomically replaces SQLite + WAL + SHM + recovery snapshot as one unit.
         if FileManager.default.fileExists(atPath: active.path) {
@@ -117,6 +120,10 @@ public actor SQLiteStore: DocumentStore {
         } else {
             guard Darwin.rename(stage.path, active.path) == 0 else { throw StoreError.io("atomic install: \(errno)") }
         }
+        let parent = Darwin.open(directory.path, O_RDONLY)
+        guard parent >= 0 else { throw StoreError.io("store directory open: \(errno)") }
+        defer { Darwin.close(parent) }
+        guard fsync(parent) == 0 else { throw StoreError.io("store directory sync: \(errno)") }
     }
 }
 
@@ -133,7 +140,7 @@ private final class Connection {
             if create {
                 try execute("BEGIN IMMEDIATE")
                 try execute("CREATE TABLE current_state (id INTEGER PRIMARY KEY CHECK(id=1), payload BLOB NOT NULL)")
-                try execute("PRAGMA user_version=2")
+                try execute("PRAGMA user_version=3")
                 try execute("COMMIT")
             }
         } catch { sqlite3_close_v2(db); db = nil; throw error }
@@ -157,8 +164,8 @@ private final class Connection {
         let result = sqlite3_step(version)
         guard result == SQLITE_ROW else { sqlite3_finalize(version); throw failure(result) }
         let sqlVersion = Int(sqlite3_column_int(version, 0)); try check(sqlite3_finalize(version))
-        guard sqlVersion <= 2 else { throw StoreError.unsupportedVersion }
-        guard sqlVersion == 1 || sqlVersion == 2 else { throw StoreError.malformedSchema }
+        guard sqlVersion <= PersistenceFormat.sqliteVersion else { throw StoreError.unsupportedVersion }
+        guard (1...PersistenceFormat.sqliteVersion).contains(sqlVersion) else { throw StoreError.malformedSchema }
         let schema = try prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='current_state'")
         guard sqlite3_step(schema) == SQLITE_ROW, let definition = sqlite3_column_text(schema, 0) else { sqlite3_finalize(schema); throw StoreError.malformedSchema }
         let sql = String(cString: definition).lowercased().filter { !$0.isWhitespace }

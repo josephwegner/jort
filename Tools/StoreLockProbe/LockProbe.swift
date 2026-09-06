@@ -19,6 +19,15 @@ import JortDocument
                 let store = SQLiteStore(directory: directory)
                 let snapshot = try await store.load()
                 let owner = try DocumentCoordinator(snapshot: snapshot)
+                if mode == "crash" {
+                    let id = LandmarkID()
+                    for index in 0..<10_000 {
+                        try owner.apply(.init(baseRevision: owner.snapshot.revision, origin: .metadata, mutation: .landmark(Landmark(id: id, lineID: snapshot.lines[0].id, emoji: index.isMultiple(of: 2) ? "🌲" : "🦊"))))
+                        _ = try await store.save(owner.snapshot)
+                        FileHandle.standardOutput.write(Data("\(owner.snapshot.revision)\n".utf8))
+                    }
+                    try await store.close(); exit(0)
+                }
                 try owner.apply(.init(baseRevision: snapshot.revision, origin: .native, mutation: .edit(text: "process save", range: nil, replacementLength: nil)))
                 _ = try await store.save(owner.snapshot)
                 FileHandle.standardOutput.write(Data("OWNED\n".utf8))

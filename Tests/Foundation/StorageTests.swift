@@ -72,6 +72,8 @@ final class StorageTests: XCTestCase {
         XCTAssertThrowsError(try PersistenceFormat.decode(Data(repeating: 0, count: PersistenceFormat.maximumBytes + 1))) { XCTAssertEqual($0 as? StoreError, .sizeLimit) }
         var json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         var document = try XCTUnwrap(json["document"] as? [String: Any]); document.removeValue(forKey: "landmarks"); json["document"] = document
+        XCTAssertThrowsError(try PersistenceFormat.decode(JSONSerialization.data(withJSONObject: json)))
+        json["formatVersion"] = 2
         XCTAssertEqual(try PersistenceFormat.decode(JSONSerialization.data(withJSONObject: json)).snapshot.landmarks, [])
     }
     func testBusyAndReadOnlyFailuresPreserveRetryableStore() async throws {
