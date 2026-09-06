@@ -49,7 +49,7 @@ import JortPersistence
         XCTAssertEqual(controller.state, before)
         XCTAssertEqual(controller.textView.selectedRange(), selection)
         XCTAssertTrue(window.firstResponder === controller.textView)
-        XCTAssertEqual(controller.footer.landmarks.title, "⌥ Landmarks 0")
+        XCTAssertEqual(controller.footer.landmarks.title, "⌥ Landmarks: 0")
     }
     func testAccessoryExpandsCanonicalLineWithoutTextMutation() throws {
         let (controller, window) = try editor(); defer { window.orderOut(nil) }

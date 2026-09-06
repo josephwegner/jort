@@ -3,7 +3,7 @@ import AppKit
 @MainActor enum EditorMetrics {
     static let gutterWidth: CGFloat = 48
     static let footerHeight: CGFloat = 36
-    static let contentInset = NSSize(width: 24, height: 0)
+    static let contentInset = NSSize(width: 12, height: 0)
     static let canvas = NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1)
     static let chrome = NSColor(calibratedWhite: 0.075, alpha: 1)
     static let separator = NSColor(calibratedWhite: 0.20, alpha: 1)
@@ -18,7 +18,7 @@ struct LandmarkModeState: Equatable {
 }
 
 @MainActor final class EditorFooter: NSView {
-    let landmarks = LandmarkStatusButton(title: "⌥ Landmarks 0", target: nil, action: nil)
+    let landmarks = LandmarkStatusButton(title: "⌥ Landmarks: 0", target: nil, action: nil)
     override init(frame: NSRect) {
         super.init(frame: frame)
         landmarks.isBordered = false
@@ -42,7 +42,7 @@ struct LandmarkModeState: Equatable {
         NSRect(x: bounds.minX, y: bounds.maxY - pixel, width: bounds.width, height: pixel).fill()
     }
     func update(count: Int, mode: LandmarkModeState) {
-        landmarks.title = "⌥ \(String(localized: "Landmarks")) \(count)"
+        landmarks.title = "⌥ \(String(localized: "Landmarks")): \(count)"
         landmarks.setAccessibilityValue("\(count) landmarks, \(mode.description)")
         landmarks.contentTintColor = mode.isVisible ? .labelColor : .secondaryLabelColor
     }
@@ -53,8 +53,9 @@ struct LandmarkModeState: Equatable {
         let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: 11), .foregroundColor: contentTintColor ?? NSColor.secondaryLabelColor]
         let symbol = "⌥" as NSString
         let symbolSize = symbol.size(withAttributes: attributes)
-        symbol.draw(at: NSPoint(x: (EditorMetrics.gutterWidth - symbolSize.width) / 2, y: (bounds.height - symbolSize.height) / 2), withAttributes: attributes)
+        let symbolX = (EditorMetrics.gutterWidth - symbolSize.width) / 2
+        symbol.draw(at: NSPoint(x: symbolX, y: (bounds.height - symbolSize.height) / 2), withAttributes: attributes)
         let text = String(title.dropFirst(2)) as NSString
-        text.draw(at: NSPoint(x: EditorMetrics.gutterWidth + 10, y: (bounds.height - symbolSize.height) / 2), withAttributes: attributes)
+        text.draw(at: NSPoint(x: symbolX + symbolSize.width + 6, y: (bounds.height - symbolSize.height) / 2), withAttributes: attributes)
     }
 }
