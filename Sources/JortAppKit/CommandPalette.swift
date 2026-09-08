@@ -120,7 +120,7 @@ import AppKit
     }
 }
 
-@MainActor final class PaletteTable: NSTableView {
+@MainActor class PaletteTable: NSTableView {
     var activate: (() -> Void)?
     var dismiss: (() -> Void)?
     override func keyDown(with event: NSEvent) {

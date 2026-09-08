@@ -11,6 +11,7 @@ public protocol DocumentStore: Sendable {
 public enum StoreStage: String, CaseIterable, Sendable {
     case backup, create, write, validate, replace, snapshot, bind, close
     case checkpointWrite, checkpointFileSync, checkpointRename, checkpointDirectorySync, checkpointVerify, checkpointManifest, checkpointPublished
+    case historyWrite, historyVerify, historyCommit, historyPrune
 }
 
 /// Connection and filesystem state never leave this actor.
@@ -66,6 +67,13 @@ public actor SQLiteStore: DocumentStore {
         try RecoveryCheckpoints(directory: active, inject: inject).publish(data, snapshot: snapshot)
         return snapshot.revision
     }
+    /// History cannot acquire its own writer or bypass successful current-state loading.
+    func historyConnection() throws -> Connection {
+        guard ownership != nil, let connection else { throw StoreError.io("Store has not loaded safely") }
+        try connection.validateHistorySchema()
+        return connection
+    }
+    func historyInjection(_ stage: StoreStage) throws { try inject(stage) }
     public func recover() throws -> DocumentSnapshot {
         try own()
         try connection?.close(); connection = nil
@@ -76,9 +84,12 @@ public actor SQLiteStore: DocumentStore {
         try connection!.configureWrites()
         return snapshot
     }
+    public func historyRecoveryWasIncomplete() -> Bool {
+        FileManager.default.fileExists(atPath: active.appendingPathComponent("HistoryRecoveryIncomplete").path)
+    }
     private func copyFiles(from source: URL, to target: URL) throws {
         try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
-        for name in ["Jort.sqlite", "Jort.sqlite-wal", "Jort.sqlite-shm", "Recovery.json"] + RecoveryCheckpoints.names {
+        for name in ["Jort.sqlite", "Jort.sqlite-wal", "Jort.sqlite-shm", "Recovery.json", "HistoryRecoveryIncomplete"] + RecoveryCheckpoints.names {
             let file = source.appendingPathComponent(name)
             if FileManager.default.fileExists(atPath: file.path) {
                 guard try file.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else { throw StoreError.malformedSchema }
@@ -103,6 +114,9 @@ public actor SQLiteStore: DocumentStore {
             let data = try PersistenceFormat.encode(snapshot)
             try writer.write(data, inject: inject)
             try RecoveryCheckpoints(directory: stage, inject: inject).publish(data, snapshot: snapshot)
+            if let source {
+                try carryHistory(from: source, to: writer, stage: stage, documentID: snapshot.documentID)
+            }
             try inject(.close)
             try writer.close()
         } catch { try? writer.close(); throw error }
@@ -125,9 +139,56 @@ public actor SQLiteStore: DocumentStore {
         defer { Darwin.close(parent) }
         guard fsync(parent) == 0 else { throw StoreError.io("store directory sync: \(errno)") }
     }
+
+    /// Inspect a disposable copy, never open the preserved diagnostic backup for writing.
+    private func carryHistory(from source: URL, to writer: Connection, stage: URL, documentID: UUID) throws {
+        let inspection = directory.appendingPathComponent(".HistoryInspect-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: inspection) }
+        try copyFiles(from: source, to: inspection)
+        var incomplete = FileManager.default.fileExists(atPath: source.appendingPathComponent("HistoryRecoveryIncomplete").path)
+        let reader: Connection?
+        do { reader = try Connection(directory: inspection, create: false) }
+        catch { reader = nil; incomplete = true }
+        if let reader {
+            defer { try? reader.close() }
+            // Source read failures degrade history; destination writes still abort the swap.
+            let version: Int?
+            do { version = try reader.schemaVersion() } catch { version = nil; incomplete = true }
+            if let version, version > PersistenceFormat.sqliteVersion { throw StoreError.unsupportedVersion }
+            if let version, version >= 4 {
+                var before: Int64?
+                while true {
+                    let page: [HistoryEntry]
+                    do { page = try reader.historyEntries(before: before, limit: 100) }
+                    catch { incomplete = true; break }
+                    if page.isEmpty { break }
+                    for entry in page {
+                        let revision: HistoryRevision
+                        do {
+                            revision = try reader.historyRevision(sequence: entry.sequence)
+                            guard revision.snapshot.documentID == documentID else { throw StoreError.invalidPayload }
+                        } catch { incomplete = true; continue }
+                        let (payload, metadata) = try HistoryRevisionFormat.encode(revision.snapshot,
+                            reason: revision.metadata.reason, timestamp: revision.metadata.timestamp,
+                            milestone: revision.metadata.milestone, id: revision.metadata.id)
+                        _ = try writer.insertHistory(payload: payload, metadata: metadata,
+                            preservingSequence: entry.sequence, inject: inject)
+                    }
+                    before = page.last?.sequence
+                }
+                let settings: HistorySettings?
+                do { settings = try reader.readHistorySettings() } catch { settings = nil; incomplete = true }
+                if let settings { try writer.writeHistorySettings(settings) }
+            }
+        }
+        if incomplete {
+            try Data("Some history could not be recovered; originals are preserved in the diagnostic backup.".utf8)
+                .write(to: stage.appendingPathComponent("HistoryRecoveryIncomplete"), options: .atomic)
+        }
+    }
 }
 
-private final class Connection {
+final class Connection {
     private var db: OpaquePointer?
     private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     init(directory: URL, create: Bool) throws {
@@ -140,7 +201,8 @@ private final class Connection {
             if create {
                 try execute("BEGIN IMMEDIATE")
                 try execute("CREATE TABLE current_state (id INTEGER PRIMARY KEY CHECK(id=1), payload BLOB NOT NULL)")
-                try execute("PRAGMA user_version=3")
+                try createHistorySchema()
+                try execute("PRAGMA user_version=4")
                 try execute("COMMIT")
             }
         } catch { sqlite3_close_v2(db); db = nil; throw error }
@@ -151,13 +213,20 @@ private final class Connection {
         try check(sqlite3_close(db)); self.db = nil
     }
     func configureWrites() throws { try execute("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON") }
-    private func failure(_ code: Int32) -> StoreError { .sqlite(code & 0xff, db.map { String(cString: sqlite3_errmsg($0)) } ?? "SQLite closed") }
-    private func check(_ result: Int32) throws { if result != SQLITE_OK { throw failure(result) } }
-    private func execute(_ sql: String) throws { try check(sqlite3_exec(db, sql, nil, nil, nil)) }
-    private func prepare(_ sql: String) throws -> OpaquePointer {
+    func failure(_ code: Int32) -> StoreError { .sqlite(code & 0xff, db.map { String(cString: sqlite3_errmsg($0)) } ?? "SQLite closed") }
+    func check(_ result: Int32) throws { if result != SQLITE_OK { throw failure(result) } }
+    func execute(_ sql: String) throws { try check(sqlite3_exec(db, sql, nil, nil, nil)) }
+    func prepare(_ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
         try check(sqlite3_prepare_v2(db, sql, -1, &statement, nil))
         guard let statement else { throw StoreError.malformedSchema }; return statement
+    }
+    func schemaVersion() throws -> Int {
+        let statement = try prepare("PRAGMA user_version")
+        defer { sqlite3_finalize(statement) }
+        let step = sqlite3_step(statement)
+        guard step == SQLITE_ROW else { throw failure(step) }
+        return Int(sqlite3_column_int(statement, 0))
     }
     func read() throws -> (snapshot: DocumentSnapshot, sqlVersion: Int, payloadVersion: Int) {
         let version = try prepare("PRAGMA user_version")

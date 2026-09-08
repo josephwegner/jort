@@ -32,12 +32,12 @@ Type into the single canvas. Paste is plain text. Native selection, wrapping, Fi
 
 - **⌘S**: save or retry.
 - **⌘Z / ⇧⌘Z**: undo/redo text and metadata as one transaction.
-- **⌘F**: native Find/Replace.
+- **⌘F**: search the current document in a floating box at the top-right. Click a result or use the arrows to navigate; Escape or the close button dismisses search.
 - **⌘K**: search application and landmark actions, including moving or deleting detached landmarks.
 - Click a gutter line to add/change its emoji using the native character picker; right-click a landmark for change, clear, or move actions.
 - The footer landmark button toggles a compact landmark index. Its entries navigate by stable line identity; scrolling the index does not scroll the document.
 - Hold **Option (⌥)** to reveal the landmark index temporarily. Release restores the previous mode; the footer landmark button can latch it open. The footer shows the attached landmark count and any actionable storage notice.
-- The native title bar keeps Pocket at the right. The gutter and footer have distinct surfaces and dividers. Future tool and agent accessories can expand an individual line without adding artificial line numbers; no Run controls are displayed yet.
+- The native title bar keeps Pocket at the right. Pocket includes Search Document and Version History. History offers a read-only snapshot or changes view, inline revision counts, and confirmed full-state restore with Undo. Revisions are retained after one minute of idle editing and at semantic/lifecycle boundaries; current-state autosave runs more frequently.
 - **⌘W / ⌘0**: close/reopen the one window.
 - **File → Save Recovery Copy…**: save a separate versioned JSON snapshot when needed.
 

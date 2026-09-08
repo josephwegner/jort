@@ -13,7 +13,7 @@ The committed `canvas-10000.txt` fixture contains 10,000 representative lines wi
 | Undo depth | 200 groups bounded; verify 100 randomized native edit/undo/redo cycles |
 | Search / replace-all | 1 second target for the fixture |
 | Memory growth | 200 MB ceiling for the fixture and bounded undo, excluding platform/test-runner baseline |
-| Future history checkpoint | 250 ms target; history does not exist yet |
+| History checkpoint | 250 ms target; current Run measurements and qualification gaps are in `run-verification.md` |
 
 These are initial generous regression ceilings for shared macOS runners, not product latency promises. Sanitizer runs report functional results separately and do not enforce timing ceilings. The save-cadence test measures persistence during sustained typing without an idle gap. Scheduling, storage latency, and failure retries mean there is no strict user-facing half-second deadline.
 

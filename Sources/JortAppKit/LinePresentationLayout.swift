@@ -94,9 +94,13 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
         guard let editor, let manager = editor.textLayoutManager, let content = manager.textContentManager,
               let viewport = manager.textViewportLayoutController.viewportRange else { return [] }
         var result: [Band] = []
+        let visibleBottom = (editor.enclosingScrollView?.contentView.bounds.maxY ?? editor.visibleRect.maxY) - editor.textContainerOrigin.y
         manager.enumerateTextLayoutFragments(from: viewport.location, options: [.ensuresExtraLineFragment]) { fragment in
+            // TextKit can retain the pre-edit viewport end while new paragraphs are
+            // already visible. Stop at the visible geometry, not that stale offset.
+            guard fragment.layoutFragmentFrame.minY <= visibleBottom else { return false }
             result.append(contentsOf: self.bands(fragment, content: content))
-            return fragment.rangeInElement.location.compare(viewport.endLocation) == .orderedAscending
+            return fragment.layoutFragmentFrame.maxY < visibleBottom
         }
         return result
     }

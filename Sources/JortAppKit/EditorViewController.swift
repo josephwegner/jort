@@ -15,6 +15,15 @@ import JortPersistence
     @objc public func undo(_ sender: Any?) { history.undo() }
     @objc public func redo(_ sender: Any?) { history.redo() }
     var onCompositionCommit: (() -> Void)?
+    var onTextChange: (() -> Void)?
+    var onEscape: (() -> Bool)?
+    public override func didChangeText() {
+        super.didChangeText()
+        onTextChange?()
+    }
+    public override func cancelOperation(_ sender: Any?) {
+        if onEscape?() != true { super.cancelOperation(sender) }
+    }
     var lineAccessibilityChildren: (() -> [Any]?)?
     public override func accessibilityChildren() -> [Any]? {
         lineAccessibilityChildren?() ?? super.accessibilityChildren()
@@ -41,7 +50,12 @@ import JortPersistence
     private var ruler: LineRuler!
     private(set) var linePresentation: LinePresentationLayout!
     private(set) var palette: CommandPalette?
+    private(set) var documentSearch: DocumentSearchController?
     private var emojiPicker: EmojiPicker?
+    private(set) var historyWorkspace: HistoryWorkspaceController?
+    private var openingHistory = false
+    private var historySelection: NSRange?
+    private var historyViewport: NSPoint?
     public var saveStatus: ((PersistenceState) -> Void)?
 
     public init(persistence: PersistenceController) { self.persistence = persistence; super.init(nibName: nil, bundle: nil) }
@@ -149,11 +163,20 @@ import JortPersistence
             retry.centerYAnchor.constraint(equalTo: notice.centerYAnchor)
         ])
         textView.onCompositionCommit = { [weak self] in self?.commitText() }
+        textView.onTextChange = { [weak self] in self?.commitText(); self?.refreshGutterAfterLayout() }
+        textView.onEscape = { [weak self] in
+            guard let search = self?.documentSearch else { return false }
+            search.dismiss(); return true
+        }
         persistence.onState = { [weak self] status in
             self?.present(status)
             self?.saveStatus?(status)
         }
         persistence.onCommit = { [weak self] revision in self?.coordinator?.markCommitted(revision) }
+        persistence.onHistoryState = { [weak self] in
+            guard let self else { return }
+            self.present(self.persistence.status)
+        }
         persistence.load { [weak self] result in
             guard let self else { return }
             if case .success(let snapshot) = result {
@@ -178,7 +201,14 @@ import JortPersistence
                 self.updateFooter()
                 self.palette?.actions = self.paletteActions()
                 self.palette?.reload()
-                self.persistence.changed(result.after)
+                let historyReason: HistoryBoundary?
+                switch result.transaction.origin {
+                case .restore: historyReason = .restore
+                case .automation: historyReason = .bulk
+                default: historyReason = result.before.landmarks != result.after.landmarks ? .landmark : nil
+                }
+                self.persistence.changed(result.after, historyReason: historyReason)
+                self.documentSearch?.documentChanged()
                 if result.before.landmarks != result.after.landmarks, self.persistence.status.failure == nil { self.persistence.flush() }
             }
             self.linePresentation.update(lines: self.state.lines)
@@ -197,9 +227,10 @@ import JortPersistence
         case .ownershipConflict: message = String(localized: "This canvas is already open in another Jort process.")
         default: message = status.failure == nil ? nil : String(localized: "Couldn’t save. Your text is still here. Retry with ⌘S.")
         }
-        notice.stringValue = message ?? ""
-        notice.toolTip = message
-        notice.isHidden = message == nil
+        let visibleMessage = message ?? persistence.historyMessage
+        notice.stringValue = visibleMessage ?? ""
+        notice.toolTip = visibleMessage
+        notice.isHidden = visibleMessage == nil
         retry.isHidden = message == nil || status == .ownershipConflict
         retry.title = status.permitsRetry ? String(localized: "Retry save") : String(localized: "Save Recovery Copy…")
     }
@@ -267,15 +298,18 @@ import JortPersistence
             } catch { notice.stringValue = String(localized: "This edit could not be recorded. Copy your text to preserve it."); notice.isHidden = false }
         }
     }
-    private func recordUndo(_ snapshot: DocumentSnapshot, selection: NSRange) {
+    private func recordUndo(_ snapshot: DocumentSnapshot, selection: NSRange, viewport: NSPoint? = nil) {
+        let savedViewport = viewport ?? scroll.contentView.bounds.origin
         textView.history.registerUndo(withTarget: self) { target in
             let origin: MutationOrigin = target.textView.history.isUndoing ? .undo : .redo
             let currentSelection = target.textView.selectedRange()
+            let currentViewport = target.scroll.contentView.bounds.origin
             do {
                 let result = try target.coordinator.apply(DocumentTransaction(baseRevision: target.state.revision, origin: origin,
                     undoPolicy: .replay, mutation: .restore(snapshot)))
-                target.recordUndo(result.before, selection: currentSelection)
+                target.recordUndo(result.before, selection: currentSelection, viewport: currentViewport)
                 target.display(result, selection: selection)
+                target.scroll.contentView.scroll(to: savedViewport)
             } catch { assertionFailure("Invalid undo snapshot: \(error)") }
         }
     }
@@ -318,7 +352,7 @@ import JortPersistence
         return state.lines.last { $0.location <= textView.selectedRange().location }?.id
     }
     private var canPresent: Bool {
-        ready && !textView.hasMarkedText() && (view.window?.firstResponder as? NSTextView)?.hasMarkedText() != true &&
+        ready && historyWorkspace == nil && documentSearch == nil && !textView.hasMarkedText() && (view.window?.firstResponder as? NSTextView)?.hasMarkedText() != true &&
             emojiPicker == nil && view.window?.attachedSheet == nil
     }
     @objc public func showCommandPalette() {
@@ -335,16 +369,20 @@ import JortPersistence
             self.palette = nil
         }
     }
-    @objc public func toggleLandmarkMode() { ruler.toggleLatchedMode() }
+    @objc public func toggleLandmarkMode() { if historyWorkspace == nil { ruler.toggleLatchedMode() } }
     @objc public func addOrChangeLandmark() { if let id = currentLineID { chooseLandmark(on: id) } }
     @objc public func clearCurrentLandmark() {
         guard let id = currentLineID, let landmark = state.landmarks.first(where: { !$0.detached && $0.lineID == id }) else { return }
         mutateLandmark(.removeLandmark(landmark.id))
     }
     func mutateLandmark(_ mutation: DocumentMutation) {
-        guard ready, !textView.hasMarkedText() else { return }
+        guard ready, historyWorkspace == nil, !textView.hasMarkedText() else { return }
         textView.history.beginUndoGrouping()
         defer { textView.history.endUndoGrouping() }
+        // Flush any committed native edit before deriving a metadata transaction.
+        // Otherwise displaying a transaction based on the older model can erase it.
+        commitText()
+        guard textView.string == state.text else { return }
         do { try apply(.init(baseRevision: state.revision, origin: .metadata, mutation: mutation)) }
         catch { notice.stringValue = "This landmark is no longer available. Choose a current line."; notice.isHidden = false }
     }
@@ -390,6 +428,8 @@ import JortPersistence
     }
     func paletteActions() -> [PaletteAction] {
         var actions = [
+            PaletteAction(id: "history.open", title: "Version History", keywords: "revision restore snapshot changes", enabled: { [weak self] in self?.persistence.status.permitsRetry == true }, execute: { [weak self] in self?.showHistory() }),
+            PaletteAction(id: "search.document", title: "Search Document", keywords: "find text matches", execute: { [weak self] in self?.showDocumentSearch() }),
             PaletteAction(id: "landmark.edit", title: "Add or Change Landmark", keywords: "emoji bookmark", enabled: { [weak self] in self?.currentLineID != nil }, execute: { [weak self] in self?.addOrChangeLandmark() }),
             PaletteAction(id: "landmark.clear", title: "Clear Landmark at Current Line", enabled: { [weak self] in
                 guard let self, let id = self.currentLineID else { return false }; return self.state.landmarks.contains { !$0.detached && $0.lineID == id }
@@ -416,6 +456,89 @@ import JortPersistence
         }
         return actions
     }
+
+    @objc public func showDocumentSearch() {
+        if let documentSearch { documentSearch.present(); return }
+        guard canPresent, !openingHistory, let window = view.window else { return }
+        let search = DocumentSearchController(); documentSearch = search
+        addChild(search); search.view.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(search.view)
+        let width = search.view.widthAnchor.constraint(equalToConstant: 360); width.priority = .defaultHigh
+        NSLayoutConstraint.activate([width, search.view.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -24), search.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12), search.view.topAnchor.constraint(equalTo: view.topAnchor, constant: 12)])
+        search.snapshot = { [weak self] in self?.state ?? DocumentSnapshot() }
+        search.navigate = { [weak self] match in
+            guard let self, !self.textView.hasMarkedText(), let range = match.resolve(in: self.state) else { return false }
+            self.textView.setSelectedRange(range); self.textView.scrollRangeToVisible(range)
+            self.view.window?.makeFirstResponder(self.textView)
+            return true
+        }
+        search.onDismiss = { [weak self, weak window] in
+            self?.documentSearch?.view.removeFromSuperview(); self?.documentSearch?.removeFromParent()
+            self?.documentSearch = nil
+            window?.makeKeyAndOrderFront(nil)
+            if let self { window?.makeFirstResponder(self.textView) }
+        }
+        search.present()
+    }
+
+
+    @objc public func showHistory() {
+        guard canPresent, !openingHistory else { return }
+        openingHistory = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { openingHistory = false }
+            do {
+                let store = try await persistence.openHistory()
+                guard canPresent else { return }
+                let workspace = HistoryWorkspaceController(store: store)
+                historySelection = textView.selectedRange(); historyViewport = scroll.contentView.bounds.origin
+                historyWorkspace = workspace
+                workspace.onDismiss = { [weak self] in self?.dismissHistory() }
+                workspace.onRestore = { [weak self] sequence in
+                    guard let self else { throw DocumentError.invalidState }
+                    try await self.restoreHistory(sequence: sequence)
+                }
+                addChild(workspace)
+                workspace.view.translatesAutoresizingMaskIntoConstraints = false
+                view.addSubview(workspace.view)
+                NSLayoutConstraint.activate([workspace.view.leadingAnchor.constraint(equalTo: view.leadingAnchor), workspace.view.trailingAnchor.constraint(equalTo: view.trailingAnchor), workspace.view.topAnchor.constraint(equalTo: view.topAnchor), workspace.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)])
+                scroll.isHidden = true; footer.isHidden = true; textView.isEditable = false
+                view.window?.makeFirstResponder(workspace.revisions)
+            } catch { notice.stringValue = "History could not be opened. Your current document is still available."; notice.isHidden = false }
+        }
+    }
+
+    func dismissHistory(restored: Bool = false) {
+        guard let workspace = historyWorkspace else { return }
+        workspace.model.cancel(); workspace.view.removeFromSuperview(); workspace.removeFromParent()
+        historyWorkspace = nil; scroll.isHidden = false; footer.isHidden = false; textView.isEditable = true
+        if !restored {
+            if let selection = historySelection { textView.setSelectedRange(selection) }
+            if let viewport = historyViewport { scroll.contentView.scroll(to: viewport) }
+        }
+        historySelection = nil; historyViewport = nil
+        present(persistence.status)
+        view.window?.makeFirstResponder(textView)
+    }
+
+    func restoreHistory(sequence: Int64) async throws {
+        guard let workspace = historyWorkspace else { throw DocumentError.invalidState }
+        let before = state
+        let revision = try await workspace.model.store.revision(sequence: sequence)
+        guard revision.snapshot.documentID == before.documentID else { throw DocumentError.invalidState }
+        try await persistence.preserveBeforeRestore(before)
+        guard historyWorkspace === workspace, state.revision == before.revision else {
+            throw DocumentError.staleRevision(expected: before.revision, actual: state.revision)
+        }
+        textView.history.beginUndoGrouping()
+        do {
+            try apply(.init(baseRevision: before.revision, origin: .restore, mutation: .restore(revision.snapshot)))
+            textView.history.setActionName("Restore Version")
+            textView.history.endUndoGrouping()
+        } catch { textView.history.endUndoGrouping(); throw error }
+        dismissHistory(restored: true)
+        persistence.flush()
+    }
     @objc public func saveRecoveryCopy() {
         guard let window = view.window else { return }
         let panel = NSSavePanel()
@@ -440,6 +563,7 @@ import JortPersistence
 
 /// Uses TextKit 2's already-visible fragments; scrolling never forces whole-document layout.
 @MainActor public final class LineRuler: NSRulerView {
+    var readOnly = false
     weak var editor: NSTextView?
     weak var presentation: LinePresentationLayout?
     var lines: [LineMeta] = [] { didSet { needsDisplay = true } }
@@ -511,6 +635,7 @@ import JortPersistence
         refreshControls(); needsDisplay = true
     }
     public override func mouseDown(with event: NSEvent) {
+        guard !readOnly else { return }
         let point = convert(event.locationInWindow, from: nil)
         if let hit = hits.first(where: { $0.frame.contains(point) }) {
             if landmarkMode {
@@ -520,6 +645,7 @@ import JortPersistence
         }
     }
     @objc private func activateEntry(_ sender: NSButton) {
+        guard !readOnly else { return }
         guard hits.indices.contains(sender.tag) else { return }
         let id = hits[sender.tag].id
         if landmarkMode {
@@ -528,6 +654,7 @@ import JortPersistence
         } else { onEdit?(id) }
     }
     public override func menu(for event: NSEvent) -> NSMenu? {
+        guard !readOnly else { return nil }
         let point = convert(event.locationInWindow, from: nil)
         guard let hit = hits.first(where: { $0.frame.contains(point) }) else { return nil }
         return menu(for: hit.id)
@@ -555,7 +682,9 @@ import JortPersistence
         guard let manager = editor.textLayoutManager, let content = manager.textContentManager,
               let viewport = manager.textViewportLayoutController.viewportRange else { return [] }
         var rows: [(number: Int, y: CGFloat)] = []
+        let visibleBottom = (editor.enclosingScrollView?.contentView.bounds.maxY ?? editor.visibleRect.maxY) - editor.textContainerOrigin.y
         manager.enumerateTextLayoutFragments(from: viewport.location, options: [.ensuresExtraLineFragment]) { fragment in
+            guard fragment.layoutFragmentFrame.minY <= visibleBottom else { return false }
             let paragraphOffset = content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
             for line in fragment.textLineFragments {
                 let offset = paragraphOffset + line.characterRange.location
@@ -569,7 +698,7 @@ import JortPersistence
                     rows.append((low + 1, fragment.layoutFragmentFrame.minY + line.typographicBounds.minY))
                 }
             }
-            return fragment.rangeInElement.location.compare(viewport.endLocation) == .orderedAscending
+            return fragment.layoutFragmentFrame.maxY < visibleBottom
         }
         return rows
     }
@@ -623,9 +752,9 @@ import JortPersistence
         for (position, entry) in entries.enumerated() {
             let button = entryButtons[position]
             button.frame = entry.frame; button.title = entry.label
-            button.menu = menu(for: entry.id)
+            button.menu = readOnly ? nil : menu(for: entry.id)
             button.tag = hits.count; hits.append((entry.id, entry.frame))
-            let name = "\(entry.label), line \(entry.number), \(landmarkMode ? "navigate" : "change landmark")"
+            let name = "\(entry.label), line \(entry.number), \(readOnly ? "historical landmark" : landmarkMode ? "navigate" : "change landmark")"
             button.setAccessibilityLabel(name)
             if landmarkMode, lines.indices.contains(entry.number - 1) {
                 let line = lines[entry.number - 1]

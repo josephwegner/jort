@@ -8,7 +8,9 @@ After Walk, users can mark important lines but still cannot recover earlier docu
 - Create revision boundaries from idle/lifecycle rules and meaningful landmark or bulk events without retaining every keystroke.
 - Add palette actions to search the current document and browse local history.
 - Present search matches with line context and navigate to the exact current range.
-- Present complete-state history previews and restore a selected revision atomically, preserving the state being replaced.
+- Present history as a read-only split workspace with a complete-state snapshot, an optional derived changes view, and a newest-first revision rail.
+- Preserve historical line ordinals and landmarks in previews, clearly replace live-editor footer affordances with contextual history status, and restore the normal shell on dismissal.
+- Restore a selected revision atomically from an explicit confirmed action, preserving the state being replaced.
 - Keep history and search local, lazy, off the launch/keystroke paths, and inaccessible to nonexistent agents or providers.
 
 ## Capabilities
@@ -27,5 +29,6 @@ None. This change depends on archived Crawl and Walk capabilities without alteri
 - Migrates SQLite from bounded current-state-only storage to separate bounded current-state plus retained revision storage.
 - Adds background revision serialization/coalescing and a storage-budget pruning policy.
 - Extends the Walk command palette with Search Document and Version History surfaces.
-- Adds history preview/restore transactions and search result navigation while preserving editor selection and viewport behavior.
+- Adds lazy derived-diff presentation, history preview/restore transactions, and search result navigation while preserving editor selection and viewport behavior.
+- Adds a transient in-window history workspace without adding a permanent History title-bar control or changing the healthy live-editor shell.
 - Adds no invocation parser, tools, agents, provider, script runtime, network access, or capture.

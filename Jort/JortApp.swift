@@ -76,12 +76,12 @@ enum JortApp {
         window.makeKeyAndOrderFront(nil); return true
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        persistence.flush(); return true
+        persistence.flushLifecycle(reason: .windowClosed); return true
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if duplicate { return .terminateNow }
         editor.textView.unmarkText()
-        persistence.flush { saved in
+        persistence.flushLifecycle(reason: .shutdown) { saved in
             if saved { sender.reply(toApplicationShouldTerminate: true) }
             else {
                 self.window.makeKeyAndOrderFront(nil)
@@ -103,12 +103,10 @@ enum JortApp {
            let icon = NSImage(contentsOf: url) { options[.applicationIcon] = icon }
         NSApp.orderFrontStandardAboutPanel(options: options)
     }
-    @objc func flush() { persistence.flush() }
+    @objc func flush() { persistence.flushLifecycle(reason: .deactivation) }
     @objc func showWindow() { window.makeKeyAndOrderFront(nil) }
     @objc func find() {
-        window.makeFirstResponder(editor.textView)
-        let item = NSMenuItem(); item.tag = NSTextFinder.Action.showFindInterface.rawValue
-        editor.textView.performFindPanelAction(item)
+        editor.showDocumentSearch()
     }
     private func buildMenu() {
         let main = NSMenu()

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		01BF871E54FD37F0704A5882 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF8341534A77B39BFA2904E /* PerformanceTests.swift */; };
+		04DFE6B5D74DD7D82466B457 /* HistoryWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */; };
 		0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACEB5981A7D1291606F22F4 /* EditorTests.swift */; };
 		105252729BE95E5A1F10E17D /* Transactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B872610ED836A61E96ED8DA /* Transactions.swift */; };
 		10958F2E0818D271D9BA9229 /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -16,17 +17,25 @@
 		1D1A9E90F304A9C8687B5B34 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
 		240CD90C57FF86496999F525 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		2831200E41E8F68BDC00FBB8 /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		2E3E2A12FB7E0DAE13A04A9A /* SQLiteHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0D62A6EE87AF55951103E0 /* SQLiteHistory.swift */; };
+		2EBB12C3C60CC1901765106C /* HistoryRevision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6853014BEFCE356E061ADFE6 /* HistoryRevision.swift */; };
 		2FF7F79150A10933EDFDA5A0 /* v2.json in Resources */ = {isa = PBXBuildFile; fileRef = 160370B1CD4C448EA0BEF96F /* v2.json */; };
+		31A782CBBFEAE5E00915ADCF /* DocumentSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B02EBC133D052919F85BFB1A /* DocumentSearchModel.swift */; };
 		326DA487B403FA6E4B990AFA /* RecoveryCheckpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */; };
 		3719E1FCB30A684B366E033B /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		3F1D8773EB88BF5E84AE1EC0 /* HistoryRetention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EA408834ABD32E691793CF /* HistoryRetention.swift */; };
 		43B9CC41FB64E27E0135D251 /* JortUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73F5C254EE12140FB60EB69 /* JortUITests.swift */; };
 		44A382E1159D0FD45E33BA6E /* CommandPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */; };
 		4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECC95805D3B99275307225B /* EditorViewController.swift */; };
 		4B8B663D3C060E790F4FE4A7 /* EmojiPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49680FE93D310BAFEC1043AE /* EmojiPicker.swift */; };
 		568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */; };
+		593A3CA36C8F99C7B958A13D /* DocumentSearchWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEAD877F9100ECB9E95895A /* DocumentSearchWorkspaceTests.swift */; };
 		5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D58BDC7B59E9928134887E3 /* StoreLock.swift */; };
+		5E7D11CF8C1CC0BDA47DF41B /* HistoryBrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9CBCC80A19ACDDBA76BDD0 /* HistoryBrowserModel.swift */; };
 		6B61C12EF1097CD68EA35E5E /* jort-white.svg in Resources */ = {isa = PBXBuildFile; fileRef = 07D77C5D4902A6B038E693AC /* jort-white.svg */; };
+		6BE23B46B8F346EF7C58868D /* DocumentSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D87A80477F84AD407D8C4E18 /* DocumentSearchController.swift */; };
 		6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
+		738EFFEA93B139D4C2EB00BD /* RunPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FBF44A835C49844B6902A16 /* RunPerformanceTests.swift */; };
 		7630238FB57057423175113F /* v1.json in Resources */ = {isa = PBXBuildFile; fileRef = 857FDC8BC95B6835BA5D1921 /* v1.json */; };
 		79B717601414FF7180172417 /* EditorShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3468DC421F7F54BE19537C /* EditorShell.swift */; };
 		7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD9032EA20B653B9CE85D00 /* JortApp.swift */; };
@@ -50,18 +59,26 @@
 		B8F124A8831203C5633B1E2E /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BADD1BD1890D8951172F6F65 /* v2.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = 4EBD819547F38AB24B0FD19F /* v2.sqlite */; };
 		BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CDD19338990DA4F6F840FA4B /* DocumentSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */; };
 		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		D32F25240A7053CD4C2C4D9E /* LinePresentationLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */; };
 		D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
+		D706A34255A3D2176DB9F625 /* HistoryDiffCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9069F39A81E388BB6AB7A24B /* HistoryDiffCell.swift */; };
 		D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */; };
 		DA78A33F7BEF6FB088516FDC /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		DB8A4FCD9426994D22AA3BA3 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		DD7AE91B690C6AEF939C5E42 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		E1B2AF06ED7F95AE96C63138 /* HistoryComparisonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072791E6103E642613A62D3E /* HistoryComparisonTests.swift */; };
+		E52AEB2D233A54A47B408564 /* HistoryStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B711F6E42B2DE037E8A58651 /* HistoryStorageTests.swift */; };
+		EAF611328974918CB820FC05 /* HistoryComparison.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56950F58BF8920CC14ABD7E4 /* HistoryComparison.swift */; };
 		EF5628B16F824A83A9A00909 /* v1.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = AD6759F2DA71568CAF61B1BA /* v1.sqlite */; };
 		F063CAE1A119DDA229FAC6AD /* PersistenceFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */; };
 		F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F66085B030452677C1BF9B8 /* ProcessTests.swift */; };
+		F67A84D29E8023BD49F137B5 /* HistoryWorkspaceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B8EF4F5FC1F5A8A7D6AE13F /* HistoryWorkspaceController.swift */; };
+		FA13C11805153B8A11FFB907 /* HistoryCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21039D88B48BA0259A6EF860 /* HistoryCoordinator.swift */; };
+		FE8279535EA11ADAE468D3F0 /* DocumentSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 817DD0BD61508DA25EEC854D /* DocumentSearchTests.swift */; };
 		FF37B0DE9AA742722B31827F /* SchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -217,42 +234,59 @@
 /* Begin PBXFileReference section */
 		02A0A8926B0C7313854C181A /* JortPersistence.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortPersistence.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceFormat.swift; sourceTree = "<group>"; };
+		072791E6103E642613A62D3E /* HistoryComparisonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryComparisonTests.swift; sourceTree = "<group>"; };
 		07D77C5D4902A6B038E693AC /* jort-white.svg */ = {isa = PBXFileReference; path = "jort-white.svg"; sourceTree = "<group>"; };
 		0B872610ED836A61E96ED8DA /* Transactions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transactions.swift; sourceTree = "<group>"; };
 		0F66085B030452677C1BF9B8 /* ProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTests.swift; sourceTree = "<group>"; };
 		160370B1CD4C448EA0BEF96F /* v2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v2.json; sourceTree = "<group>"; };
 		1978353FEB464E98985FE522 /* Jort.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jort.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A0D62A6EE87AF55951103E0 /* SQLiteHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteHistory.swift; sourceTree = "<group>"; };
 		1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCheckpoints.swift; sourceTree = "<group>"; };
 		1ECC95805D3B99275307225B /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
+		21039D88B48BA0259A6EF860 /* HistoryCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCoordinator.swift; sourceTree = "<group>"; };
 		21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
 		3D58BDC7B59E9928134887E3 /* StoreLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreLock.swift; sourceTree = "<group>"; };
 		49680FE93D310BAFEC1043AE /* EmojiPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiPicker.swift; sourceTree = "<group>"; };
 		4EBD819547F38AB24B0FD19F /* v2.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v2.sqlite; sourceTree = "<group>"; };
+		56950F58BF8920CC14ABD7E4 /* HistoryComparison.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryComparison.swift; sourceTree = "<group>"; };
+		57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearch.swift; sourceTree = "<group>"; };
 		59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		5EBF7CA0931124DB116AE610 /* JortUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5FF8341534A77B39BFA2904E /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
 		65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerTests.swift; sourceTree = "<group>"; };
+		6853014BEFCE356E061ADFE6 /* HistoryRevision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryRevision.swift; sourceTree = "<group>"; };
+		6B8EF4F5FC1F5A8A7D6AE13F /* HistoryWorkspaceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWorkspaceController.swift; sourceTree = "<group>"; };
 		6BD742A9E09AD22E1174BECA /* LockProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockProbe.swift; sourceTree = "<group>"; };
 		6DD9032EA20B653B9CE85D00 /* JortApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortApp.swift; sourceTree = "<group>"; };
 		72C38DD691618F20FA27AD87 /* LandmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandmarkTests.swift; sourceTree = "<group>"; };
+		73EA408834ABD32E691793CF /* HistoryRetention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryRetention.swift; sourceTree = "<group>"; };
 		7B13A1E275C9292115821584 /* StoreLockProbe */ = {isa = PBXFileReference; includeInIndex = 0; path = StoreLockProbe; sourceTree = BUILT_PRODUCTS_DIR; };
 		7CAE479DACAAE1E87A1B412E /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		7D9CBCC80A19ACDDBA76BDD0 /* HistoryBrowserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryBrowserModel.swift; sourceTree = "<group>"; };
+		7DEAD877F9100ECB9E95895A /* DocumentSearchWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchWorkspaceTests.swift; sourceTree = "<group>"; };
 		7E4A736D729EC93F968914D1 /* emoji.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = emoji.json; sourceTree = "<group>"; };
+		7FBF44A835C49844B6902A16 /* RunPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunPerformanceTests.swift; sourceTree = "<group>"; };
+		817DD0BD61508DA25EEC854D /* DocumentSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchTests.swift; sourceTree = "<group>"; };
 		836D2480566399F33F4D0E4B /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		857FDC8BC95B6835BA5D1921 /* v1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v1.json; sourceTree = "<group>"; };
 		890A3B619F758EFE88D70C05 /* DocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTests.swift; sourceTree = "<group>"; };
 		8B90F41BD2015B26B477581A /* JortAppKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortAppKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E614086D89E52EFCC7DCED6 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
+		9069F39A81E388BB6AB7A24B /* HistoryDiffCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryDiffCell.swift; sourceTree = "<group>"; };
 		9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortFoundationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWorkspaceTests.swift; sourceTree = "<group>"; };
 		9F4448EA2A682199B4390618 /* JortDocument.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortDocument.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrawlLargeDocument.swift; sourceTree = "<group>"; };
 		AD6759F2DA71568CAF61B1BA /* v1.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v1.sqlite; sourceTree = "<group>"; };
+		B02EBC133D052919F85BFB1A /* DocumentSearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchModel.swift; sourceTree = "<group>"; };
+		B711F6E42B2DE037E8A58651 /* HistoryStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStorageTests.swift; sourceTree = "<group>"; };
 		B73F5C254EE12140FB60EB69 /* JortUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortUITests.swift; sourceTree = "<group>"; };
 		BACEB5981A7D1291606F22F4 /* EditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTests.swift; sourceTree = "<group>"; };
 		BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		C9136C288B97547D76167A45 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
 		CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPalette.swift; sourceTree = "<group>"; };
 		D7391540700D5CC6E567E4A5 /* canvas-10000.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "canvas-10000.txt"; sourceTree = "<group>"; };
+		D87A80477F84AD407D8C4E18 /* DocumentSearchController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchController.swift; sourceTree = "<group>"; };
 		DE3468DC421F7F54BE19537C /* EditorShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorShell.swift; sourceTree = "<group>"; };
 		E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinePresentationLayout.swift; sourceTree = "<group>"; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -330,7 +364,9 @@
 		2855EA06D4096653BA9FB7A2 /* AppKit */ = {
 			isa = PBXGroup;
 			children = (
+				7DEAD877F9100ECB9E95895A /* DocumentSearchWorkspaceTests.swift */,
 				BACEB5981A7D1291606F22F4 /* EditorTests.swift */,
+				9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */,
 			);
 			name = AppKit;
 			path = Tests/AppKit;
@@ -367,11 +403,15 @@
 		7269BD467E1B32166BACFEA2 /* Foundation */ = {
 			isa = PBXGroup;
 			children = (
+				817DD0BD61508DA25EEC854D /* DocumentSearchTests.swift */,
 				890A3B619F758EFE88D70C05 /* DocumentTests.swift */,
+				072791E6103E642613A62D3E /* HistoryComparisonTests.swift */,
+				B711F6E42B2DE037E8A58651 /* HistoryStorageTests.swift */,
 				72C38DD691618F20FA27AD87 /* LandmarkTests.swift */,
 				59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */,
 				5FF8341534A77B39BFA2904E /* PerformanceTests.swift */,
 				0F66085B030452677C1BF9B8 /* ProcessTests.swift */,
+				7FBF44A835C49844B6902A16 /* RunPerformanceTests.swift */,
 				65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */,
 				8E614086D89E52EFCC7DCED6 /* StorageTests.swift */,
 			);
@@ -429,9 +469,13 @@
 		A7038EEFC224A9473B106BF9 /* JortPersistence */ = {
 			isa = PBXGroup;
 			children = (
+				21039D88B48BA0259A6EF860 /* HistoryCoordinator.swift */,
+				73EA408834ABD32E691793CF /* HistoryRetention.swift */,
+				6853014BEFCE356E061ADFE6 /* HistoryRevision.swift */,
 				BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */,
 				02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */,
 				1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */,
+				1A0D62A6EE87AF55951103E0 /* SQLiteHistory.swift */,
 				21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */,
 				3D58BDC7B59E9928134887E3 /* StoreLock.swift */,
 			);
@@ -442,7 +486,9 @@
 		C77123F6C474CA61648A68C2 /* JortDocument */ = {
 			isa = PBXGroup;
 			children = (
+				57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */,
 				C9136C288B97547D76167A45 /* DocumentState.swift */,
+				56950F58BF8920CC14ABD7E4 /* HistoryComparison.swift */,
 				0B872610ED836A61E96ED8DA /* Transactions.swift */,
 			);
 			name = JortDocument;
@@ -461,9 +507,14 @@
 			isa = PBXGroup;
 			children = (
 				CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */,
+				D87A80477F84AD407D8C4E18 /* DocumentSearchController.swift */,
+				B02EBC133D052919F85BFB1A /* DocumentSearchModel.swift */,
 				DE3468DC421F7F54BE19537C /* EditorShell.swift */,
 				1ECC95805D3B99275307225B /* EditorViewController.swift */,
 				49680FE93D310BAFEC1043AE /* EmojiPicker.swift */,
+				7D9CBCC80A19ACDDBA76BDD0 /* HistoryBrowserModel.swift */,
+				9069F39A81E388BB6AB7A24B /* HistoryDiffCell.swift */,
+				6B8EF4F5FC1F5A8A7D6AE13F /* HistoryWorkspaceController.swift */,
 				E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */,
 			);
 			name = JortAppKit;
@@ -765,9 +816,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				44A382E1159D0FD45E33BA6E /* CommandPalette.swift in Sources */,
+				6BE23B46B8F346EF7C58868D /* DocumentSearchController.swift in Sources */,
+				31A782CBBFEAE5E00915ADCF /* DocumentSearchModel.swift in Sources */,
 				79B717601414FF7180172417 /* EditorShell.swift in Sources */,
 				4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */,
 				4B8B663D3C060E790F4FE4A7 /* EmojiPicker.swift in Sources */,
+				5E7D11CF8C1CC0BDA47DF41B /* HistoryBrowserModel.swift in Sources */,
+				D706A34255A3D2176DB9F625 /* HistoryDiffCell.swift in Sources */,
+				F67A84D29E8023BD49F137B5 /* HistoryWorkspaceController.swift in Sources */,
 				D32F25240A7053CD4C2C4D9E /* LinePresentationLayout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -792,7 +848,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CDD19338990DA4F6F840FA4B /* DocumentSearch.swift in Sources */,
 				818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */,
+				EAF611328974918CB820FC05 /* HistoryComparison.swift in Sources */,
 				105252729BE95E5A1F10E17D /* Transactions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -801,9 +859,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA13C11805153B8A11FFB907 /* HistoryCoordinator.swift in Sources */,
+				3F1D8773EB88BF5E84AE1EC0 /* HistoryRetention.swift in Sources */,
+				2EBB12C3C60CC1901765106C /* HistoryRevision.swift in Sources */,
 				12545FCDDE669EA9FAB9629A /* PersistenceController.swift in Sources */,
 				F063CAE1A119DDA229FAC6AD /* PersistenceFormat.swift in Sources */,
 				326DA487B403FA6E4B990AFA /* RecoveryCheckpoints.swift in Sources */,
+				2E3E2A12FB7E0DAE13A04A9A /* SQLiteHistory.swift in Sources */,
 				D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */,
 				5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */,
 			);
@@ -814,7 +876,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */,
+				593A3CA36C8F99C7B958A13D /* DocumentSearchWorkspaceTests.swift in Sources */,
 				0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */,
+				04DFE6B5D74DD7D82466B457 /* HistoryWorkspaceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -823,11 +887,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				8F36CF2DD3DBB3F6CBF38AC3 /* CrawlLargeDocument.swift in Sources */,
+				FE8279535EA11ADAE468D3F0 /* DocumentSearchTests.swift in Sources */,
 				963EF4108F717821D8675420 /* DocumentTests.swift in Sources */,
+				E1B2AF06ED7F95AE96C63138 /* HistoryComparisonTests.swift in Sources */,
+				E52AEB2D233A54A47B408564 /* HistoryStorageTests.swift in Sources */,
 				B695B5BD3B553B1747430083 /* LandmarkTests.swift in Sources */,
 				568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */,
 				037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */,
 				F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */,
+				738EFFEA93B139D4C2EB00BD /* RunPerformanceTests.swift in Sources */,
 				FF37B0DE9AA742722B31827F /* SchedulerTests.swift in Sources */,
 				8347474761FD76586ADA88DC /* StorageTests.swift in Sources */,
 			);

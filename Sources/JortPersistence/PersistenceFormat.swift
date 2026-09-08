@@ -12,7 +12,7 @@ public enum StoreError: Error, Equatable, Sendable {
     }
 }
 public enum PersistenceFormat {
-    public static let sqliteVersion = 3
+    public static let sqliteVersion = 4
     public static let payloadVersion = 3
     public static let maximumBytes = 64 * 1024 * 1024
     private struct Header: Decodable { let formatVersion: Int?; let schemaVersion: Int? }

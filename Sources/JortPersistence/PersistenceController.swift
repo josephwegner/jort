@@ -34,6 +34,31 @@ public enum PersistenceState: Equatable, Sendable {
     private var writing = false
     private var failures = 0
     private var ready = false
+    private var loadedSnapshot: DocumentSnapshot?
+    public private(set) var history: HistoryCoordinator?
+    public private(set) var historyRecoveryIncomplete = false
+    public var onHistoryState: (@MainActor () -> Void)?
+    public func openHistory() async throws -> any HistoryStore {
+        guard ready, let store = store as? any HistoryStore, let initial = loadedSnapshot else { throw StoreError.io("History is unavailable") }
+        if try await store.revisions(before: nil, limit: 1).isEmpty {
+            _ = try await store.retain(initial, reason: "Initial state", timestamp: Date(), milestone: false)
+        }
+        return store
+    }
+    public func preserveBeforeRestore(_ snapshot: DocumentSnapshot) async throws {
+        guard ready, let store = store as? any HistoryStore, let initial = loadedSnapshot else { throw StoreError.io("History is unavailable") }
+        if history == nil {
+            history = HistoryCoordinator(store: store, initial: initial)
+            history?.onState = { [weak self] _ in self?.onHistoryState?() }
+        }
+        history?.changed(snapshot)
+        guard await history?.flush(reason: .beforeRestore) == true else { throw StoreError.io("Could not preserve the current state") }
+    }
+    public var historyMessage: String? {
+        if case .failed = history?.state { return "History could not be retained. Your current document is saved separately. Retry with ⌘S." }
+        if case .budgetExceeded = history?.state { return "History exceeds its budget because recent revisions or milestones are protected." }
+        return historyRecoveryIncomplete ? "Some history could not be recovered. Original files have been preserved." : nil
+    }
     private var waiters: [@MainActor (Bool) -> Void] = []
     public private(set) var committedRevision: Int64?
     public private(set) var status: PersistenceState = .loading {
@@ -52,6 +77,11 @@ public enum PersistenceState: Equatable, Sendable {
                 do { snapshot = try await store.load() }
                 catch let error as StoreError where error.recoverableCorruption { snapshot = try await store.recover() }
                 ready = true; pending = snapshot; committedRevision = snapshot.revision
+                loadedSnapshot = snapshot
+                if let sqlite = store as? SQLiteStore {
+                    historyRecoveryIncomplete = await sqlite.historyRecoveryWasIncomplete()
+                    onHistoryState?()
+                }
                 status = .clean(committed: snapshot.revision)
                 completion(.success(snapshot))
             } catch {
@@ -65,9 +95,14 @@ public enum PersistenceState: Equatable, Sendable {
             }
         }
     }
-    public func changed(_ snapshot: DocumentSnapshot) {
+    public func changed(_ snapshot: DocumentSnapshot, historyReason: HistoryBoundary? = nil) {
         pending = snapshot
         guard ready else { return }
+        if history == nil, let store = store as? any HistoryStore, let initial = loadedSnapshot {
+            history = HistoryCoordinator(store: store, initial: initial)
+            history?.onState = { [weak self] _ in self?.onHistoryState?() }
+        }
+        history?.changed(snapshot, reason: historyReason)
         if failures > retryDelays.count {
             if let failure = status.failure { status = .saveFailed(revision: snapshot.revision, failure: failure) }
             return
@@ -83,7 +118,26 @@ public enum PersistenceState: Equatable, Sendable {
             self.scheduled = nil; self.flush()
         }
     }
-    public func retry() { failures = 0; flush() }
+    public func retry() {
+        failures = 0
+        flush { [weak self] saved in
+            if saved { Task { _ = await self?.history?.flush(reason: .retry) } }
+        }
+    }
+    public func flushLifecycle(reason: HistoryBoundary, completion: (@MainActor (Bool) -> Void)? = nil) {
+        flush { [weak self] saved in
+            Task {
+                guard let self else { completion?(false); return }
+                if saved { _ = await self.history?.flush(reason: reason) }
+                // Editing can continue while history awaits its storage actor.
+                if saved, self.pending?.revision != self.committedRevision {
+                    self.flushLifecycle(reason: reason, completion: completion)
+                    return
+                }
+                completion?(saved)
+            }
+        }
+    }
     public func flush(completion: (@MainActor (Bool) -> Void)? = nil) {
         if let completion { waiters.append(completion) }
         scheduled?.cancel(); scheduled = nil
