@@ -13,6 +13,15 @@ settings:
     CURRENT_PROJECT_VERSION: 3
     ARCHS: '$(ARCHS_STANDARD)'
 targets:
+  JortSettings:
+    type: framework
+    platform: macOS
+    sources: [Sources/JortSettings]
+    dependencies:
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.settings
   JortDocument:
     type: framework
     platform: macOS
@@ -37,6 +46,7 @@ targets:
     dependencies:
       - target: JortDocument
       - target: JortPersistence
+      - target: JortSettings
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.appkit
@@ -79,6 +89,8 @@ targets:
         embed: true
       - target: JortAppKit
         embed: true
+      - target: JortSettings
+        embed: true
   StoreLockProbe:
     type: tool
     platform: macOS
@@ -94,12 +106,14 @@ targets:
     platform: macOS
     sources:
       - path: Tests/Foundation
+      - path: Tests/Settings
       - path: Tests/Support
       - path: Tests/Fixtures
         buildPhase: resources
     dependencies:
       - target: JortDocument
       - target: JortPersistence
+      - target: JortSettings
       - target: StoreLockProbe
         link: false
     settings:
@@ -117,6 +131,7 @@ targets:
       - target: JortDocument
       - target: JortPersistence
       - target: JortAppKit
+      - target: JortSettings
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editortests
@@ -145,6 +160,7 @@ schemes:
   JortFoundation:
     build:
       targets:
+        JortSettings: all
         JortDocument: all
         JortPersistence: all
         StoreLockProbe: all

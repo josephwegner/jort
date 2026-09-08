@@ -1,61 +1,232 @@
 ## ADDED Requirements
 
-### Requirement: Registered slash commands are recognized in place
-Jort SHALL recognize an exact registered `/command` token at its actual logical-line and character position after committed text input and SHALL leave unmatched or abandoned slash text as ordinary canonical text.
+### Requirement: Registered package commands are recognized in place
+Jort SHALL recognize an exact slash command from an enabled valid tool package at its actual logical-line and character position after committed text input and SHALL leave unmatched, pasted, abandoned, or provisional slash text as ordinary canonical text.
 
 #### Scenario: Registered command is typed
-- **WHEN** a slash token at line start or after whitespace exactly matches a registered command name
-- **THEN** Jort records pending state anchored by `LineID` and line-relative range
-- **AND** decorates that actual invocation line without inserting decoration content into text
+- **WHEN** a slash token at line start or after whitespace exactly matches an enabled registered command
+- **THEN** Jort records invocation state using stable line identities and line-relative anchors
+- **AND** decorates the actual token without adding characters to canonical text
 
-#### Scenario: Slash text is unmatched
-- **WHEN** typed slash text does not exactly match a registered name
-- **THEN** Jort treats all characters as ordinary text and creates no invocation metadata
+#### Scenario: Slash text is unmatched or pasted
+- **WHEN** slash text is not an exact enabled command or enters the document through plain-text paste
+- **THEN** Jort treats every character as ordinary text
+- **AND** creates no invocation metadata
 
 #### Scenario: IME composition contains slash text
 - **WHEN** slash text exists only in provisional marked text
 - **THEN** Jort does not recognize or execute it until composition commits
 
-### Requirement: Completion inserts text but never implicitly executes
-Jort SHALL offer registered command completion after slash input and SHALL treat completion selection as ordinary undoable text insertion rather than execution.
+### Requirement: Completion acceptance never implicitly executes
+Jort SHALL offer registry-backed command completion after slash input, SHALL accept a selected command with Space or Return according to its declared input mode, and SHALL NOT execute as part of completion acceptance.
 
-#### Scenario: Completion is selected
-- **WHEN** the user selects a command from filtered completion
-- **THEN** Jort inserts or completes its slash name in canonical text
+#### Scenario: Space accepts a canonical-input command
+- **WHEN** the user selects a contained or contextual completion with Space
+- **THEN** Jort completes the slash token and inserts the Space as canonical input
 - **AND** does not run the command
+
+#### Scenario: Return accepts a canonical-input command
+- **WHEN** the user selects a contained or contextual completion with Return
+- **THEN** Jort completes the slash token and consumes the acceptance key without inserting a newline
+- **AND** does not run the command
+
+#### Scenario: Ephemeral completion is accepted
+- **WHEN** the user accepts an ephemeral command with Space or Return
+- **THEN** Jort consumes the acceptance key and focuses the command's anchored prompt
+- **AND** inserts no prompt content into canonical text
 
 #### Scenario: Completion is dismissed
 - **WHEN** the user presses Escape while completion is open
 - **THEN** completion closes and focus remains in the editor
 - **AND** already typed text remains unchanged
 
-### Requirement: Execution is explicit
-Jort SHALL execute a pending command only from its Run action or Shift-Return and SHALL preserve Return as native newline insertion.
+### Requirement: Contained input is canonical text in one owned range
+Jort SHALL create an empty contained range immediately after an accepted contained command and SHALL grow that range through ordinary canonical editing performed from within it.
 
-#### Scenario: User presses Return
-- **WHEN** a pending command is decorated and the user presses Return
+#### Scenario: User enters contained input
+- **WHEN** the user types after accepting a contained command
+- **THEN** the command and typed input form one invocation-owned canonical range
+- **AND** the command is visually emphasized while input retains document typography
+
+#### Scenario: Contained input crosses a newline
+- **WHEN** the user presses Return while focused inside contained input
+- **THEN** Jort inserts a canonical newline and extends the owned range onto the new logical line
+- **AND** preserves ordinary gutter numbering for that line
+
+#### Scenario: User leaves contained input
+- **WHEN** the user clicks or keyboard-navigates outside an unsubmitted contained invocation
+- **THEN** the invocation remains valid but unfocused
+- **AND** typing outside its range is not added to its content
+
+#### Scenario: Command token becomes invalid
+- **WHEN** the user edits an unsubmitted command so it no longer identifies a compatible enabled tool
+- **THEN** Jort drops its invocation metadata and decoration
+- **AND** leaves the command and contained input as ordinary canonical text
+
+### Requirement: Contextual input uses one adjustable contiguous scope
+Jort SHALL initialize contextual input to the accepted command's complete current logical line excluding its newline and SHALL expose movable start and end boundaries at any legal character positions around one excluded invocation token.
+
+#### Scenario: Contextual command is accepted
+- **WHEN** the user accepts a contextual command
+- **THEN** Jort places its start boundary at the logical-line beginning and its end boundary at the logical-line end
+- **AND** visibly wraps that exact contiguous range while excluding only the slash-command characters from submitted content
+
+#### Scenario: Context boundary is dragged
+- **WHEN** the user drags a text-selection-style start or end handle
+- **THEN** Jort expands or contracts the contextual range to the chosen legal character boundary
+- **AND** keeps the invocation active without replacing the ordinary typing selection
+
+#### Scenario: Context boundary moves from the keyboard
+- **WHEN** the active invocation receives Option-Shift with Left, Right, Up, or Down
+- **THEN** Jort moves the focused contextual boundary by the corresponding character or logical line
+- **AND** ordinary Shift-arrow retains native text-selection behavior
+
+#### Scenario: Context reaches another invocation
+- **WHEN** pointer or keyboard expansion would overlap another active invocation-owned range
+- **THEN** Jort stops at the nearest legal character boundary
+- **AND** creates no overlapping or nested range
+
+#### Scenario: Context spans both sides of its invocation
+- **WHEN** contextual source exists before and after `/command`
+- **THEN** Jort submits the exact before and after characters concatenated in document order
+- **AND** removes only `/command` while preserving every adjacent whitespace and newline character
+
+### Requirement: Ephemeral input remains outside document semantics
+Jort SHALL present ephemeral input in a focused single-line field or multiline text area anchored below and to the right of its canonical command token and SHALL exclude the prompt from canonical document semantics.
+
+#### Scenario: Ephemeral prompt opens
+- **WHEN** an ephemeral command is accepted
+- **THEN** its prompt takes focus and remains anchored to the command as the document scrolls
+- **AND** may naturally move offscreen with that anchor
+
+#### Scenario: Ephemeral prompt is dismissed
+- **WHEN** the focused prompt receives Escape, its X action is activated, or its command token becomes invalid
+- **THEN** Jort closes the prompt and irreversibly discards its ephemeral content
+- **AND** leaves the slash token as ordinary canonical text
+
+#### Scenario: Document content is copied or persisted
+- **WHEN** the user copies, saves, versions, closes, or recovers a document containing open ephemeral prompts
+- **THEN** no ephemeral prompt content enters the copied text, revision, snapshot, persistence, or recovery payload
+
+### Requirement: Execution is explicit and focus-owned
+Jort SHALL submit an invocation only through its Run action or Shift-Return while its owned input, contextual wrapper, boundary, or ephemeral prompt is focused.
+
+#### Scenario: Focused invocation runs
+- **WHEN** the user activates Run or presses Shift-Return within invocation-owned focus
+- **THEN** both inputs dispatch one identical validated execution path
+- **AND** one activation cannot execute the invocation twice
+
+#### Scenario: Return is used after acceptance
+- **WHEN** completion is closed and the user presses Return inside canonical invocation input
 - **THEN** the native editor inserts a newline
-- **AND** Jort does not execute the command
+- **AND** Jort does not submit the invocation
 
-#### Scenario: User runs the command
-- **WHEN** the user activates Run or presses Shift-Return
-- **THEN** both inputs dispatch one identical command execution path
-- **AND** one activation cannot execute the command twice
+#### Scenario: User edits outside an invocation
+- **WHEN** focus is in unrelated document text and the user presses Shift-Return
+- **THEN** Jort performs no tool action
 
-#### Scenario: User abandons pending state
-- **WHEN** the user presses Escape with no completion open or edits the token so it no longer matches
-- **THEN** Jort removes pending decoration and metadata
-- **AND** leaves invocation text as ordinary text
+#### Scenario: Several invocations share a line
+- **WHEN** multiple nonoverlapping invocations exist or execute on one logical line
+- **THEN** each retains independent focus, lifecycle, geometry, and controls
+- **AND** an action affects only its owning invocation
 
-### Requirement: Invocation controls are accessible and layout stable
-Jort SHALL expose pending command identity, scope, Run, preview, and error state through keyboard and accessibility APIs without changing canonical text or shifting unrelated editor layout.
+### Requirement: Submission locks all source used by the invocation
+Jort SHALL lock the command and contained input or the command and complete contextual source from successful submission until a terminal lifecycle action restores or removes that state.
 
-#### Scenario: VoiceOver inspects a pending command
-- **WHEN** VoiceOver reaches a pending invocation line
-- **THEN** Jort announces command name, input scope, and Run action
-- **AND** the underlying document value remains ordinary text only
+#### Scenario: User selects locked text
+- **WHEN** a selection includes any locked source or pending-output character and the user invokes an editing command
+- **THEN** Jort rejects the entire edit
+- **AND** permits ordinary selection and copy across the same text
 
-#### Scenario: Invocation line wraps or scrolls
-- **WHEN** a pending invocation wraps, moves in the viewport, or scrolls offscreen
-- **THEN** its decoration remains anchored to its current logical line or is recycled when offscreen
-- **AND** no whole-document layout is forced
+#### Scenario: User edits unrelated text
+- **WHEN** an edit does not intersect any locked range
+- **THEN** Jort applies the edit normally
+- **AND** updates surviving invocation anchors without changing captured execution content
+
+#### Scenario: Context is submitted
+- **WHEN** a contextual invocation passes validation and begins execution
+- **THEN** its whole contextual range becomes locked
+- **AND** subsequent output continues to correspond to the captured immutable content
+
+### Requirement: Every invocation follows one cancellable asynchronous lifecycle
+Jort SHALL run fast and slow tools through inputting, submitted, processing, error or timeout, and pending-merge states with exactly one terminal transition per submitted generation.
+
+#### Scenario: A fast tool completes
+- **WHEN** a tool finishes before the configured processing-indicator delay
+- **THEN** Jort advances directly to pending merge
+- **AND** does not flash processing chrome
+
+#### Scenario: Processing remains active
+- **WHEN** execution exceeds the processing-indicator delay
+- **THEN** Jort shows only a spinner and X Cancel action inside the green invocation region
+- **AND** exposes the X as a named Cancel action to hover, keyboard, and accessibility clients
+
+#### Scenario: User cancels processing
+- **WHEN** the user activates Cancel before completion
+- **THEN** Jort invalidates that execution generation and discards any late result
+- **AND** removes invocation metadata while leaving invocation and canonical input as ordinary text
+
+#### Scenario: Execution fails or times out
+- **WHEN** a tool throws, violates its runtime boundary, or exceeds its timeout
+- **THEN** Jort publishes no output, retains locked source, applies a red error treatment, and exposes Dismiss only
+- **AND** Dismiss restores the exact pre-submit editable invocation
+
+#### Scenario: Validation fails
+- **WHEN** submitted content fails manifest or tool validation before execution
+- **THEN** Jort retains editable input and applies an orange warning treatment
+- **AND** makes no document mutation or history boundary
+
+### Requirement: Tool decoration is connected, accessible, and layout stable
+Jort SHALL draw contained and contextual source as one connected green range-union silhouette and pending canonical output as a connected purple region within the same compound structure without changing canonical text or gutter semantics.
+
+#### Scenario: Input wraps or crosses logical lines
+- **WHEN** an owned or contextual range spans visual fragments or canonical newlines
+- **THEN** Jort removes shared internal edges and rounds only exposed outer corners of the fragment union
+- **AND** does not render each fragment as an independent capsule
+
+#### Scenario: Pending output is published
+- **WHEN** output begins immediately after an invocation or on a later fragment or line
+- **THEN** the purple output joins the green source through a flush seam, shared edge, or short aligned neck
+- **AND** remains visually associated with exactly that invocation
+
+#### Scenario: Decorated content uses the gutter
+- **WHEN** a connected wrapper crosses canonical and presentation-only rows
+- **THEN** each canonical logical line retains its normal line number, wrapped and accessory rows receive blank gutter space, and no wrapper includes the gutter
+
+#### Scenario: Pending actions are exposed
+- **WHEN** output awaits Merge or Dismiss
+- **THEN** Jort places a pull-request-style Merge icon and X Dismiss icon inside the purple region near the command token
+- **AND** shows text labels on hover or focus and always exposes named accessible actions with adequate hit targets
+
+#### Scenario: VoiceOver traverses an invocation
+- **WHEN** VoiceOver reaches a decorated invocation
+- **THEN** it encounters canonical text in document order plus separately named scope, Run, Cancel, Merge, Dismiss, warning, or error actions applicable to the current state
+- **AND** the document accessibility value contains canonical text only
+
+#### Scenario: Invocation scrolls or relayouts
+- **WHEN** a connected invocation wraps, moves, expands above the viewport, or scrolls offscreen
+- **THEN** viewport-bounded presentation geometry keeps visible text, gutter, handles, and controls aligned and recycles offscreen presentation views
+- **AND** preserves the top visible stable line, relative offset, selection, and editor first responder when possible
+
+### Requirement: Persisted invocation state degrades safely across recovery and package changes
+Jort SHALL persist bounded canonical invocation lifecycle metadata atomically with canonical output and SHALL preserve canonical characters when metadata cannot be restored.
+
+#### Scenario: Pending output is reopened
+- **WHEN** a document with valid pending invocation metadata relaunches
+- **THEN** Jort restores its connected source/output decoration, locks, actions, and captured package contract
+- **AND** does not execute completed output again
+
+#### Scenario: Metadata is missing or corrupt
+- **WHEN** canonical invocation or output text exists without valid matching metadata
+- **THEN** Jort drops the metadata and decorations
+- **AND** preserves every canonical character as ordinary plain text
+
+#### Scenario: Inputting state cannot map to a changed package
+- **WHEN** bounded package-version migration cannot map an inputting invocation
+- **THEN** contained mode retains `/tool` and input, contextual mode retains `/tool` and source, and ephemeral mode retains `/tool`
+- **AND** all retained characters become ordinary text
+
+#### Scenario: Completed state cannot map to a changed package
+- **WHEN** bounded package-version migration cannot map an invocation with canonical output
+- **THEN** Jort removes `/tool` and contained input where applicable while retaining output
+- **AND** an empty completed output removes `/tool` and contained input and leaves no replacement

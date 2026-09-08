@@ -78,4 +78,24 @@ import XCTest
         app.typeKey(.escape, modifierFlags: [])
         editor.typeText("!"); XCTAssertEqual(editor.value as? String, "First\nSecond!")
     }
+
+    func testSettingsWindowAndCustomToolDraft() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("SettingsUI-\(UUID())")
+        let app = XCUIApplication(); app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
+        app.launch(); defer { app.terminate() }
+        XCTAssertTrue(app.textViews["Jort document"].waitForExistence(timeout: 5))
+        app.typeKey(",", modifierFlags: .command)
+        XCTAssertTrue(app.windows["Jort Settings"].waitForExistence(timeout: 3))
+        app.buttons["New Tool"].click()
+        let name = app.textFields["Tool name"], command = app.textFields["Command name"], source = app.textViews["JavaScript source"]
+        XCTAssertTrue(name.waitForExistence(timeout: 2)); name.click(); name.typeKey("a", modifierFlags: .command); name.typeText("UI Tool")
+        command.click(); command.typeKey("a", modifierFlags: .command); command.typeText("9 bad")
+        XCTAssertFalse(app.buttons["Save"].isEnabled)
+        command.typeKey("a", modifierFlags: .command); command.typeText("ui-tool")
+        source.click(); source.typeText("return input;")
+        XCTAssertTrue(app.buttons["Save"].isEnabled); app.buttons["Save"].click()
+        XCTAssertTrue(app.staticTexts["UI Tool"].waitForExistence(timeout: 3))
+        app.windows["Jort Settings"].buttons[XCUIIdentifierCloseWindow].click()
+        XCTAssertTrue(app.textViews["Jort document"].exists)
+    }
 }

@@ -43,6 +43,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C95C707E2A3214B5F7E60416"
+               BuildableName = "JortSettings.framework"
+               BlueprintName = "JortSettings"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "D7119C245676A4F069D25D44"
                BuildableName = "StoreLockProbe"
                BlueprintName = "StoreLockProbe"

@@ -39,6 +39,7 @@ Type into the single canvas. Paste is plain text. Native selection, wrapping, Fi
 - Hold **Option (⌥)** to reveal the landmark index temporarily. Release restores the previous mode; the footer landmark button can latch it open. The footer shows the attached landmark count and any actionable storage notice.
 - The native title bar keeps Pocket at the right. Pocket includes Search Document and Version History. History offers a read-only snapshot or changes view, inline revision counts, and confirmed full-state restore with Undo. Revisions are retained after one minute of idle editing and at semantic/lifecycle boundaries; current-state autosave runs more frequently.
 - **⌘W / ⌘0**: close/reopen the one window.
+- **⌘,**: open the modeless Settings window. Its Tools pane stores enabled state and custom JavaScript definitions independently from document content and history.
 - **File → Save Recovery Copy…**: save a separate versioned JSON snapshot when needed.
 
 Saving is best-effort and runs off the typing path. The internal scheduler targets frequent saves during continuous typing; it is not a strict half-second deadline or a guarantee under stalled/failing storage.
@@ -63,6 +64,7 @@ The maximum serialized payload is **64 MiB**. Oversize, busy, permissions, disk,
 
 - `JortDocument`: authoritative main-actor coordinator, immutable Sendable snapshots, typed transactions, line lineage, anchors, and revisions. No AppKit dependency.
 - `JortPersistence`: storage actor, locking, versioned codecs, atomic migration/recovery, typed main-actor scheduling.
+- `JortSettings`: bounded tool-definition models, versioned settings persistence, catalog snapshots, and a non-executing runtime handoff.
 - `JortAppKit`: native text, gutter, coordinator-backed undo, selection/viewport mapping, localized status presentation.
 - `Jort`: composition, menus, and lifecycle.
 

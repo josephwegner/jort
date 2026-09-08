@@ -57,6 +57,7 @@ import JortPersistence
     private var historySelection: NSRange?
     private var historyViewport: NSPoint?
     public var saveStatus: ((PersistenceState) -> Void)?
+    public var openSettings: (() -> Void)?
 
     public init(persistence: PersistenceController) { self.persistence = persistence; super.init(nibName: nil, bundle: nil) }
     public required init?(coder: NSCoder) { fatalError() }
@@ -428,6 +429,7 @@ import JortPersistence
     }
     func paletteActions() -> [PaletteAction] {
         var actions = [
+            PaletteAction(id: "settings.open", title: "Open Settings", keywords: "preferences tools configuration", execute: { [weak self] in self?.openSettings?() }),
             PaletteAction(id: "history.open", title: "Version History", keywords: "revision restore snapshot changes", enabled: { [weak self] in self?.persistence.status.permitsRetry == true }, execute: { [weak self] in self?.showHistory() }),
             PaletteAction(id: "search.document", title: "Search Document", keywords: "find text matches", execute: { [weak self] in self?.showDocumentSearch() }),
             PaletteAction(id: "landmark.edit", title: "Add or Change Landmark", keywords: "emoji bookmark", enabled: { [weak self] in self?.currentLineID != nil }, execute: { [weak self] in self?.addOrChangeLandmark() }),

@@ -2,6 +2,7 @@ import AppKit
 import JortDocument
 import JortPersistence
 import JortAppKit
+import JortSettings
 
 @main
 enum JortApp {
@@ -19,6 +20,8 @@ enum JortApp {
     var window: NSWindow!
     var editor: EditorViewController!
     var persistence: PersistenceController!
+    var settingsStore: SQLiteSettingsStore!
+    var settingsWindow: SettingsWindowController!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
@@ -28,6 +31,13 @@ enum JortApp {
         let directory = override.map { URL(fileURLWithPath: $0) } ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(storeName, isDirectory: true)
         persistence = PersistenceController(directory: directory)
         editor = EditorViewController(persistence: persistence)
+        let templates = (try? BundledTemplateLoader.load(from: Bundle.main.url(forResource: "ToolTemplates", withExtension: "json"))) ?? []
+        settingsStore = SQLiteSettingsStore(directory: directory, templates: templates)
+        let toolsPane = ToolsSettingsViewController(store: settingsStore, templates: templates)
+        settingsWindow = SettingsWindowController(panes: [
+            SettingsPaneDescriptor(id: "tools", title: "Tools", symbolName: "hammer", keywords: "scripts javascript") { toolsPane }
+        ])
+        editor.openSettings = { [weak self] in self?.showSettings() }
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 680), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.title = "Jort"
@@ -80,6 +90,14 @@ enum JortApp {
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if duplicate { return .terminateNow }
+        settingsWindow.prepareForTermination { [weak self] allowed in
+            guard let self else { sender.reply(toApplicationShouldTerminate: false); return }
+            guard allowed else { sender.reply(toApplicationShouldTerminate: false); return }
+            self.finishTermination(sender)
+        }
+        return .terminateLater
+    }
+    private func finishTermination(_ sender: NSApplication) {
         editor.textView.unmarkText()
         persistence.flushLifecycle(reason: .shutdown) { saved in
             if saved { sender.reply(toApplicationShouldTerminate: true) }
@@ -95,7 +113,6 @@ enum JortApp {
                 }
             }
         }
-        return .terminateLater
     }
     @objc func showAbout() {
         var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
@@ -105,6 +122,7 @@ enum JortApp {
     }
     @objc func flush() { persistence.flushLifecycle(reason: .deactivation) }
     @objc func showWindow() { window.makeKeyAndOrderFront(nil) }
+    @objc func showSettings() { settingsWindow.present() }
     @objc func find() {
         editor.showDocumentSearch()
     }
@@ -120,6 +138,8 @@ enum JortApp {
         }
         let app = submenu("Jort")
         add(app, "About Jort", #selector(showAbout), "", self)
+        app.addItem(.separator())
+        add(app, "Settings…", #selector(showSettings), ",", self)
         app.addItem(.separator())
         add(app, "Hide Jort", #selector(NSApplication.hide(_:)), "h")
         app.addItem(.separator())
