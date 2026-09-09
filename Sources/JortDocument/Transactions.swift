@@ -56,8 +56,10 @@ public struct DocumentSnapshot: Equatable, Sendable {
     public let revision: Int64
     public let lines: [LineMeta]
     public let landmarks: [Landmark]
-    public init(documentID: UUID = UUID(), text: String = "", revision: Int64 = 0, lines: [LineMeta] = [LineMeta(location: 0, length: 0)], landmarks: [Landmark] = []) {
+    public let invocations: [ToolInvocation]
+    public init(documentID: UUID = UUID(), text: String = "", revision: Int64 = 0, lines: [LineMeta] = [LineMeta(location: 0, length: 0)], landmarks: [Landmark] = [], invocations: [ToolInvocation] = []) {
         self.documentID = documentID; self.text = text; self.revision = revision; self.lines = lines
+        self.invocations = invocations
         if landmarks.isEmpty { self.landmarks = []; return }
         var order: [UUID: Int] = [:]
         for (index, line) in lines.enumerated() { order[line.id] = index }
@@ -67,8 +69,11 @@ public struct DocumentSnapshot: Equatable, Sendable {
             return a == b ? $0.id.rawValue.uuidString < $1.id.rawValue.uuidString : a < b
         }
     }
-    public func validate() throws { try liveState.validate() }
-    var liveState: DocumentState { DocumentState(documentID: documentID, landmarks: landmarks, text: text, revision: revision, lines: lines) }
+    public func validate() throws {
+        try liveState.validate()
+        guard invocations.count <= 1000, ToolInvocation.sanitized(invocations, in: self) == invocations else { throw DocumentError.invalidState }
+    }
+    var liveState: DocumentState { DocumentState(documentID: documentID, landmarks: landmarks, invocations: invocations, text: text, revision: revision, lines: lines) }
     public func isDetached(_ landmark: Landmark) -> Bool { landmark.detached || !lines.contains { $0.id == landmark.lineID } }
     public var orderedLandmarks: [Landmark] { landmarks }
 }
@@ -81,6 +86,7 @@ public enum DocumentMutation: Sendable {
     case removeLandmark(LandmarkID)
     case clearLandmarks
     case insertAfter(lineID: UUID, text: String)
+    case tools(DocumentSnapshot)
 }
 public struct DocumentTransaction: Sendable {
     public let baseRevision: Int64
@@ -105,7 +111,7 @@ public struct TransactionResult: Sendable {
     public private(set) var committedRevision: Int64?
     public var onTransaction: (@MainActor (TransactionResult) -> Void)?
     public var snapshot: DocumentSnapshot {
-        DocumentSnapshot(documentID: state.documentID, text: state.text, revision: state.revision, lines: state.lines, landmarks: state.landmarks)
+        DocumentSnapshot(documentID: state.documentID, text: state.text, revision: state.revision, lines: state.lines, landmarks: state.landmarks, invocations: state.invocations)
     }
     public init(snapshot: DocumentSnapshot = DocumentSnapshot(), committed: Bool = false) throws {
         try snapshot.validate(); state = snapshot.liveState
@@ -122,6 +128,10 @@ public struct TransactionResult: Sendable {
         let before = snapshot
         var next = state
         switch transaction.mutation {
+        case .tools(let snapshot):
+            try snapshot.validate()
+            guard snapshot.documentID == state.documentID else { throw DocumentError.invalidState }
+            next = snapshot.liveState
         case .edit(let text, let range, let length):
             if let range, let length {
                 let count = state.text.utf16.count
@@ -129,7 +139,22 @@ public struct TransactionResult: Sendable {
                       range.length <= count - range.location, length >= 0, count - range.length <= Int.max - length,
                       count - range.length + length == text.utf16.count else { throw DocumentError.invalidRange }
             }
-            next.replaceText(text, editRange: range, replacementLength: length, at: time)
+            let effectiveRange: NSRange, effectiveLength: Int
+            if let range, let length { effectiveRange = range; effectiveLength = length }
+            else {
+                let old = Array(state.text.utf16), new = Array(text.utf16)
+                var prefix = 0, suffix = 0
+                while prefix < min(old.count, new.count), old[prefix] == new[prefix] { prefix += 1 }
+                while suffix < min(old.count, new.count) - prefix, old[old.count - suffix - 1] == new[new.count - suffix - 1] { suffix += 1 }
+                effectiveRange = NSRange(location: prefix, length: old.count - prefix - suffix)
+                effectiveLength = new.count - prefix - suffix
+            }
+            if ToolRangeEditing.intersectsLock(effectiveRange, snapshot: before) { throw DocumentError.invalidRange }
+            next.replaceText(text, editRange: effectiveRange, replacementLength: effectiveLength, at: time)
+            if !state.invocations.isEmpty {
+                let plain = DocumentSnapshot(documentID: next.documentID, text: next.text, revision: next.revision, lines: next.lines, landmarks: next.landmarks)
+                next.invocations = ToolRangeEditing.remap(state.invocations, from: before, to: plain, edit: effectiveRange, replacementLength: effectiveLength)
+            }
         case .restore(let snapshot):
             try snapshot.validate()
             guard snapshot.documentID == state.documentID else { throw DocumentError.invalidState }
@@ -145,7 +170,10 @@ public struct TransactionResult: Sendable {
             let prefix = offset == state.text.utf16.count && !state.text.hasSuffix("\n") ? "\n" : ""
             let inserted = prefix + text + (text.hasSuffix("\n") ? "" : "\n")
             let range = NSRange(location: offset, length: 0)
+            if ToolRangeEditing.intersectsLock(range, snapshot: before) { throw DocumentError.invalidRange }
             next.replaceText((state.text as NSString).replacingCharacters(in: range, with: inserted), editRange: range, replacementLength: inserted.utf16.count, at: time)
+            let plain = DocumentSnapshot(documentID: next.documentID, text: next.text, revision: next.revision, lines: next.lines, landmarks: next.landmarks)
+            next.invocations = ToolRangeEditing.remap(state.invocations, from: before, to: plain, edit: range, replacementLength: inserted.utf16.count)
         }
         guard state.revision < Int64.max else { throw DocumentError.invalidState }
         next.revision = state.revision + 1

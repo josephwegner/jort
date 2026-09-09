@@ -20,7 +20,8 @@ enum JortApp {
     var window: NSWindow!
     var editor: EditorViewController!
     var persistence: PersistenceController!
-    var settingsStore: SQLiteSettingsStore!
+    var settingsStore: (any SettingsStore)!
+    var toolCatalogTask: Task<Void, Never>?
     var settingsWindow: SettingsWindowController!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -31,8 +32,26 @@ enum JortApp {
         let directory = override.map { URL(fileURLWithPath: $0) } ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(storeName, isDirectory: true)
         persistence = PersistenceController(directory: directory)
         editor = EditorViewController(persistence: persistence)
-        let templates = (try? BundledTemplateLoader.load(from: Bundle.main.url(forResource: "ToolTemplates", withExtension: "json"))) ?? []
-        settingsStore = SQLiteSettingsStore(directory: directory, templates: templates)
+        let packageRegistry = ToolPackageRegistry(
+            bundledDirectory: Bundle.main.resourceURL!.appendingPathComponent("Tools"),
+            installedDirectory: directory.appendingPathComponent("Tools"))
+        Task { [weak self] in self?.editor.toolPackages = (try? await packageRegistry.inspect().executable) ?? [] }
+        let toolRoot = Bundle.main.resourceURL!.appendingPathComponent("Tools")
+        let templates: [ToolTemplate] = ((try? FileManager.default.contentsOfDirectory(at: toolRoot, includingPropertiesForKeys: nil)) ?? []).compactMap {
+            guard let package = try? ToolPackage.load(from: $0) else { return nil }
+            var template = ToolTemplate(id: ToolID(package.manifest.id), version: package.manifest.version,
+                displayName: package.manifest.name, commandName: String(package.manifest.command.dropFirst()),
+                summary: package.manifest.description, source: package.source)
+            template.manifest = package.manifest; return template
+        }
+        settingsStore = PackageSettingsStore(registry: packageRegistry, preferences: SQLiteSettingsStore(directory: directory))
+        let settings = settingsStore!
+        toolCatalogTask = Task { [weak self] in
+            _ = try? await settings.load()
+            for await _ in await settings.updates() {
+                self?.editor.toolPackages = (try? await packageRegistry.inspect().executable) ?? []
+            }
+        }
         let toolsPane = ToolsSettingsViewController(store: settingsStore, templates: templates)
         settingsWindow = SettingsWindowController(panes: [
             SettingsPaneDescriptor(id: "tools", title: "Tools", symbolName: "hammer", keywords: "scripts javascript") { toolsPane }

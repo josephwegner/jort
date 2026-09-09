@@ -92,10 +92,41 @@ import XCTest
         command.click(); command.typeKey("a", modifierFlags: .command); command.typeText("9 bad")
         XCTAssertFalse(app.buttons["Save"].isEnabled)
         command.typeKey("a", modifierFlags: .command); command.typeText("ui-tool")
-        source.click(); source.typeText("return input;")
+        source.click(); source.typeKey("a", modifierFlags: .command)
+        source.typeText("export default async function(input) { return {output: input.content}; }")
         XCTAssertTrue(app.buttons["Save"].isEnabled); app.buttons["Save"].click()
         XCTAssertTrue(app.staticTexts["UI Tool"].waitForExistence(timeout: 3))
         app.windows["Jort Settings"].buttons[XCUIIdentifierCloseWindow].click()
         XCTAssertTrue(app.textViews["Jort document"].exists)
+    }
+
+    func testBundledToolCompletionPendingMergeAndRelaunch() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ToolsUI-\(UUID())")
+        let app = XCUIApplication(); app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
+        app.launch(); defer { app.terminate() }
+        let editor = app.textViews["Jort document"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.click()
+        editor.typeText("I need /calc")
+        XCTAssertTrue(app.buttons["/calc  Calc"].waitForExistence(timeout: 3))
+        editor.typeText(" 3+3 ")
+        app.typeKey(.return, modifierFlags: .shift)
+        let merge = app.buttons["Merge"]
+        XCTAssertTrue(merge.waitForExistence(timeout: 5))
+        XCTAssertEqual(editor.value as? String, "I need /calc 3+3 6")
+        merge.click()
+        XCTAssertEqual(editor.value as? String, "I need 6")
+        app.typeKey("s", modifierFlags: .command)
+        let durable = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let data = try? Data(contentsOf: root.appendingPathComponent("Store/Recovery-manifest.json")),
+                  let manifest = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let entries = manifest["entries"] as? [[String: Any]], let slot = entries.first?["slot"] as? Int,
+                  let recovery = try? Data(contentsOf: root.appendingPathComponent("Store/Recovery-\(slot).json")),
+                  let envelope = try? JSONSerialization.jsonObject(with: recovery) as? [String: Any],
+                  let document = envelope["document"] as? [String: Any] else { return false }
+            return document["content"] as? String == "I need 6"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [durable], timeout: 5), .completed)
+        app.terminate(); app.launch()
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); XCTAssertEqual(editor.value as? String, "I need 6")
     }
 }

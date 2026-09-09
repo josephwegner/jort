@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.jort.date",
+  "version": 1,
+  "name": "Date",
+  "command": "/date",
+  "description": "Current UTC date (YYYY-MM-DD)",
+  "entryContract": 1,
+  "inputMode": "contained",
+  "outputOperation": "replace-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

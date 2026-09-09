@@ -12,8 +12,8 @@ public enum StoreError: Error, Equatable, Sendable {
     }
 }
 public enum PersistenceFormat {
-    public static let sqliteVersion = 4
-    public static let payloadVersion = 3
+    public static let sqliteVersion = 5
+    public static let payloadVersion = 4
     public static let maximumBytes = 64 * 1024 * 1024
     private struct Header: Decodable { let formatVersion: Int?; let schemaVersion: Int? }
     private struct LegacyV1: Decodable {
@@ -26,6 +26,7 @@ public enum PersistenceFormat {
         let formatVersion: Int
         let document: Payload
         let checksum: String?
+        var annotationChecksum: String? = nil
     }
     private struct Payload: Codable {
         let id: UUID
@@ -33,10 +34,12 @@ public enum PersistenceFormat {
         let liveRevision: Int64
         let lines: [LineMeta]
         let landmarks: [Landmark]
-        enum CodingKeys: String, CodingKey { case id, content, liveRevision, lines, landmarks }
+        let invocations: [ToolInvocation]?
+        enum CodingKeys: String, CodingKey { case id, content, liveRevision, lines, landmarks, invocations }
         init(_ snapshot: DocumentSnapshot) {
             id = snapshot.documentID; content = snapshot.text; liveRevision = snapshot.revision
             lines = snapshot.lines; landmarks = snapshot.orderedLandmarks
+            invocations = snapshot.invocations.isEmpty ? nil : snapshot.invocations
         }
         init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -45,6 +48,7 @@ public enum PersistenceFormat {
             liveRevision = try values.decode(Int64.self, forKey: .liveRevision)
             lines = try values.decode([LineMeta].self, forKey: .lines)
             landmarks = try values.decode([Landmark].self, forKey: .landmarks)
+            invocations = try? values.decodeIfPresent([ToolInvocation].self, forKey: .invocations)
         }
     }
     private struct LegacyLandmark: Decodable {
@@ -66,11 +70,16 @@ public enum PersistenceFormat {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]; return encoder
     }
     public static func checksum(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
-    public static func encode(_ snapshot: DocumentSnapshot) throws -> Data {
+    public static func encode(_ snapshot: DocumentSnapshot, version: Int = payloadVersion) throws -> Data {
+        guard version == payloadVersion || version == 3 && snapshot.invocations.isEmpty else { throw StoreError.unsupportedVersion }
         guard snapshot.text.utf8.count <= maximumBytes else { throw StoreError.sizeLimit }
         try snapshot.validate()
         let payload = Payload(snapshot)
-        let data = try encoder().encode(Envelope(formatVersion: payloadVersion, document: payload, checksum: checksum(encoder().encode(payload))))
+        let canonical = Payload(DocumentSnapshot(documentID: snapshot.documentID, text: snapshot.text,
+            revision: snapshot.revision, lines: snapshot.lines, landmarks: snapshot.landmarks))
+        var envelope = Envelope(formatVersion: version, document: payload, checksum: checksum(try encoder().encode(canonical)))
+        if version >= 4, let annotations = payload.invocations { envelope.annotationChecksum = checksum(try encoder().encode(annotations)) }
+        let data = try encoder().encode(envelope)
         guard data.count <= maximumBytes else { throw StoreError.sizeLimit }
         return data
     }
@@ -90,11 +99,16 @@ public enum PersistenceFormat {
                 let ids = Set(value.lines.map(\.id))
                 let landmarks = (value.landmarks ?? []).map { Landmark(id: $0.id, lineID: $0.lineID, emoji: $0.emoji, detached: !ids.contains($0.lineID)) }
                 snapshot = DocumentSnapshot(documentID: value.id, text: value.content, revision: value.liveRevision, lines: value.lines, landmarks: landmarks)
-            case 3:
+            case 3, 4:
                 let envelope = try decoder.decode(Envelope.self, from: data)
                 let value = envelope.document
-                guard envelope.checksum == checksum(try encoder().encode(value)) else { throw StoreError.invalidPayload }
-                snapshot = DocumentSnapshot(documentID: value.id, text: value.content, revision: value.liveRevision, lines: value.lines, landmarks: value.landmarks)
+                let plain = DocumentSnapshot(documentID: value.id, text: value.content, revision: value.liveRevision, lines: value.lines, landmarks: value.landmarks)
+                guard envelope.checksum == checksum(try encoder().encode(Payload(plain))) else { throw StoreError.invalidPayload }
+                let stored = value.invocations ?? []
+                let annotationHash = checksum(try encoder().encode(stored))
+                let metadataValid = version >= 4 && stored.count <= 1000 && envelope.annotationChecksum == annotationHash
+                let annotations = metadataValid ? ToolInvocation.sanitized(stored, in: plain) : []
+                snapshot = DocumentSnapshot(documentID: value.id, text: value.content, revision: value.liveRevision, lines: value.lines, landmarks: value.landmarks, invocations: annotations)
             default: throw StoreError.invalidPayload
             }
             try snapshot.validate()

@@ -84,10 +84,10 @@ enum HistoryRevisionFormat {
 
     /// Generation is bookkeeping: an exact undo back to a retained state deduplicates.
     /// Text, document/line/landmark identities and line timestamps remain in the hash.
-    static func stateHash(_ snapshot: DocumentSnapshot) throws -> String {
+    static func stateHash(_ snapshot: DocumentSnapshot, payloadVersion: Int = PersistenceFormat.payloadVersion) throws -> String {
         let state = DocumentSnapshot(documentID: snapshot.documentID, text: snapshot.text,
-                                     revision: 0, lines: snapshot.lines, landmarks: snapshot.landmarks)
-        return PersistenceFormat.checksum(try PersistenceFormat.encode(state))
+                                     revision: 0, lines: snapshot.lines, landmarks: snapshot.landmarks, invocations: snapshot.invocations)
+        return PersistenceFormat.checksum(try PersistenceFormat.encode(state, version: payloadVersion))
     }
 
     static func encode(_ snapshot: DocumentSnapshot, reason: String, timestamp: Date,
@@ -150,10 +150,11 @@ enum HistoryRevisionFormat {
             }
             guard payload.count == content.uncompressedBytes,
                   PersistenceFormat.checksum(payload) == content.payloadHash else { throw StoreError.invalidPayload }
-            let snapshot = try PersistenceFormat.decode(payload).snapshot
+            let decoded = try PersistenceFormat.decode(payload)
+            let snapshot = decoded.snapshot
             guard snapshot.documentID == content.metadata.documentID,
                   snapshot.revision == content.metadata.generation,
-                  try stateHash(snapshot) == content.metadata.stateHash else { throw StoreError.invalidPayload }
+                  try stateHash(snapshot, payloadVersion: decoded.version) == content.metadata.stateHash else { throw StoreError.invalidPayload }
             return HistoryRevision(metadata: content.metadata, snapshot: snapshot)
         } catch let error as StoreError { throw error }
         catch { throw StoreError.invalidPayload }

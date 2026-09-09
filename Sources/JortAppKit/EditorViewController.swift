@@ -2,6 +2,7 @@ import AppKit
 import UniformTypeIdentifiers
 import JortDocument
 import JortPersistence
+import JortSettings
 
 @MainActor public final class JortTextView: NSTextView {
     public let history = UndoManager()
@@ -17,6 +18,43 @@ import JortPersistence
     var onCompositionCommit: (() -> Void)?
     var onTextChange: (() -> Void)?
     var onEscape: (() -> Bool)?
+    var onToolKey: ((NSEvent) -> Bool)?
+    var onToolDraw: ((NSRect) -> Void)?
+    var isPasting = false
+    var onPaste: (() -> Void)?
+    var onCommittedSlash: (() -> Void)?
+    public override func keyDown(with event: NSEvent) {
+        if !hasMarkedText(), onToolKey?(event) == true { return }
+        super.keyDown(with: event)
+    }
+    public override func insertText(_ insertString: Any, replacementRange: NSRange) {
+        let committed = (insertString as? NSAttributedString)?.string ?? (insertString as? String ?? "")
+        if !isPasting, committed == "/" || (hasMarkedText() && committed.contains("/")) { onCommittedSlash?() }
+        var attributes = typingAttributes
+        attributes[.kern] = 0
+        attributes.removeValue(forKey: NSAttributedString.Key("JortToolDecoration"))
+        attributes[.font] = NSFont.monospacedSystemFont(ofSize: 15, weight: .regular)
+        typingAttributes = attributes
+        super.insertText(insertString, replacementRange: replacementRange)
+    }
+    public override func paste(_ sender: Any?) {
+        pasteAsPlainText(sender)
+    }
+    public override func pasteAsPlainText(_ sender: Any?) {
+        let previous = isPasting
+        isPasting = true; defer { isPasting = previous }
+        onPaste?()
+        super.pasteAsPlainText(sender)
+    }
+    public override func copy(_ sender: Any?) {
+        let range = selectedRange()
+        guard NSMaxRange(range) <= string.utf16.count else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString((string as NSString).substring(with: range), forType: .string)
+    }
+    public override func drawBackground(in rect: NSRect) {
+        super.drawBackground(in: rect); onToolDraw?(rect)
+    }
     public override func didChangeText() {
         super.didChangeText()
         onTextChange?()
@@ -29,6 +67,9 @@ import JortPersistence
         lineAccessibilityChildren?() ?? super.accessibilityChildren()
     }
     public override func unmarkText() {
+        let marked = markedRange()
+        if !isPasting, marked.location != NSNotFound, NSMaxRange(marked) <= string.utf16.count,
+           (string as NSString).substring(with: marked).contains("/") { onCommittedSlash?() }
         super.unmarkText()
         onCompositionCommit?()
     }
@@ -58,6 +99,15 @@ import JortPersistence
     private var historyViewport: NSPoint?
     public var saveStatus: ((PersistenceState) -> Void)?
     public var openSettings: (() -> Void)?
+    var toolController: ToolInvocationController!
+    var toolPresentation: ToolInvocationPresentation!
+    private var toolCatalogLoaded = false
+    public var toolPackages: [ToolPackage] = [] {
+        didSet {
+            toolCatalogLoaded = true; toolController?.packages = toolPackages; toolController?.reconcilePackages(); refreshToolPresentation()
+            palette?.actions = paletteActions(); palette?.reload()
+        }
+    }
 
     public init(persistence: PersistenceController) { self.persistence = persistence; super.init(nibName: nil, bundle: nil) }
     public required init?(coder: NSCoder) { fatalError() }
@@ -83,6 +133,7 @@ import JortPersistence
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
         textView.isAutomaticLinkDetectionEnabled = false
+        textView.smartInsertDeleteEnabled = false
         textView.isContinuousSpellCheckingEnabled = false
         textView.allowsUndo = false
         textView.history.levelsOfUndo = 200
@@ -164,8 +215,15 @@ import JortPersistence
             retry.centerYAnchor.constraint(equalTo: notice.centerYAnchor)
         ])
         textView.onCompositionCommit = { [weak self] in self?.commitText() }
+        toolController = ToolInvocationController(editor: self); toolController.packages = toolPackages
+        toolPresentation = ToolInvocationPresentation(editor: self)
+        textView.onToolKey = { [weak self] in self?.toolPresentation.handle($0) ?? false }
+        textView.onToolDraw = { [weak self] in self?.toolPresentation.draw($0) }
+        textView.onPaste = { [weak self] in self?.toolPresentation.abandonCompletion() }
+        textView.onCommittedSlash = { [weak self] in self?.toolPresentation.armCommittedSlash() }
         textView.onTextChange = { [weak self] in self?.commitText(); self?.refreshGutterAfterLayout() }
         textView.onEscape = { [weak self] in
+            if self?.toolPresentation.escape() == true { return true }
             guard let search = self?.documentSearch else { return false }
             search.dismiss(); return true
         }
@@ -210,6 +268,8 @@ import JortPersistence
                 }
                 self.persistence.changed(result.after, historyReason: historyReason)
                 self.documentSearch?.documentChanged()
+                self.toolController.documentChanged()
+                self.refreshToolPresentation()
                 if result.before.landmarks != result.after.landmarks, self.persistence.status.failure == nil { self.persistence.flush() }
             }
             self.linePresentation.update(lines: self.state.lines)
@@ -217,6 +277,7 @@ import JortPersistence
             self.ruler.landmarks = self.state.landmarks
             self.updateFooter()
             self.textView.history.removeAllActions()
+            if self.toolCatalogLoaded { self.toolController.reconcilePackages() }
             self.view.window?.makeFirstResponder(self.textView)
         }
     }
@@ -266,6 +327,7 @@ import JortPersistence
         footer.update(count: state.landmarks.filter { !$0.detached }.count, mode: ruler.modeState)
     }
     public func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+        if ToolRangeEditing.intersectsLock(affectedCharRange, snapshot: state) { return false }
         if ready, !textView.hasMarkedText(), textView.string == state.text, let replacementString {
             pendingEdit = (affectedCharRange, replacementString.utf16.count)
         } else { pendingEdit = nil }
@@ -280,6 +342,7 @@ import JortPersistence
         DispatchQueue.main.async { [weak self] in
             self?.ruler?.needsDisplay = true
             self?.linePresentation?.refreshViews()
+            self?.refreshToolPresentation()
         }
     }
     private func commitText() {
@@ -311,9 +374,12 @@ import JortPersistence
                 target.recordUndo(result.before, selection: currentSelection, viewport: currentViewport)
                 target.display(result, selection: selection)
                 target.scroll.contentView.scroll(to: savedViewport)
+                if target.toolCatalogLoaded { target.toolController.reconcilePackages() }
             } catch { assertionFailure("Invalid undo snapshot: \(error)") }
         }
     }
+    func registerToolUndo(_ snapshot: DocumentSnapshot) { recordUndo(snapshot, selection: textView.selectedRange()) }
+    func refreshToolPresentation() { toolPresentation?.refresh() }
     /// Future commands and captures submit transactions here; they never receive NSTextStorage.
     @discardableResult public func apply(_ transaction: DocumentTransaction) throws -> TransactionResult {
         guard ready else { throw DocumentError.invalidState }
@@ -439,6 +505,16 @@ import JortPersistence
             PaletteAction(id: "landmark.next", title: "Scroll to Next Landmark", enabled: { [weak self] in self?.state.landmarks.contains { !$0.detached } == true }, execute: { [weak self] in self?.nextLandmark() }),
             PaletteAction(id: "landmark.previous", title: "Scroll to Last Landmark", keywords: "previous", enabled: { [weak self] in self?.state.landmarks.contains { !$0.detached } == true }, execute: { [weak self] in self?.previousLandmark() })
         ]
+        for package in toolPackages {
+            actions.append(PaletteAction(id: "tool.\(package.manifest.id)", title: "Insert \(package.manifest.command) — \(package.manifest.name)",
+                keywords: "tool " + package.manifest.description, enabled: { [weak self] in
+                    guard let self else { return false }
+                    return !self.textView.hasMarkedText() && self.textView.selectedRange().length == 0 && self.toolController?.focused() == nil
+                }, execute: { [weak self] in
+                    guard let self else { return }
+                    try? self.toolController.accept(package, token: self.textView.selectedRange(), space: true)
+                }))
+        }
         let ordinals = Dictionary(uniqueKeysWithValues: state.lines.enumerated().map { ($0.element.id, $0.offset + 1) })
         for landmark in state.orderedLandmarks {
             let identity = landmark.id.rawValue.uuidString
@@ -535,6 +611,7 @@ import JortPersistence
         textView.history.beginUndoGrouping()
         do {
             try apply(.init(baseRevision: before.revision, origin: .restore, mutation: .restore(revision.snapshot)))
+            if toolCatalogLoaded { toolController.reconcilePackages() }
             textView.history.setActionName("Restore Version")
             textView.history.endUndoGrouping()
         } catch { textView.history.endUndoGrouping(); throw error }

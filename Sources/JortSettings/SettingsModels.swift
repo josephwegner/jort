@@ -44,6 +44,7 @@ public struct ToolDiagnostic: Codable, Equatable, Sendable, Identifiable {
 }
 
 public struct ToolTemplate: Codable, Equatable, Sendable, Identifiable {
+    public var manifest: ToolManifest? = nil
     public var id: ToolID
     public var version: Int
     public var displayName: String
@@ -59,6 +60,7 @@ public struct ToolTemplate: Codable, Equatable, Sendable, Identifiable {
 }
 
 public struct UserToolDefinition: Codable, Equatable, Sendable, Identifiable {
+    public var manifest: ToolManifest? = nil
     public var id: ToolID
     public var revision: RecordRevision
     public var basedOnTemplateID: ToolID?
@@ -67,7 +69,7 @@ public struct UserToolDefinition: Codable, Equatable, Sendable, Identifiable {
     public var summary: String
     public var source: String
     public var isEnabled: Bool
-    public init(id: ToolID = ToolID(UUID().uuidString.lowercased()), revision: RecordRevision = RecordRevision(),
+    public init(id: ToolID = ToolID("user.jort.tool-" + UUID().uuidString.lowercased()), revision: RecordRevision = RecordRevision(),
                 basedOnTemplateID: ToolID? = nil, displayName: String, commandName: String,
                 summary: String = "", source: String, isEnabled: Bool = false) {
         self.id = id; self.revision = revision; self.basedOnTemplateID = basedOnTemplateID

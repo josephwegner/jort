@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.jort.uuid",
+  "version": 1,
+  "name": "Uuid",
+  "command": "/uuid",
+  "description": "uuid tool",
+  "entryContract": 1,
+  "inputMode": "contained",
+  "outputOperation": "replace-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

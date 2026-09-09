@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.jort.calc",
+  "version": 1,
+  "name": "Calc",
+  "command": "/calc",
+  "description": "calc tool",
+  "entryContract": 1,
+  "inputMode": "contained",
+  "outputOperation": "replace-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

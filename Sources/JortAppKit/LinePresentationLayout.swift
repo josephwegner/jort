@@ -148,6 +148,23 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
         guard let editor, let scroll = editor.enclosingScrollView, let band = visibleBands().first else { return nil }
         return (band.id, scroll.contentView.bounds.minY - band.frame.minY)
     }
+    /// Visible canonical selection fragments, in text-view coordinates. Tool
+    /// wrappers and handles share this layout manager with gutter/accessory bands.
+    func canonicalRects(for range: NSRange) -> [NSRect] {
+        guard let editor, let manager = editor.textLayoutManager, let content = manager.textContentManager,
+              let viewport = manager.textViewportLayoutController.viewportRange else { return [] }
+        let a = content.offset(from: content.documentRange.location, to: viewport.location)
+        let b = content.offset(from: content.documentRange.location, to: viewport.endLocation)
+        let clipped = NSIntersectionRange(range, NSRange(location: a, length: b - a))
+        guard clipped.length > 0 || range.length == 0 && range.location >= a && range.location <= b,
+              let start = content.location(content.documentRange.location, offsetBy: range.length == 0 ? range.location : clipped.location),
+              let end = content.location(start, offsetBy: clipped.length), let textRange = NSTextRange(location: start, end: end) else { return [] }
+        var frames: [NSRect] = []
+        manager.enumerateTextSegments(in: textRange, type: .selection, options: [.rangeNotRequired]) { _, frame, _, _ in
+            frames.append(frame.offsetBy(dx: editor.textContainerOrigin.x, dy: editor.textContainerOrigin.y)); return true
+        }
+        return frames
+    }
     func accessibilityChildren() -> [Any]? {
         guard !accessories.isEmpty, let editor else { return nil }
         var children: [Any] = []

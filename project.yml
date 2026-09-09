@@ -13,11 +13,27 @@ settings:
     CURRENT_PROJECT_VERSION: 3
     ARCHS: '$(ARCHS_STANDARD)'
 targets:
+  JortJavaScript:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/JortJavaScript
+      - path: Vendor/QuickJS
+        excludes: [JORT.md, LICENSE]
+      - path: Vendor/QuickJS/LICENSE
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Vendor/QuickJS'
+        GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'CONFIG_VERSION=\"2026-06-04\"']
+        CLANG_WARN_DOCUMENTATION_COMMENTS: NO
   JortSettings:
     type: framework
     platform: macOS
     sources: [Sources/JortSettings]
     dependencies:
+      - target: JortJavaScript
       - sdk: libsqlite3.tbd
     settings:
       base:
@@ -57,10 +73,14 @@ targets:
       - path: Jort/JortApp.swift
       - path: Jort/Resources
         excludes:
+          - Tools
           - IconSources/jort-black.svg
           - IconSources/jort-color.png
           - IconSources/jort-j-stitch-black.svg
           - IconSources/jort-j-stitch-white.svg
+      - path: Jort/Resources/Tools
+        type: folder
+        buildPhase: resources
     preBuildScripts:
       - name: Generate application icon
         script: 'bash "$SRCROOT/scripts/generate-icon.sh"'
@@ -90,6 +110,8 @@ targets:
       - target: JortAppKit
         embed: true
       - target: JortSettings
+        embed: true
+      - target: JortJavaScript
         embed: true
   StoreLockProbe:
     type: tool

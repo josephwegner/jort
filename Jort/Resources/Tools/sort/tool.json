@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.jort.sort",
+  "version": 1,
+  "name": "Sort",
+  "command": "/sort",
+  "description": "sort tool",
+  "entryContract": 1,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

@@ -31,7 +31,8 @@ public struct ToolCatalogBuilder: Sendable {
     public init() {}
 
     public func configuredTools(templates: [ToolTemplate], snapshot: SettingsSnapshot) -> [ConfiguredTool] {
-        var tools: [ConfiguredTool] = templates.prefix(SettingsLimits.maximumTemplates).map { template in
+        let overridden = Set(snapshot.customTools.map(\.id))
+        var tools: [ConfiguredTool] = templates.prefix(SettingsLimits.maximumTemplates).filter { !overridden.contains($0.id) }.map { template in
             ConfiguredTool(id: template.id, origin: .bundledTemplate, templateVersion: template.version,
                 recordRevision: nil, basedOnTemplateID: nil, displayName: template.displayName,
                 commandName: SettingsValidation.normalizedCommandName(template.commandName), summary: template.summary,
@@ -67,14 +68,16 @@ public struct ToolCatalogBuilder: Sendable {
 
     public func newDraft(avoiding names: Set<String>) -> ToolDraft {
         ToolDraft(definition: UserToolDefinition(displayName: "Untitled Tool",
-            commandName: availableName(base: "untitled-tool", avoiding: names), source: ""))
+            commandName: availableName(base: "untitled-tool", avoiding: names), source: "export default async function(input) {\n  return {output: input.content};\n}\n"))
     }
 
     public func duplicate(_ template: ToolTemplate, avoiding names: Set<String>) -> ToolDraft {
         let base = SettingsValidation.normalizedCommandName(template.commandName) + "-copy"
-        return ToolDraft(definition: UserToolDefinition(basedOnTemplateID: template.id,
+        var definition = UserToolDefinition(basedOnTemplateID: template.id,
             displayName: template.displayName + " Copy", commandName: availableName(base: base, avoiding: names),
-            summary: template.summary, source: template.source, isEnabled: false))
+            summary: template.summary, source: template.source, isEnabled: false)
+        definition.manifest = template.manifest
+        return ToolDraft(definition: definition)
     }
 
     private func availableName(base: String, avoiding names: Set<String>) -> String {

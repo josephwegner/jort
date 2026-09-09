@@ -202,7 +202,7 @@ final class Connection {
                 try execute("BEGIN IMMEDIATE")
                 try execute("CREATE TABLE current_state (id INTEGER PRIMARY KEY CHECK(id=1), payload BLOB NOT NULL)")
                 try createHistorySchema()
-                try execute("PRAGMA user_version=4")
+                try execute("PRAGMA user_version=5")
                 try execute("COMMIT")
             }
         } catch { sqlite3_close_v2(db); db = nil; throw error }

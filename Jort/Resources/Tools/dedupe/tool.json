@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.jort.dedupe",
+  "version": 1,
+  "name": "Dedupe",
+  "command": "/dedupe",
+  "description": "dedupe tool",
+  "entryContract": 1,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

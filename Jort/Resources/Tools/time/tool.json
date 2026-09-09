@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.jort.time",
+  "version": 1,
+  "name": "Time",
+  "command": "/time",
+  "description": "Current UTC time (HH:mm:ssZ)",
+  "entryContract": 1,
+  "inputMode": "contained",
+  "outputOperation": "replace-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

@@ -15,6 +15,7 @@ public struct LineMeta: Codable, Equatable, Sendable {
 struct DocumentState: Equatable {
     var documentID = UUID()
     var landmarks: [Landmark] = []
+    var invocations: [ToolInvocation] = []
     var text = ""
     var revision: Int64 = 0
     var lines = [LineMeta(location: 0, length: 0)]
