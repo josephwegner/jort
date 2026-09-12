@@ -21,6 +21,7 @@ import JortSettings
         self.sourceView = sourceView
         super.init(scrollView: scrollView, orientation: .verticalRuler)
         ruleThickness = 44
+        wantsLayer = true; layer?.masksToBounds = true
     }
     required init(coder: NSCoder) { fatalError() }
     override func drawHashMarksAndLabels(in rect: NSRect) {
@@ -61,6 +62,7 @@ import JortSettings
         get { textView.string }
         set {
             updating = true; textView.string = newValue; textView.sourceUndoManager.removeAllActions(); updating = false
+            textView.setSelectedRange(NSRange(location: 0, length: 0)); scrollView.contentView.scroll(to: .zero)
             refreshStatus(); scrollView.verticalRulerView?.needsDisplay = true
         }
     }
@@ -71,6 +73,7 @@ import JortSettings
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+        wantsLayer = true; layer?.masksToBounds = true
         scrollView.translatesAutoresizingMaskIntoConstraints = false; status.translatesAutoresizingMaskIntoConstraints = false
         addSubview(scrollView); addSubview(status)
         scrollView.hasVerticalScroller = true; scrollView.hasHorizontalScroller = true

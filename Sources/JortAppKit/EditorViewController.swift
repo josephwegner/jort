@@ -23,9 +23,46 @@ import JortSettings
     var isPasting = false
     var onPaste: (() -> Void)?
     var onCommittedSlash: (() -> Void)?
+    public override func resetCursorRects() {
+        super.resetCursorRects()
+        // NSTextView installs an I-beam across its entire visible area, including
+        // embedded controls. Partition that region instead of competing with it.
+        discardCursorRects()
+        var regions = [visibleRect]
+        for button in subviews where button is NSButton && !button.isHidden {
+            let hit = button.frame.intersection(visibleRect)
+            guard !hit.isEmpty else { continue }
+            regions = regions.flatMap { region -> [NSRect] in
+                let cut = region.intersection(hit)
+                guard !cut.isEmpty else { return [region] }
+                return [NSRect(x: region.minX, y: region.minY, width: region.width, height: cut.minY - region.minY),
+                    NSRect(x: region.minX, y: cut.maxY, width: region.width, height: region.maxY - cut.maxY),
+                    NSRect(x: region.minX, y: cut.minY, width: cut.minX - region.minX, height: cut.height),
+                    NSRect(x: cut.maxX, y: cut.minY, width: region.maxX - cut.maxX, height: cut.height)].filter { !$0.isEmpty }
+            }
+            addCursorRect(hit, cursor: .pointingHand)
+        }
+        for region in regions { addCursorRect(region, cursor: .iBeam) }
+    }
+    public override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        let point = convert(event.locationInWindow, from: nil)
+        if subviews.contains(where: { $0 is NSButton && !$0.isHidden && $0.frame.contains(point) }) { NSCursor.pointingHand.set() }
+    }
+    public override func cursorUpdate(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        if subviews.contains(where: { $0 is NSButton && !$0.isHidden && $0.frame.contains(point) }) {
+            NSCursor.pointingHand.set()
+        } else { super.cursorUpdate(with: event) }
+    }
     public override func keyDown(with event: NSEvent) {
         if !hasMarkedText(), onToolKey?(event) == true { return }
         super.keyDown(with: event)
+    }
+    public override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if window?.firstResponder === self, event.modifierFlags.contains([.command, .option]), [123, 124, 125, 126].contains(event.keyCode),
+           !hasMarkedText(), onToolKey?(event) == true { return true }
+        return super.performKeyEquivalent(with: event)
     }
     public override func insertText(_ insertString: Any, replacementRange: NSRange) {
         let committed = (insertString as? NSAttributedString)?.string ?? (insertString as? String ?? "")
@@ -63,8 +100,11 @@ import JortSettings
         if onEscape?() != true { super.cancelOperation(sender) }
     }
     var lineAccessibilityChildren: (() -> [Any]?)?
+    var toolAccessibilityChildren: (() -> [Any])?
     public override func accessibilityChildren() -> [Any]? {
-        lineAccessibilityChildren?() ?? super.accessibilityChildren()
+        let children = lineAccessibilityChildren?() ?? super.accessibilityChildren() ?? []
+        let tools = toolAccessibilityChildren?() ?? []
+        return children + tools.filter { tool in !children.contains { ($0 as AnyObject) === (tool as AnyObject) } }
     }
     public override func unmarkText() {
         let marked = markedRange()
@@ -219,6 +259,7 @@ import JortSettings
         toolPresentation = ToolInvocationPresentation(editor: self)
         textView.onToolKey = { [weak self] in self?.toolPresentation.handle($0) ?? false }
         textView.onToolDraw = { [weak self] in self?.toolPresentation.draw($0) }
+        textView.toolAccessibilityChildren = { [weak self] in self?.toolPresentation.accessibilityChildren() ?? [] }
         textView.onPaste = { [weak self] in self?.toolPresentation.abandonCompletion() }
         textView.onCommittedSlash = { [weak self] in self?.toolPresentation.armCommittedSlash() }
         textView.onTextChange = { [weak self] in self?.commitText(); self?.refreshGutterAfterLayout() }
@@ -327,7 +368,23 @@ import JortSettings
         footer.update(count: state.landmarks.filter { !$0.detached }.count, mode: ruler.modeState)
     }
     public func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
-        if ToolRangeEditing.intersectsLock(affectedCharRange, snapshot: state) { return false }
+        let locked = ToolRangeEditing.intersectingLocks(affectedCharRange, snapshot: state)
+        if !locked.isEmpty {
+            if replacementString == "", affectedCharRange.length > 0, locked.allSatisfy({ $0.phase == .pending }),
+               let window = view.window, window.attachedSheet == nil {
+                let revision = state.revision
+                let alert = NSAlert()
+                alert.messageText = "\(locked.count) mergeable responses will be deleted"
+                alert.informativeText = "Only the selected text will be deleted. Any remaining text from affected tool calls will become ordinary text."
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "Delete"); alert.addButton(withTitle: "Cancel")
+                alert.beginSheetModal(for: window) { [weak self] response in
+                    guard response == .alertFirstButtonReturn, let self else { return }
+                    try? self.toolController.deletePending(in: affectedCharRange, expectedRevision: revision)
+                }
+            }
+            return false
+        }
         if ready, !textView.hasMarkedText(), textView.string == state.text, let replacementString {
             pendingEdit = (affectedCharRange, replacementString.utf16.count)
         } else { pendingEdit = nil }
@@ -378,7 +435,7 @@ import JortSettings
             } catch { assertionFailure("Invalid undo snapshot: \(error)") }
         }
     }
-    func registerToolUndo(_ snapshot: DocumentSnapshot) { recordUndo(snapshot, selection: textView.selectedRange()) }
+    func registerToolUndo(_ snapshot: DocumentSnapshot, selection: NSRange) { recordUndo(snapshot, selection: selection) }
     func refreshToolPresentation() { toolPresentation?.refresh() }
     /// Future commands and captures submit transactions here; they never receive NSTextStorage.
     @discardableResult public func apply(_ transaction: DocumentTransaction) throws -> TransactionResult {
@@ -391,6 +448,11 @@ import JortSettings
         var topAnchor: (UUID, CGFloat)?
         if preserveAnchors {
             func mapped(_ offset: Int) -> Int {
+                if case .tools(_, let edit?, let length?) = result.transaction.mutation {
+                    if offset <= edit.location { return offset }
+                    if offset >= NSMaxRange(edit) { return offset + length - edit.length }
+                    return edit.location + min(offset - edit.location, length)
+                }
                 guard let old = result.before.lines.last(where: { $0.location <= offset }),
                       let new = result.after.lines.first(where: { $0.id == old.id }) else { return min(offset, result.after.text.utf16.count) }
                 return new.location + min(offset - old.location, new.length)
@@ -400,7 +462,13 @@ import JortSettings
             topAnchor = linePresentation.viewportAnchor()
         }
         linePresentation.update(lines: result.after.lines)
-        textView.string = result.after.text
+        if textView.string != result.after.text {
+            textView.string = result.after.text
+            toolPresentation?.invalidateStyles()
+        }
+        // Restore presentation before selection/scrolling can trigger a layout
+        // pass; replay must never expose an intermediate unstyled snapshot.
+        refreshToolPresentation()
         textView.setSelectedRange(NSRange(location: min(selected.location, result.after.text.utf16.count), length: min(selected.length, max(0, result.after.text.utf16.count - selected.location))))
         var position = viewport
         if let (id, relativeY) = topAnchor, let band = linePresentation.band(for: id) {

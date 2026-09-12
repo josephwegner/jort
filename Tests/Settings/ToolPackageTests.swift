@@ -74,7 +74,9 @@ final class ToolPackageTests: XCTestCase {
         for (name, input, expected) in [
             ("sort", "b\na\nb\n", "a\nb\nb\n"), ("sort", "🌲\nA\na", "A\na\n🌲"),
             ("dedupe", "a\n\na\n\nb\n", "a\n\nb\n"), ("dedupe", "", ""),
-            ("date", " ", "1970-01-01"), ("time", "", "00:00:00Z"),
+            ("date", " ", "1970-01-01 "), ("time", "", "00:00:00Z"),
+            ("date", " next\nline", "1970-01-01 next\nline"), ("time", " reminder", "00:00:00Z reminder"),
+            ("uuid", " apples", "00000000-0000-0000-0000-000000000001 apples"),
             ("uuid", "", "00000000-0000-0000-0000-000000000001")
         ] {
             let package = try ToolPackage.load(from: bundled.appendingPathComponent(name))
@@ -151,5 +153,33 @@ final class ToolPackageTests: XCTestCase {
         }
         func p95(_ values: [Double]) -> Double { values.sorted()[Int(ceil(Double(values.count) * 0.95)) - 1] * 1000 }
         print("PERF Tools ms p95: discovery=\(p95(discovery)), validation=\(p95(validation)), host-startup+calc=\(p95(startup))")
+    }
+
+    func testBundledUpgradeAndInvalidOverridePreserveUserFiles() async throws {
+        let shipped = try root(), installed = try root()
+        let calc = shipped.appendingPathComponent("calc")
+        try FileManager.default.copyItem(at: bundled.appendingPathComponent("calc"), to: calc)
+        let registry = ToolPackageRegistry(bundledDirectory: shipped, installedDirectory: installed)
+        let initial = try await registry.inspect()
+        var user = try XCTUnwrap(initial.executable.first)
+        user.source = "export default async function() { return {output:'custom'}; }"
+        _ = try await registry.save(user)
+        var upgraded = try ToolPackage.load(from: calc)
+        upgraded.manifest.version = 2
+        try JSONEncoder().encode(upgraded.manifest).write(to: calc.appendingPathComponent("tool.json"), options: .atomic)
+        try await registry.reload()
+        let preserved = try await registry.inspect()
+        XCTAssertEqual(preserved.executable.first, user)
+        let index = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: installed.appendingPathComponent("index.json"))) as? [String: Any])
+        let generations = try XCTUnwrap(index["installed"] as? [String: String])
+        let source = installed.appendingPathComponent(try XCTUnwrap(generations[user.manifest.id])).appendingPathComponent("tool.js")
+        try Data("broken script !!!".utf8).write(to: source, options: .atomic)
+        try await registry.reload()
+        let isolated = try await registry.inspect()
+        XCTAssertEqual(isolated.executable.first, upgraded)
+        XCTAssertFalse(isolated.diagnostics.isEmpty)
+        XCTAssertEqual(try String(contentsOf: source, encoding: .utf8), "broken script !!!")
+        _ = try await registry.restore(id: user.manifest.id)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
     }
 }

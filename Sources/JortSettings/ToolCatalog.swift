@@ -68,7 +68,7 @@ public struct ToolCatalogBuilder: Sendable {
 
     public func newDraft(avoiding names: Set<String>) -> ToolDraft {
         ToolDraft(definition: UserToolDefinition(displayName: "Untitled Tool",
-            commandName: availableName(base: "untitled-tool", avoiding: names), source: "export default async function(input) {\n  return {output: input.content};\n}\n"))
+            commandName: availableName(base: "untitled-tool", avoiding: names), source: "export default async function(input) {\n  return {output: input.content};\n}\n", isEnabled: true))
     }
 
     public func duplicate(_ template: ToolTemplate, avoiding names: Set<String>) -> ToolDraft {

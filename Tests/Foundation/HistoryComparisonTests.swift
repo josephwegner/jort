@@ -2,6 +2,26 @@ import XCTest
 import JortDocument
 
 final class HistoryComparisonTests: XCTestCase {
+    @MainActor func testToolMetadataOnlyChangesRemainVisibleAndCanonical() throws {
+        let owner = try DocumentCoordinator()
+        try owner.apply(.init(baseRevision: 0, origin: .native, mutation: .edit(text: "/calc 3+36", range: nil, replacementLength: nil)))
+        let plain = owner.snapshot
+        var invocation = ToolInvocation(packageID: "dev.jort.calc", packageVersion: 1, entryContract: 1,
+            inputMode: "contained", outputOperation: "replace-invocation", command: "/calc",
+            token: try .init(NSRange(location: 0, length: 5), lines: plain.lines),
+            scope: try .init(NSRange(location: 0, length: 9), lines: plain.lines), sourceHash: ToolInvocation.hash("/calc 3+3"))
+        invocation.phase = .pending
+        invocation.output = try .init(NSRange(location: 9, length: 1), lines: plain.lines)
+        invocation.outputHash = ToolInvocation.hash("6")
+        let annotated = DocumentSnapshot(documentID: plain.documentID, text: plain.text, revision: plain.revision,
+            lines: plain.lines, landmarks: plain.landmarks, invocations: [invocation])
+        let diff = try HistoryComparison.compare(plain, annotated)
+        XCTAssertTrue(diff.metadataChanged)
+        XCTAssertEqual(diff.lines.first { $0.kind == .added }?.tools.first?.label, "/calc · Pending merge")
+        XCTAssertEqual(diff.lines.first { $0.kind == .added }?.tools.first?.containsOutput, true)
+        XCTAssertEqual(diff.lines.filter { $0.kind != .removed }.map(\.text).joined(), plain.text)
+        XCTAssertEqual(diff.lines.filter { $0.kind != .added }.map(\.text).joined(), plain.text)
+    }
     @MainActor func testChangesReconstructBothSnapshotsIncludingUnicodeAndLandmarks() throws {
         let owner = try DocumentCoordinator()
         try owner.apply(.init(baseRevision: 0, origin: .native, mutation: .edit(text: "one\n👩🏽‍💻 café\nthree\n", range: nil, replacementLength: nil)))

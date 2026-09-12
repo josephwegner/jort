@@ -1,5 +1,7 @@
 # Implementation handoff: `build-jort-run-tools`
 
+**Read [VERIFICATION.md](VERIFICATION.md) and [FEEDBACK.md](FEEDBACK.md) first.** The 2026-09-10 feedback is implemented in the working tree. Those files and `tasks.md` supersede the historical progress and verification counts below.
+
 Last updated: 2026-09-09. This is an active `openspec-apply-change` implementation, not an archive-ready change.
 
 ## Resume here

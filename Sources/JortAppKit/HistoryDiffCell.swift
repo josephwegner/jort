@@ -35,10 +35,21 @@ import JortDocument
             NSLayoutConstraint.activate([label.leadingAnchor.constraint(equalTo: leading), label.widthAnchor.constraint(equalToConstant: width)])
             leading = label.trailingAnchor
         }
-        NSLayoutConstraint.activate([text.leadingAnchor.constraint(equalTo: leading, constant: 8), text.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8)])
+        text.lineBreakMode = .byTruncatingTail
+        text.leadingAnchor.constraint(equalTo: leading, constant: 8).isActive = true
+        let toolDescription = line.tools.map(\.label).joined(separator: ", ")
+        if !line.tools.isEmpty {
+            let badge = field(toolDescription, alignment: .right)
+            badge.font = .systemFont(ofSize: 11, weight: .medium)
+            badge.textColor = line.tools.contains { $0.phase == .pending } ? ToolPresentationColors.pending : .systemTeal
+            badge.lineBreakMode = .byTruncatingTail; badge.toolTip = toolDescription
+            NSLayoutConstraint.activate([badge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+                badge.widthAnchor.constraint(equalToConstant: min(220, badge.intrinsicContentSize.width)),
+                text.trailingAnchor.constraint(equalTo: badge.leadingAnchor, constant: -12)])
+        } else { text.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8).isActive = true }
         let change = line.kind == .added ? "Added" : line.kind == .removed ? "Removed" : "Unchanged"
         setAccessibilityElement(true); setAccessibilityRole(.staticText)
-        setAccessibilityLabel("\(change), landmark \(line.emoji ?? "none"), old line \(line.oldOrdinal.map(String.init) ?? "none"), new line \(line.newOrdinal.map(String.init) ?? "none"), \(text.stringValue)")
+        setAccessibilityLabel("\(change), landmark \(line.emoji ?? "none"), old line \(line.oldOrdinal.map(String.init) ?? "none"), new line \(line.newOrdinal.map(String.init) ?? "none"), \(text.stringValue)\(toolDescription.isEmpty ? "" : ", " + toolDescription)")
     }
     required init?(coder: NSCoder) { fatalError() }
     private func field(_ value: String, alignment: NSTextAlignment) -> NSTextField {

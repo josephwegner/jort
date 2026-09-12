@@ -2,17 +2,86 @@ import AppKit
 import JortDocument
 import JortSettings
 
+@MainActor enum ToolPresentationColors {
+    static let pending = NSColor(calibratedRed: 0.68, green: 0.38, blue: 0.86, alpha: 1)
+    static let canvas = NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1)
+}
+
 @MainActor private final class ToolActionButton: NSButton {
     var invoke: (() -> Void)?
+    private var hovered = false
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .cursorUpdate, .activeInKeyWindow, .inVisibleRect], owner: self))
+    }
+    override func cursorUpdate(with event: NSEvent) { NSCursor.pointingHand.set() }
+    override func mouseEntered(with event: NSEvent) { NSCursor.pointingHand.set(); hovered = true; needsDisplay = true }
+    override func mouseExited(with event: NSEvent) { hovered = false; needsDisplay = true }
+    override func draw(_ dirtyRect: NSRect) {
+        if hovered || isHighlighted {
+            NSColor.white.withAlphaComponent(isHighlighted ? 0.18 : 0.10).setFill()
+            NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 2), xRadius: 4, yRadius: 4).fill()
+        }
+        super.draw(dirtyRect)
+    }
     init(symbol: String, label: String, action: @escaping () -> Void) {
         super.init(frame: .zero)
         image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
         title = ""; isBordered = false; bezelStyle = .inline
-        toolTip = label; setAccessibilityLabel(label)
+        contentTintColor = NSColor(calibratedWhite: 0.88, alpha: 1)
+        if symbol == "play.fill" {
+            image = nil; title = "⇧↵"; font = .systemFont(ofSize: 13, weight: .medium)
+        }
+        toolTip = symbol == "play.fill" ? "Run (Shift+Enter)" : label; setAccessibilityLabel(label)
+        setAccessibilityElement(true); setAccessibilityRole(.button)
         target = self; self.action = #selector(activate); invoke = action
     }
     required init?(coder: NSCoder) { fatalError() }
     @objc private func activate() { invoke?() }
+    override func accessibilityPerformPress() -> Bool {
+        guard isEnabled, let invoke else { return false }
+        invoke(); return true
+    }
+}
+
+@MainActor private final class ToolCompletionRow: NSButton {
+    var invoke: (() -> Void)?
+    let command: String
+    let name: String
+    let selected: Bool
+    init(command: String, name: String, selected: Bool, action: @escaping () -> Void) {
+        self.command = command; self.name = name; self.selected = selected; self.invoke = action
+        super.init(frame: .zero)
+        title = ""; isBordered = false; target = self; self.action = #selector(activate)
+        setAccessibilityLabel("\(command)  \(name)")
+        setAccessibilityValue(selected ? "Selected" : "")
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    @objc private func activate() { invoke?() }
+    override func draw(_ dirtyRect: NSRect) {
+        if selected || isHighlighted {
+            NSColor.selectedContentBackgroundColor.withAlphaComponent(0.28).setFill()
+            NSBezierPath(roundedRect: bounds, xRadius: 5, yRadius: 5).fill()
+        }
+        let commandAttributes: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedSystemFont(ofSize: 14, weight: .medium), .foregroundColor: NSColor.labelColor]
+        let paragraph = NSMutableParagraphStyle(); paragraph.alignment = .right; paragraph.lineBreakMode = .byTruncatingTail
+        let nameAttributes: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph]
+        let commandWidth = min((command as NSString).size(withAttributes: commandAttributes).width, bounds.width * 0.6)
+        (command as NSString).draw(in: NSRect(x: 10, y: (bounds.height - 17) / 2, width: commandWidth, height: 17), withAttributes: commandAttributes)
+        (name as NSString).draw(in: NSRect(x: commandWidth + 26, y: (bounds.height - 16) / 2, width: max(0, bounds.width - commandWidth - 36), height: 16), withAttributes: nameAttributes)
+    }
+    override func accessibilityPerformPress() -> Bool { invoke?(); return true }
+}
+
+@MainActor private final class ToolCompletionPopover: NSView {
+    override var isFlipped: Bool { true }
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.windowBackgroundColor.setFill()
+        let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
+        path.fill(); NSColor.separatorColor.setStroke(); path.stroke()
+    }
 }
 
 @MainActor private final class ToolPromptView: NSView, NSTextViewDelegate {
@@ -35,6 +104,8 @@ import JortSettings
         let run = ToolActionButton(symbol: "play.fill", label: "Run") { [weak self] in self?.submit?() }
         let close = ToolActionButton(symbol: "xmark", label: "Dismiss prompt") { [weak self] in self?.dismiss?() }
         addSubview(run); addSubview(close)
+        setAccessibilityElement(true); setAccessibilityRole(.group); setAccessibilityLabel("Tool prompt form")
+        setAccessibilityChildren([scroll, run, close])
     }
     required init?(coder: NSCoder) { fatalError() }
     override func layout() {
@@ -42,7 +113,7 @@ import JortSettings
         scroll.frame = bounds.insetBy(dx: 8, dy: 8); scroll.frame.size.height -= 26
         input.frame.size.width = scroll.contentSize.width
         input.minSize = NSSize(width: 0, height: scroll.contentSize.height)
-        subviews[1].frame = NSRect(x: bounds.width - 56, y: bounds.height - 28, width: 24, height: 24)
+        subviews[1].frame = NSRect(x: bounds.width - 68, y: bounds.height - 28, width: 36, height: 24)
         subviews[2].frame = NSRect(x: bounds.width - 30, y: bounds.height - 28, width: 24, height: 24)
     }
     func textDidChange(_ notification: Notification) { changed?(input.string) }
@@ -57,13 +128,26 @@ import JortSettings
 }
 
 @MainActor private final class ToolScopeHandle: NSView {
+    var isStart = false
     var moved: ((NSPoint) -> Void)?
     var focused: (() -> Void)?
     var key: ((NSEvent) -> Bool)?
+    var adjusted: ((Int) -> Void)?
+    override func accessibilityPerformIncrement() -> Bool {
+        guard let adjusted else { return false }; adjusted(1); return true
+    }
+    override func accessibilityPerformDecrement() -> Bool {
+        guard let adjusted else { return false }; adjusted(-1); return true
+    }
     override var acceptsFirstResponder: Bool { true }
     override func draw(_ dirtyRect: NSRect) {
         NSColor.systemTeal.setFill()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: 5, dy: 1), xRadius: 2, yRadius: 2).fill()
+        let x = bounds.midX
+        NSBezierPath(rect: NSRect(x: x - 1, y: 2, width: 2, height: bounds.height - 6)).fill()
+        let flag = NSBezierPath()
+        flag.move(to: NSPoint(x: x, y: bounds.height - 2))
+        flag.line(to: NSPoint(x: x + (isStart ? 7 : -7), y: bounds.height - 2))
+        flag.line(to: NSPoint(x: x, y: bounds.height - 9)); flag.close(); flag.fill()
     }
     override func mouseDown(with event: NSEvent) { window?.makeFirstResponder(self); focused?() }
     override func keyDown(with event: NSEvent) { if key?(event) != true { super.keyDown(with: event) } }
@@ -86,11 +170,28 @@ import JortSettings
     private var styled: [NSRange] = []
     private let decorationAttribute = NSAttributedString.Key("JortToolDecoration")
     private var styledRevision: Int64 = -1
+    private struct ViewportStamp: Equatable {
+        let visible: NSRect
+        let size: NSSize
+        let end: Int
+    }
+    private var decoratedViewport: ViewportStamp?
+    private func viewportStamp() -> ViewportStamp? {
+        guard let view = editor?.textView, let manager = view.textLayoutManager,
+              let content = manager.textContentManager, let viewport = manager.textViewportLayoutController.viewportRange else { return nil }
+        return ViewportStamp(visible: view.visibleRect, size: view.bounds.size,
+            end: content.offset(from: content.documentRange.location, to: viewport.endLocation))
+    }
     private let documentFont: NSFont
     private var handles: [String: ToolScopeHandle] = [:]
     private var focusedBoundary: (UUID, Bool)?
+    private var errorAccessoryIDs = Set<UUID>()
+    func invalidateStyles() { styledRevision = -1 }
     init(editor: EditorViewController) { self.editor = editor; documentFont = editor.textView.font ?? .monospacedSystemFont(ofSize: 15, weight: .regular) }
     func abandonCompletion() { completion = nil; completionArmed = false; suppressedCompletion = true }
+    func accessibilityChildren() -> [Any] {
+        controls.filter { !$0.isHidden } + handles.values.filter { !$0.isHidden } + prompts.values.filter { !$0.isHidden }
+    }
     func armCommittedSlash() {
         completionArmed = editor?.toolController.focused() == nil
         suppressedCompletion = false
@@ -98,6 +199,9 @@ import JortSettings
 
     func escape() -> Bool {
         if completion != nil { completion = nil; suppressedCompletion = true; refresh(); return true }
+        if let invocation = editor?.toolController.focused(), invocation.phase == .pending {
+            try? editor?.toolController.dismiss(invocation.id); return true
+        }
         if let invocation = editor?.toolController.focused(), invocation.phase == .inputting {
             editor?.toolController.cancel(invocation.id); return true
         }
@@ -121,7 +225,7 @@ import JortSettings
             }
             if key == " " || key == "\r" {
                 completion = nil; suppressedCompletion = true
-                try? editor.toolController.accept(packages[selected], token: range, space: key == " ")
+                try? editor.toolController.accept(packages[selected], token: range, space: true)
                 return true
             }
         }
@@ -129,9 +233,10 @@ import JortSettings
         let boundaryOwnsFocus = editor.view.window?.firstResponder is ToolScopeHandle
         if !boundaryOwnsFocus, focusedBoundary?.0 != caretInvocation?.id { focusedBoundary = nil }
         let focusedContext = focusedBoundary.flatMap { id, _ in editor.state.invocations.first { $0.id == id } } ?? caretInvocation
-        if event.modifierFlags.contains([.option, .shift]), let invocation = focusedContext, invocation.inputMode == "contextual",
+        if (event.modifierFlags.contains([.command, .option]) || event.modifierFlags.contains([.option, .shift])), let invocation = focusedContext, invocation.inputMode == "contextual",
            let scope = invocation.scope.resolve(in: editor.state.lines), [123, 124, 125, 126].contains(event.keyCode) {
-            let start = focusedBoundary?.0 == invocation.id ? focusedBoundary!.1 : false
+            let start = focusedBoundary?.0 == invocation.id ? focusedBoundary!.1 : [123, 126].contains(event.keyCode)
+            focusedBoundary = (invocation.id, start)
             let offset = start ? scope.location : NSMaxRange(scope)
             let text = editor.state.text as NSString
             let next: Int
@@ -160,11 +265,11 @@ import JortSettings
         completion = packages.isEmpty ? nil : (NSRange(location: offset, length: caret - offset), packages, 0)
     }
 
-    func refresh(recomputeCompletion: Bool = true) {
+    func refresh(recomputeCompletion: Bool = true, invalidateDisplay: Bool = true) {
         guard !refreshing, let editor, let storage = editor.textView.textStorage else { return }
         refreshing = true; defer { refreshing = false }
         controls.forEach { $0.removeFromSuperview() }; controls = []; shapes = []
-        handles.values.forEach { $0.isHidden = true }
+        var visibleHandles = Set<String>()
         var visiblePrompts = Set<UUID>()
         if recomputeCompletion { findCompletion() }
         let snapshot = editor.state
@@ -176,6 +281,7 @@ import JortSettings
             return
         }
         if styledRevision != snapshot.revision {
+            updateErrorAccessories(snapshot)
             // Attribute runs move with native edits; cached numeric ranges do not.
             var oldRuns: [NSRange] = []
             storage.enumerateAttribute(decorationAttribute, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
@@ -184,6 +290,8 @@ import JortSettings
             storage.beginEditing()
             for range in oldRuns {
                 storage.removeAttribute(.kern, range: range)
+                storage.removeAttribute(.paragraphStyle, range: range)
+                if let paragraph = editor.textView.defaultParagraphStyle { storage.addAttribute(.paragraphStyle, value: paragraph, range: range) }
                 storage.addAttribute(.font, value: documentFont, range: range)
                 storage.removeAttribute(decorationAttribute, range: range)
             }
@@ -193,13 +301,28 @@ import JortSettings
                 storage.addAttribute(.font, value: NSFontManager.shared.convert(documentFont, toHaveTrait: .boldFontMask), range: token)
                 storage.addAttribute(decorationAttribute, value: true, range: token)
                 styled.append(token)
+                if invocation.inputMode.hasPrefix("ephemeral"), invocation.phase == .inputting { continue }
                 let output = invocation.output?.resolve(in: snapshot.lines)
                 let leading = output.map { leadingActions($0, text: snapshot.text) } ?? false
                 let controlOffset = output.map { leading ? $0.location : NSMaxRange($0) } ?? NSMaxRange(invocation.inputMode == "contextual" ? token : scope)
-                if controlOffset > 0 && controlOffset <= storage.length {
+                if let output, output.location < storage.length,
+                   leadingIndent(output, text: snapshot.text) || output.length == 0 && startsLine(output, text: snapshot.text) {
+                    let padding = (snapshot.text as NSString).rangeOfComposedCharacterSequence(at: output.location)
+                    let paragraph = (editor.textView.defaultParagraphStyle?.mutableCopy() as? NSMutableParagraphStyle) ?? NSMutableParagraphStyle()
+                    paragraph.firstLineHeadIndent += output.length == 0 ? 78 : 54
+                    storage.addAttribute(.paragraphStyle, value: paragraph, range: padding)
+                    storage.addAttribute(decorationAttribute, value: true, range: padding); styled.append(padding)
+                } else if controlOffset > 0 && controlOffset <= storage.length {
                     let padding = (snapshot.text as NSString).rangeOfComposedCharacterSequence(at: controlOffset - 1)
                     storage.addAttribute(.kern, value: output?.length == 0 ? 78 : 54, range: padding); styled.append(padding)
                     storage.addAttribute(decorationAttribute, value: true, range: padding)
+                    if endsLine(controlOffset, text: snapshot.text), !startsLine(NSRange(location: controlOffset, length: 0), text: snapshot.text) {
+                        // TextKit omits trailing kern at a paragraph's end. Keep
+                        // room for the accessory even at a narrow viewport edge.
+                        let paragraph = (editor.textView.defaultParagraphStyle?.mutableCopy() as? NSMutableParagraphStyle) ?? NSMutableParagraphStyle()
+                        paragraph.tailIndent -= output?.length == 0 ? 82 : 64
+                        storage.addAttribute(.paragraphStyle, value: paragraph, range: padding)
+                    }
                 }
             }
             storage.endEditing()
@@ -210,39 +333,70 @@ import JortSettings
             guard let token = invocation.token.resolve(in: snapshot.lines), let scope = invocation.scope.resolve(in: snapshot.lines) else { continue }
             let output = invocation.output?.resolve(in: snapshot.lines)
             let leading = output.map { leadingActions($0, text: snapshot.text) } ?? false
-            var sourceRects = connected(rects(scope))
-            if output == nil, invocation.inputMode != "contextual", !sourceRects.isEmpty { sourceRects[sourceRects.count - 1].size.width += 27 }
-            if let output, !sourceRects.isEmpty, invocation.inputMode != "contextual" {
-                sourceRects[sourceRects.count - 1].size.width -= output.length == 0 ? 42 : leading ? 30 : 3
+            let indented = output.map { leadingIndent($0, text: snapshot.text) } ?? false
+            let emptyAtLineStart = output.map { $0.length == 0 && startsLine($0, text: snapshot.text) } ?? false
+            let sourceEndsLine = endsLine(NSMaxRange(invocation.inputMode == "contextual" ? token : scope), text: snapshot.text)
+            let outputEndsLine = output.map { endsLine(NSMaxRange($0), text: snapshot.text) } ?? false
+            let inlineActions = !(invocation.inputMode.hasPrefix("ephemeral") && invocation.phase == .inputting)
+            var paintedScope = scope
+            // The newline belongs to the range, but the insertion position on
+            // the following line does not. Do not paint that exclusive end.
+            if invocation.inputMode == "contextual", paintedScope.length > 0,
+               (snapshot.text as NSString).character(at: NSMaxRange(paintedScope) - 1) == 10 {
+                paintedScope.length -= 1
             }
+            var sourceFrames = rects(paintedScope)
+            if invocation.inputMode == "contained", invocation.phase == .inputting,
+               startsLine(NSRange(location: NSMaxRange(scope), length: 0), text: snapshot.text),
+               let emptyLine = rects(NSRange(location: NSMaxRange(scope), length: 0)).first,
+               !sourceFrames.contains(where: { abs($0.minY - emptyLine.minY) < 2 }) {
+                sourceFrames.append(emptyLine)
+            }
+            var sourceRects = connected(sourceFrames)
+            if output == nil, invocation.inputMode == "contextual", let tokenFrame = rects(token).last {
+                sourceRects.append(NSRect(x: tokenFrame.maxX - (sourceEndsLine ? 3 : 27), y: tokenFrame.minY, width: sourceEndsLine ? 63 : 54, height: tokenFrame.height))
+            }
+            if output == nil, invocation.inputMode != "contextual", inlineActions, !sourceRects.isEmpty {
+                sourceRects[sourceRects.count - 1].size.width += sourceEndsLine ? (invocation.phase == .inputting ? 48 : 60) : (invocation.phase == .inputting ? 15 : 27)
+            }
+            if let output, !sourceRects.isEmpty, invocation.inputMode != "contextual" {
+                sourceRects[sourceRects.count - 1].size.width -= output.length == 0 && !emptyAtLineStart ? 42 : leading && !indented ? 30 : 3
+            }
+            sourceRects = clippedBeforeFollowingGlyph(sourceRects, end: NSMaxRange(scope), text: snapshot.text)
             let color: NSColor = invocation.phase == .error ? .systemRed : invocation.message == nil ? .systemTeal : .systemOrange
             shapes.append((Self.union(sourceRects), color))
             let outputRects: [NSRect]
             if let output {
                 var frames = connected(rects(output))
                 if output.length == 0, let anchor = frames.first {
-                    frames = [NSRect(x: anchor.minX - 36, y: anchor.minY, width: 78, height: anchor.height)]
+                    let offset: CGFloat = emptyAtLineStart ? (output.location < storage.length ? 78 : 0) : 36
+                    frames = [NSRect(x: anchor.minX - offset, y: anchor.minY, width: 78, height: anchor.height)]
                 } else if !frames.isEmpty {
                     frames[0].origin.x += 3; frames[0].size.width -= 3
-                    if leading { frames[0].origin.x -= 27; frames[0].size.width += 27 }
-                    else { frames[frames.count - 1].size.width += 27 }
+                    if leading { let reserve: CGFloat = indented ? 54 : 27; frames[0].origin.x -= reserve; frames[0].size.width += reserve }
+                    // Standard segments include half the trailing kern. Complete
+                    // the action reservation, leaving clearance before the next glyph.
+                    else { frames[frames.count - 1].size.width += outputEndsLine ? 54 : 21 }
                 }
                 if let a = sourceRects.last, let b = frames.first, b.minY > a.minY {
                     let seam = NSRect(x: min(a.minX, b.minX), y: a.maxY - 2,
                         width: max(a.maxX, b.maxX) - min(a.minX, b.minX), height: max(4, b.minY - a.maxY + 4))
                     frames.insert(seam, at: 0)
                 }
+                frames = clippedBeforeFollowingGlyph(frames, end: NSMaxRange(output), text: snapshot.text)
                 outputRects = frames
-                shapes.append((Self.union(frames), .systemPurple))
+                shapes.append((Self.union(frames), ToolPresentationColors.pending))
             } else { outputRects = [] }
             var contextControl = invocation.inputMode == "contextual" && output == nil ? rects(token).last : nil
-            contextControl?.size.width += 27
+            contextControl?.size.width += sourceEndsLine ? 60 : 27
             let leadingAnchor = leading ? rects(NSRange(location: output!.location, length: 0)).first : nil
             guard let anchor = (leadingAnchor ?? outputRects.last ?? contextControl ?? sourceRects.last) else { continue }
-            let controlFrame = NSRect(x: leading ? anchor.minX - 21 : anchor.maxX - 50, y: anchor.minY, width: 50, height: max(24, anchor.height))
+            let controlFrame = NSRect(x: leading ? anchor.minX - (indented ? 48 : 21) : anchor.maxX - 50, y: anchor.minY, width: 50, height: max(24, anchor.height))
             switch invocation.phase {
             case .inputting:
-                addButton("play.fill", "Run", frame: controlFrame) { [weak editor] in editor?.toolController.submit(invocation.id) }
+                if inlineActions {
+                    addButton("play.fill", "Run", frame: controlFrame.offsetBy(dx: 10, dy: 0)) { [weak editor] in editor?.toolController.submit(invocation.id) }
+                }
             case .submitted: break
             case .processing:
                 let spinner = NSProgressIndicator(frame: NSRect(x: controlFrame.minX, y: controlFrame.minY + 3, width: 18, height: 18))
@@ -263,12 +417,28 @@ import JortSettings
                 for (start, offset) in [(true, scope.location), (false, NSMaxRange(scope))] {
                     guard let position = rects(NSRange(location: offset, length: 0)).first else { continue }
                     let handleKey = invocation.id.uuidString + (start ? ".start" : ".end")
+                    visibleHandles.insert(handleKey)
                     let handle = handles[handleKey] ?? ToolScopeHandle(frame: .zero)
                     handles[handleKey] = handle
                     handle.isHidden = false
-                    handle.frame = NSRect(x: position.minX - 7, y: position.minY, width: 14, height: 26)
+                    handle.isStart = start
+                    handle.toolTip = start ? "Context start — drag to choose source text" : "Context end — drag to choose source text"
+                    let controlGap: CGFloat = !start && offset == NSMaxRange(token) && !sourceEndsLine ? 27 : 0
+                    handle.frame = NSRect(x: position.minX - 5 - controlGap, y: max(0, position.minY - 7), width: 16, height: max(30, position.height + 7))
                     handle.setAccessibilityRole(.slider)
+                    handle.setAccessibilityElement(true)
                     handle.setAccessibilityLabel(start ? "Context start" : "Context end")
+                    handle.setAccessibilityValue(NSNumber(value: offset))
+                    handle.setAccessibilityMinValue(NSNumber(value: 0))
+                    handle.setAccessibilityMaxValue(NSNumber(value: (snapshot.text as NSString).length))
+                    handle.adjusted = { [weak editor] direction in
+                        guard let editor, let current = editor.state.invocations.first(where: { $0.id == invocation.id }),
+                              let scope = current.scope.resolve(in: editor.state.lines) else { return }
+                        let offset = start ? scope.location : NSMaxRange(scope), text = editor.state.text as NSString
+                        let next = direction < 0 ? (offset > 0 ? text.rangeOfComposedCharacterSequence(at: offset - 1).location : 0)
+                            : (offset < text.length ? NSMaxRange(text.rangeOfComposedCharacterSequence(at: offset)) : offset)
+                        try? editor.toolController.moveBoundary(invocation.id, start: start, to: next)
+                    }
                     handle.moved = { [weak editor] point in
                         guard let editor else { return }
                         let index = editor.textView.characterIndexForInsertion(at: point)
@@ -276,7 +446,7 @@ import JortSettings
                     }
                     handle.focused = { [weak self] in self?.focusedBoundary = (invocation.id, start) }
                     handle.key = { [weak self] in self?.handle($0) ?? false }
-                    if handle.superview == nil { editor.textView.addSubview(handle) }
+                    editor.textView.addSubview(handle, positioned: .above, relativeTo: nil)
                 }
             }
             if invocation.inputMode.hasPrefix("ephemeral"), invocation.phase == .inputting, let tokenRect = rects(token).last {
@@ -285,6 +455,7 @@ import JortSettings
                 let isNew = prompts[invocation.id] == nil
                 prompts[invocation.id] = prompt
                 prompt.isHidden = false
+                prompt.appearance = NSAppearance(named: .darkAqua)
                 if isNew { prompt.input.string = editor.toolController.prompts[invocation.id] ?? "" }
                 prompt.multiline = invocation.inputMode == "ephemeralMultiline"
                 let viewport = editor.textView.visibleRect
@@ -292,14 +463,19 @@ import JortSettings
                 // Prefer below/right. At a window edge keep the form usable and
                 // retain a short attachment to the same document anchor.
                 let x = max(viewport.minX + 8, min(tokenRect.maxX, viewport.maxX - width))
-                prompt.frame = NSRect(x: x, y: tokenRect.maxY + 4, width: width, height: prompt.multiline ? 150 : 70)
+                let height = min(prompt.multiline ? 150.0 : 70.0, viewport.height)
+                let below = tokenRect.maxY + 4
+                let y = below + height <= viewport.maxY ? below : max(viewport.minY, tokenRect.minY - height - 4)
+                prompt.frame = editor.view.convert(NSRect(x: x, y: y, width: width, height: height), from: editor.textView)
                 if x < tokenRect.maxX {
                     shapes.append((Self.union([NSRect(x: tokenRect.maxX - 2, y: tokenRect.maxY, width: 2, height: 5)]), .systemTeal))
                 }
                 prompt.changed = { [weak editor] in editor?.toolController.prompts[invocation.id] = $0 }
                 prompt.submit = { [weak editor] in editor?.toolController.submit(invocation.id) }
                 prompt.dismiss = { [weak editor] in editor?.toolController.cancel(invocation.id) }
-                if prompt.superview == nil { editor.textView.addSubview(prompt) }
+                // A persistent prompt must not share the glyph/control stacking
+                // context: inline actions are rebuilt on subsequent refreshes.
+                editor.view.addSubview(prompt, positioned: .above, relativeTo: nil)
                 if isNew { editor.view.window?.makeFirstResponder(prompt.input) }
             }
         }
@@ -309,29 +485,97 @@ import JortSettings
         }
         for (id, prompt) in prompts where !visiblePrompts.contains(id) { prompt.isHidden = true }
         for (key, handle) in handles where !snapshot.invocations.contains(where: { key.hasPrefix($0.id.uuidString) && $0.phase == .inputting }) {
+            if editor.view.window?.firstResponder === handle { editor.view.window?.makeFirstResponder(editor.textView) }
             handle.removeFromSuperview(); handles.removeValue(forKey: key)
         }
+        for (key, handle) in handles where !visibleHandles.contains(key) { handle.isHidden = true }
         if let (range, packages, selected) = completion, let anchor = rects(range).last {
-            for (index, package) in packages.prefix(8).enumerated() {
-                let label = "\(package.manifest.command)  \(package.manifest.name)"
-                let button = ToolActionButton(symbol: "", label: label) { [weak self, weak editor] in
+            let first = max(0, selected - 7)
+            let visible = Array(packages.dropFirst(first).prefix(8))
+            let width = min(editor.scroll.contentSize.width - 16, max(180, visible.map {
+                ($0.manifest.command as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 14, weight: .medium)]).width
+                + ($0.manifest.name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width + 56
+            }.max() ?? 180))
+            let popover = ToolCompletionPopover(frame: .zero)
+            popover.appearance = NSAppearance(named: .darkAqua)
+            let origin = editor.view.convert(anchor, from: editor.textView)
+            let height = CGFloat(visible.count) * 32 + 12
+            let viewport = editor.view.convert(editor.scroll.contentView.bounds, from: editor.scroll.contentView)
+            // Root overlay sits above TextKit's independently composited glyph layers.
+            let below = editor.view.isFlipped ? origin.maxY + 4 : origin.minY - height - 4
+            popover.frame = NSRect(x: min(max(viewport.minX + 8, origin.minX), viewport.maxX - width - 8),
+                y: max(viewport.minY, min(below, viewport.maxY - height)), width: width, height: height)
+            popover.wantsLayer = true; popover.layer?.cornerRadius = 9
+            popover.shadow = NSShadow(); popover.shadow?.shadowBlurRadius = 12
+            popover.setAccessibilityElement(true); popover.setAccessibilityRole(.group); popover.setAccessibilityLabel("Tool completions")
+            for (index, package) in visible.enumerated() {
+                let button = ToolCompletionRow(command: package.manifest.command, name: package.manifest.name, selected: index + first == selected) { [weak self, weak editor] in
                     self?.abandonCompletion()
-                    try? editor?.toolController.accept(package, token: range, space: false)
+                    try? editor?.toolController.accept(package, token: range, space: true)
                 }
-                button.title = "\(index == selected ? "› " : "")" + label; button.imagePosition = .noImage
-                button.isBordered = true; button.bezelStyle = .smallSquare
-                button.frame = NSRect(x: anchor.minX, y: anchor.maxY + 4 + CGFloat(index) * 28, width: 280, height: 28)
-                mount(button)
+                button.frame = NSRect(x: 6, y: 6 + CGFloat(index) * 32, width: width - 12, height: 32)
+                popover.addSubview(button)
             }
+            popover.setAccessibilityChildren(popover.subviews)
+            editor.view.addSubview(popover, positioned: .above, relativeTo: nil); controls.append(popover)
         }
-        editor.textView.needsDisplay = true
+        editor.textView.window?.invalidateCursorRects(for: editor.textView)
+        decoratedViewport = viewportStamp()
+        if invalidateDisplay { editor.textView.needsDisplay = true }
     }
 
     private func mount(_ view: NSView) { editor?.textView.addSubview(view); controls.append(view) }
+    private func clippedBeforeFollowingGlyph(_ frames: [NSRect], end: Int, text: String) -> [NSRect] {
+        guard end < text.utf16.count,
+              ![10, 13, 0x85, 0x2028, 0x2029].contains((text as NSString).character(at: end)),
+              let next = editor?.linePresentation.glyphFrame(at: end) else { return frames }
+        // Decorations may pad into whitespace inside their range, but neither
+        // their fill nor their 1pt stroke may enter the next character's cell.
+        return frames.compactMap { frame in
+            guard frame.maxY > next.minY + 1, frame.minY < next.maxY - 1 else { return frame }
+            var clipped = frame
+            clipped.size.width = min(frame.maxX, next.minX - 1) - frame.minX
+            return clipped.width > 0 ? clipped : nil
+        }
+    }
+    private func updateErrorAccessories(_ snapshot: DocumentSnapshot) {
+        guard let editor else { return }
+        var values = editor.linePresentation.accessories.values.filter { !errorAccessoryIDs.contains($0.lineID) }
+        let messages = Dictionary(grouping: snapshot.invocations.filter { $0.message != nil }, by: { $0.token.start.lineID })
+        let previous = errorAccessoryIDs
+        errorAccessoryIDs = Set(messages.keys)
+        guard !messages.isEmpty || !previous.isEmpty else { return }
+        for (lineID, invocations) in messages {
+            let rows = NSStackView(); rows.orientation = .vertical; rows.alignment = .leading; rows.spacing = 4
+            var height: CGFloat = 8
+            for invocation in invocations {
+                let label = NSTextField(wrappingLabelWithString: "\(invocation.command): \(invocation.message ?? "Execution failed")")
+                label.font = .systemFont(ofSize: 12)
+                let width = max(120, editor.scroll.contentSize.width - editor.textView.textContainerOrigin.x * 2 - 12)
+                label.preferredMaxLayoutWidth = width
+                height += max(22, ceil((label.stringValue as NSString).boundingRect(with: NSSize(width: width, height: 1024), options: [.usesLineFragmentOrigin], attributes: [.font: label.font!]).height) + 6)
+                label.textColor = invocation.phase == .error ? .systemRed : .systemOrange
+                label.setAccessibilityLabel(label.stringValue)
+                rows.addArrangedSubview(label)
+            }
+            values.append(LineAccessory(lineID: lineID, height: height, view: rows))
+        }
+        editor.linePresentation.setAccessories(Array(values))
+    }
     private func leadingActions(_ output: NSRange, text: String) -> Bool {
         // Long results keep their actions at the source/output seam rather than
         // requiring a scroll to the end. Short inline results retain trailing actions.
         output.length > 40 || (text as NSString).substring(with: output).contains("\n")
+    }
+    private func leadingIndent(_ output: NSRange, text: String) -> Bool {
+        output.length > 0 && leadingActions(output, text: text) && startsLine(output, text: text)
+    }
+    private func startsLine(_ output: NSRange, text: String) -> Bool {
+        output.location > 0 && [10, 13, 0x85, 0x2028, 0x2029].contains((text as NSString).character(at: output.location - 1))
+    }
+    private func endsLine(_ offset: Int, text: String) -> Bool {
+        let text = text as NSString
+        return offset == text.length || offset < text.length && [10, 13, 0x85, 0x2028, 0x2029].contains(text.character(at: offset))
     }
     private func connected(_ frames: [NSRect]) -> [NSRect] {
         guard frames.count > 1 else { return frames }
@@ -351,19 +595,30 @@ import JortSettings
     }
     private func addButton(_ symbol: String, _ label: String, frame: NSRect, action: @escaping () -> Void) {
         let button = ToolActionButton(symbol: symbol, label: label, action: action)
-        button.frame = NSRect(x: frame.minX, y: frame.minY, width: 24, height: max(24, frame.height)); mount(button)
+        button.frame = NSRect(x: frame.minX, y: frame.minY, width: symbol == "play.fill" ? 36 : 24, height: max(24, frame.height)); mount(button)
     }
     private func rects(_ range: NSRange) -> [NSRect] {
         editor?.linePresentation.canonicalRects(for: range).map { frame in
-            var frame = frame.insetBy(dx: -3, dy: 0)
+            var frame = frame.insetBy(dx: -3, dy: -1)
             if frame.minY < 0.5 { frame.size.height -= 0.5 - frame.minY; frame.origin.y = 0.5 }
             return frame
         } ?? []
     }
     func geometry(for range: NSRange) -> [NSRect] { rects(range) }
+    func containsDecoration(at point: NSPoint, pending: Bool) -> Bool {
+        shapes.contains { path, color in
+            (color == ToolPresentationColors.pending) == pending && path.contains(point)
+        }
+    }
     func draw(_ rect: NSRect) {
+        // TextKit can expand/reposition its viewport after publication or during
+        // scrolling without a document edit. Derive paths for the actual paint
+        // pass, rather than retaining only the old viewport's rectangles.
+        if decoratedViewport != viewportStamp() { refresh(recomputeCompletion: false, invalidateDisplay: false) }
         for (path, color) in shapes where path.elementCount > 0 && path.bounds.intersects(rect) {
-            color.withAlphaComponent(0.16).setFill(); path.fill()
+            // Composite once against the canvas, never against another tool's
+            // tint (contextual scopes can geometrically contain their result).
+            ToolPresentationColors.canvas.blended(withFraction: 0.16, of: color)!.setFill(); path.fill()
             color.withAlphaComponent(0.65).setStroke(); path.lineWidth = 1; path.stroke()
         }
     }

@@ -113,7 +113,11 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
 
 public enum ToolRangeEditing {
     public static func intersectsLock(_ edit: NSRange, snapshot: DocumentSnapshot) -> Bool {
-        snapshot.invocations.contains { invocation in
+        !intersectingLocks(edit, snapshot: snapshot).isEmpty
+    }
+
+    public static func intersectingLocks(_ edit: NSRange, snapshot: DocumentSnapshot) -> [ToolInvocation] {
+        snapshot.invocations.filter { invocation in
             guard invocation.isLocked else { return false }
             guard let scope = invocation.scope.resolve(in: snapshot.lines) else { return false }
             let end = max(NSMaxRange(scope), invocation.output?.resolve(in: snapshot.lines).map(NSMaxRange) ?? NSMaxRange(scope))

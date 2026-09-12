@@ -1,4 +1,5 @@
 import AppKit
+import CoreText
 import JortDocument
 
 /// Transient views are owned by their feature; only their geometry lives here.
@@ -154,16 +155,62 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
         guard let editor, let manager = editor.textLayoutManager, let content = manager.textContentManager,
               let viewport = manager.textViewportLayoutController.viewportRange else { return [] }
         let a = content.offset(from: content.documentRange.location, to: viewport.location)
-        let b = content.offset(from: content.documentRange.location, to: viewport.endLocation)
+        var b = content.offset(from: content.documentRange.location, to: viewport.endLocation)
+        let visibleBottom = (editor.enclosingScrollView?.contentView.bounds.maxY ?? editor.visibleRect.maxY) - editor.textContainerOrigin.y
+        manager.enumerateTextLayoutFragments(from: viewport.location, options: [.ensuresLayout, .ensuresExtraLineFragment]) { fragment in
+            guard fragment.layoutFragmentFrame.minY <= visibleBottom else { return false }
+            b = max(b, content.offset(from: content.documentRange.location, to: fragment.rangeInElement.endLocation))
+            return fragment.layoutFragmentFrame.maxY < visibleBottom
+        }
         let clipped = NSIntersectionRange(range, NSRange(location: a, length: b - a))
         guard clipped.length > 0 || range.length == 0 && range.location >= a && range.location <= b,
               let start = content.location(content.documentRange.location, offsetBy: range.length == 0 ? range.location : clipped.location),
               let end = content.location(start, offsetBy: clipped.length), let textRange = NSTextRange(location: start, end: end) else { return [] }
         var frames: [NSRect] = []
+        var lineFrames: [NSRect] = []
         manager.enumerateTextSegments(in: textRange, type: .selection, options: [.rangeNotRequired]) { _, frame, _, _ in
-            frames.append(frame.offsetBy(dx: editor.textContainerOrigin.x, dy: editor.textContainerOrigin.y)); return true
+            lineFrames.append(frame); return true
+        }
+        manager.enumerateTextSegments(in: textRange, type: range.length == 0 ? .selection : .standard, options: [.rangeNotRequired]) { _, frame, _, _ in
+            var normalized = frame
+            if let line = lineFrames.first(where: { abs($0.midY - frame.midY) < max(2, $0.height / 2) }) {
+                normalized.origin.y = line.minY
+                normalized.size.height = max(line.height, editor.defaultParagraphStyle?.minimumLineHeight ?? 24)
+            }
+            let positioned = normalized.offsetBy(dx: editor.textContainerOrigin.x, dy: editor.textContainerOrigin.y)
+            if !frames.contains(positioned) { frames.append(positioned) }
+            return true
         }
         return frames
+    }
+    /// Actual shaped glyph origin, not a selection/insertion boundary (which
+    /// splits kerning advances between adjacent characters). Shape the same
+    /// attributed visual line and inspect glyph positions rather than adding
+    /// an assumed half-kern to TextKit's selection rectangles.
+    func glyphFrame(at offset: Int) -> NSRect? {
+        guard let editor, offset >= 0, offset < editor.string.utf16.count,
+              let manager = editor.textLayoutManager, let content = manager.textContentManager,
+              let location = content.location(content.documentRange.location, offsetBy: offset) else { return nil }
+        guard let fragment = manager.textLayoutFragment(for: location) else { return nil }
+        let base = content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
+        let index = offset - base
+        guard let line = fragment.textLineFragments.first(where: { NSLocationInRange(index, $0.characterRange) }) else { return nil }
+        let source = line.attributedString.attributedSubstring(from: line.characterRange)
+        let shaped = CTLineCreateWithAttributedString(source)
+        let localIndex = index - line.characterRange.location
+        var glyphX: CGFloat?
+        for run in CTLineGetGlyphRuns(shaped) as! [CTRun] {
+            let count = CTRunGetGlyphCount(run)
+            var indices = [CFIndex](repeating: 0, count: count)
+            var positions = [CGPoint](repeating: .zero, count: count)
+            CTRunGetStringIndices(run, CFRange(location: 0, length: 0), &indices)
+            CTRunGetPositions(run, CFRange(location: 0, length: 0), &positions)
+            if let glyph = indices.firstIndex(of: localIndex) { glyphX = positions[glyph].x; break }
+        }
+        guard let glyphX else { return nil }
+        return NSRect(x: editor.textContainerOrigin.x + fragment.layoutFragmentFrame.minX + line.typographicBounds.minX + line.glyphOrigin.x + glyphX,
+            y: editor.textContainerOrigin.y + fragment.layoutFragmentFrame.minY + line.typographicBounds.minY,
+            width: 1, height: max(24, line.typographicBounds.height))
     }
     func accessibilityChildren() -> [Any]? {
         guard !accessories.isEmpty, let editor else { return nil }

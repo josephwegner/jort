@@ -41,6 +41,14 @@ Jort SHALL expose non-UI operations to inspect, validate, install, enable, disab
 - **THEN** the registry exposes package identity, origin, override, enabled, validation, and diagnostic state
 - **AND** this capability does not prescribe or create a Settings-panel UI
 
+#### Scenario: A user saves a new tool in the existing Settings panel
+- **WHEN** a valid new tool is saved
+- **THEN** Jort saves without a leave-editor warning and exposes the enabled package in open editors' command completion
+- **AND** new tools default to enabled, while the draft's enable toggle controls that draft
+- **AND** unsaved-change warnings remain applicable when actually leaving an edited tool
+- **AND** the Enabled checkbox remains visible beside the Tools heading for both saved tools and new drafts
+- **AND** the source editor and its ruler clip their drawing within the source editor area
+
 ### Requirement: Tool scripts run without ambient authority
 Jort SHALL evaluate `tool.js` inside a bounded JavaScript host that exposes only a deeply frozen invocation object, explicit deterministic host facilities, result construction, and cancellation observation.
 
@@ -71,10 +79,12 @@ Jort SHALL ship `/date`, `/time`, `/uuid`, `/calc`, `/sort`, and `/dedupe` as va
 - **WHEN** `/date` or `/time` receives valid content
 - **THEN** its script produces one result from the execution's injected captured clock
 - **AND** uses a documented locale-independent default format
+- **AND** appends the exact input content after the generated date or time, preserving whitespace and newlines
 
 #### Scenario: UUID package runs
 - **WHEN** `/uuid` executes
 - **THEN** its script produces one lowercase hyphenated UUID from the injected generator
+- **AND** appends the exact input content after that UUID
 
 #### Scenario: Calculator package runs
 - **WHEN** `/calc` receives a valid bounded expression containing decimal numbers, parentheses, unary signs, and supported arithmetic operators

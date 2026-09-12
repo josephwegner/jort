@@ -29,6 +29,329 @@ import JortSettings
         }
         XCTFail("Tool did not enter pending: \(editor.state.invocations)")
     }
+
+    func testPendingDeletionConfirmationPartialTextUndoAndEscape() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("calc", output: "RESULT"); editor.toolPackages = [tool]
+        editor.textView.insertText("prefix /calc suffix", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 7, length: 5), space: true)
+        let id = editor.state.invocations[0].id
+        editor.toolController.submit(id); try await pending(editor)
+        let before = editor.state
+        let selection = NSRange(location: 8, length: 2)
+        editor.textView.setSelectedRange(selection)
+        editor.textView.deleteBackward(nil)
+        let sheet = try XCTUnwrap(window.attachedSheet)
+        XCTAssertEqual(editor.state, before)
+        window.endSheet(sheet, returnCode: .alertSecondButtonReturn)
+        try await Task.sleep(for: .milliseconds(30))
+        XCTAssertEqual(editor.state, before)
+        try editor.toolController.deletePending(in: selection, expectedRevision: before.revision)
+        XCTAssertEqual(editor.state.text, (before.text as NSString).replacingCharacters(in: selection, with: ""))
+        XCTAssertTrue(editor.state.invocations.isEmpty)
+        editor.textView.history.undo()
+        XCTAssertEqual(editor.state.text, before.text)
+        XCTAssertEqual(editor.state.invocations.first?.phase, .pending)
+        let output = try XCTUnwrap(editor.state.invocations[0].output?.resolve(in: editor.state.lines))
+        editor.textView.setSelectedRange(NSRange(location: output.location + 2, length: 0))
+        XCTAssertTrue(editor.toolPresentation.escape())
+        XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
+        XCTAssertEqual(editor.state.text, "prefix /calc  suffix")
+    }
+
+    func testDeleteMultiplePendingCallsAndRejectProcessingIntersection() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("calc"); editor.toolPackages = [tool]
+        editor.textView.insertText("/calc\n/calc", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+        editor.toolController.submit(editor.state.invocations[0].id); try await pending(editor)
+        let second = (editor.state.text as NSString).range(of: "/calc", options: .backwards)
+        try editor.toolController.accept(tool, token: second, space: false)
+        let id = try XCTUnwrap(editor.state.invocations.last?.id)
+        editor.toolController.submit(id)
+        for _ in 0..<300 where editor.state.invocations.contains(where: { $0.phase != .pending }) { try await Task.sleep(for: .milliseconds(10)) }
+        let before = editor.state, all = NSRange(location: 0, length: editor.state.text.utf16.count)
+        XCTAssertEqual(ToolRangeEditing.intersectingLocks(all, snapshot: before).count, 2)
+        try editor.toolController.deletePending(in: all, expectedRevision: before.revision)
+        XCTAssertEqual(editor.state.text, ""); XCTAssertTrue(editor.state.invocations.isEmpty)
+        editor.textView.history.undo()
+        XCTAssertEqual(editor.state.text, before.text); XCTAssertEqual(editor.state.invocations.count, 2)
+        var mixed = editor.state.invocations; mixed[1].phase = .processing; mixed[1].output = nil; mixed[1].outputHash = nil
+        let snapshot = DocumentSnapshot(documentID: editor.state.documentID, text: editor.state.text, revision: editor.state.revision,
+            lines: editor.state.lines, landmarks: editor.state.landmarks, invocations: mixed)
+        try editor.apply(.init(baseRevision: editor.state.revision, origin: .automation, mutation: .tools(snapshot)))
+        let locked = editor.state
+        try editor.toolController.deletePending(in: all, expectedRevision: locked.revision)
+        XCTAssertEqual(editor.state, locked)
+    }
+
+    func testContextKeyboardWorksBeforeDraggingAndControlsDoNotOverlap() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("dedupe", mode: .contextual); editor.toolPackages = [tool]
+        editor.textView.insertText("above\n/dedupe\nbelow", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 6, length: 7), space: false)
+        let endHandle = try XCTUnwrap(editor.textView.subviews.first { $0.accessibilityLabel() == "Context end" })
+        let run = try XCTUnwrap(editor.textView.subviews.first { $0.accessibilityLabel() == "Run" })
+        XCTAssertFalse(endHandle.frame.intersects(run.frame), "\(endHandle.frame) vs \(run.frame)")
+        let tokenFrame = try XCTUnwrap(editor.toolPresentation.geometry(for: NSRange(location: 6, length: 7)).last)
+        XCTAssertGreaterThanOrEqual(run.frame.minX, tokenFrame.maxX)
+        let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.command, .option], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 126)!
+        XCTAssertTrue(editor.textView.performKeyEquivalent(with: event))
+        XCTAssertEqual(editor.state.invocations[0].scope.resolve(in: editor.state.lines)?.location, 0)
+        XCTAssertTrue(window.firstResponder === editor.textView)
+    }
+
+    func testFeedbackRendersCompletionErrorAndControlSpacing() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("calc"); editor.toolPackages = [tool]
+        editor.textView.insertText("/", replacementRange: NSRange(location: 0, length: 0)); editor.refreshToolPresentation()
+        let popup = try XCTUnwrap(editor.view.subviews.first { $0.accessibilityLabel() == "Tool completions" })
+        XCTAssertTrue(popup.superview === editor.view)
+        XCTAssertLessThan(popup.frame.width, 280)
+        let completionBitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+        editor.view.cacheDisplay(in: editor.view.bounds, to: completionBitmap)
+        try completionBitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-feedback-completion.png"))
+        let completion = try XCTUnwrap(popup.subviews.first as? NSButton)
+        XCTAssertTrue(completion.accessibilityPerformPress())
+        XCTAssertEqual(editor.state.text, "/calc ")
+        let run = try XCTUnwrap(editor.textView.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "Run" })
+        XCTAssertEqual(run.title, "⇧↵")
+        editor.textView.insertText("foo", replacementRange: editor.textView.selectedRange())
+        var invalid = tool; invalid.source = "export default async function() { return {error: 'Expected a number'}; }"
+        editor.toolPackages = [invalid]
+        editor.toolController.submit(editor.state.invocations[0].id)
+        for _ in 0..<300 where editor.state.invocations[0].phase != .error { try await Task.sleep(for: .milliseconds(10)) }
+        editor.refreshToolPresentation()
+        let messages = editor.linePresentation.accessories.values.flatMap { ($0.view as? NSStackView)?.arrangedSubviews ?? [] }.compactMap { $0 as? NSTextField }
+        let dismiss = try XCTUnwrap(editor.textView.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel()?.hasPrefix("Dismiss:") == true })
+        let textRect = try XCTUnwrap(editor.toolPresentation.geometry(for: NSRange(location: 0, length: editor.state.text.utf16.count)).last)
+        XCTAssertGreaterThanOrEqual(dismiss.frame.minX, textRect.maxX)
+        XCTAssertTrue(messages.contains { $0.stringValue.contains("Expected a number") })
+        let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+        editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-feedback-error.png"))
+    }
+
+    func testTrailingControlsFitNarrowWindowWithoutCoveringInput() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        window.setContentSize(NSSize(width: 320, height: 400))
+        let tool = package("calc"); editor.toolPackages = [tool]
+        editor.textView.insertText("A long line with /calc", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: (editor.state.text as NSString).range(of: "/calc"), space: true)
+        editor.textView.insertText("(10 + 20) * 40", replacementRange: editor.textView.selectedRange())
+        editor.view.layoutSubtreeIfNeeded(); editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport(); editor.refreshToolPresentation()
+        let run = try XCTUnwrap(editor.textView.subviews.first { $0.accessibilityLabel() == "Run" })
+        let last = try XCTUnwrap(editor.toolPresentation.geometry(for: NSRange(location: 0, length: editor.state.text.utf16.count)).last)
+        XCTAssertGreaterThanOrEqual(run.frame.minX, last.maxX)
+        XCTAssertLessThanOrEqual(run.frame.maxX, editor.textView.visibleRect.maxX)
+    }
+
+    func testMultilineOutputAtEOFHasGeometryOnEveryLine() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("write", mode: .ephemeralMultiline, output: "line 1\nline 2\nline 3")
+        editor.toolPackages = [tool]
+        editor.textView.insertText("/write", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 6), space: true)
+        editor.toolController.submit(editor.state.invocations[0].id); try await pending(editor)
+        let output = try XCTUnwrap(editor.state.invocations[0].output?.resolve(in: editor.state.lines))
+        let frames = editor.toolPresentation.geometry(for: output)
+        XCTAssertEqual(Set(frames.map { Int($0.minY) }).count, 3)
+    }
+
+    func testAccessiblePendingButtonsOverrideTextViewCursor() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("calc"); editor.toolPackages = [tool]
+        editor.textView.insertText("/calc", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: true)
+        editor.toolController.submit(editor.state.invocations[0].id); try await pending(editor)
+        editor.textView.resetCursorRects()
+        for label in ["Merge", "Dismiss"] {
+            let button = try XCTUnwrap(editor.textView.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == label })
+            XCTAssertEqual(button.accessibilityRole(), .button)
+            XCTAssertTrue(button.isEnabled)
+            let point = editor.textView.convert(NSPoint(x: button.frame.midX, y: button.frame.midY), to: nil)
+            let event = try XCTUnwrap(NSEvent.mouseEvent(with: .mouseMoved, location: point, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0))
+            NSCursor.iBeam.set()
+            editor.textView.mouseMoved(with: event)
+            XCTAssertEqual(NSCursor.current, NSCursor.pointingHand)
+        }
+        let dismiss = try XCTUnwrap(editor.textView.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "Dismiss" })
+        XCTAssertTrue(dismiss.accessibilityPerformPress())
+        XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
+    }
+
+    func testScrollingRepaintsPendingOutputBeyondOriginalEOFViewport() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("write", mode: .ephemeralMultiline, output: String(repeating: "result\n", count: 25) + "last result")
+        editor.toolPackages = [tool]
+        editor.textView.insertText(String(repeating: "before\n", count: 30) + "/write", replacementRange: NSRange(location: 0, length: 0))
+        let token = (editor.state.text as NSString).range(of: "/write")
+        editor.textView.scrollRangeToVisible(token)
+        try editor.toolController.accept(tool, token: token, space: true)
+        editor.toolController.submit(editor.state.invocations[0].id); try await pending(editor)
+        let last = (editor.state.text as NSString).range(of: "last result")
+        editor.textView.scrollRangeToVisible(last)
+        editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+        // A scroll/draw, with no document edit or explicit presentation refresh.
+        let visible = editor.textView.visibleRect
+        let bitmap = try XCTUnwrap(editor.textView.bitmapImageRepForCachingDisplay(in: visible))
+        editor.textView.cacheDisplay(in: visible, to: bitmap)
+        let frame = try XCTUnwrap(editor.toolPresentation.geometry(for: last).first)
+        XCTAssertTrue(editor.toolPresentation.containsDecoration(at: NSPoint(x: frame.minX + 5, y: frame.midY), pending: true))
+    }
+
+    func testContextEndingAtNextLineDoesNotPaintUnownedSuffix() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("dedupe", mode: .contextual, output: "- two\n- three\n- four")
+        editor.toolPackages = [tool]
+        editor.textView.insertText("- two\n/dedupe\na", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: (editor.state.text as NSString).range(of: "/dedupe"), space: false)
+        let id = editor.state.invocations[0].id
+        try editor.toolController.moveBoundary(id, start: true, to: 0)
+        try editor.toolController.moveBoundary(id, start: false, to: editor.state.text.utf16.count - 1)
+        editor.toolController.submit(id); try await pending(editor)
+        let suffix = NSRange(location: editor.state.text.utf16.count - 1, length: 1)
+        let frame = try XCTUnwrap(editor.toolPresentation.geometry(for: suffix).first)
+        XCTAssertFalse(editor.toolPresentation.containsDecoration(at: NSPoint(x: frame.minX + 3, y: frame.midY), pending: false))
+    }
+
+    func testContextMidlineBoundaryNeverPaintsFollowingGlyph() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("dedupe", mode: .contextual, output: "result")
+        editor.toolPackages = [tool]
+        editor.textView.insertText("apple\n/dedupe\npearA", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: (editor.state.text as NSString).range(of: "/dedupe"), space: false)
+        let id = editor.state.invocations[0].id
+        try editor.toolController.moveBoundary(id, start: true, to: 0)
+        try editor.toolController.moveBoundary(id, start: false, to: editor.state.text.utf16.count - 1)
+        editor.toolController.submit(id); try await pending(editor)
+        let glyph = try XCTUnwrap(editor.linePresentation.glyphFrame(at: editor.state.text.utf16.count - 1))
+        XCTAssertFalse(editor.toolPresentation.containsDecoration(at: NSPoint(x: glyph.minX, y: glyph.midY), pending: false))
+        try editor.toolController.merge(id)
+        editor.textView.history.undo()
+        let restoredGlyph = try XCTUnwrap(editor.linePresentation.glyphFrame(at: editor.state.text.utf16.count - 1))
+        XCTAssertFalse(editor.toolPresentation.containsDecoration(at: NSPoint(x: restoredGlyph.minX, y: restoredGlyph.midY), pending: false))
+        let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+        editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-feedback5-boundary.png"))
+    }
+
+    func testEphemeralOverlayWinsHitTestingOverRebuiltPendingActions() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let calc = package("calc"), write = package("write", mode: .ephemeralMultiline)
+        editor.toolPackages = [calc, write]
+        editor.textView.insertText(String(repeating: "\n", count: 8) + "/calc\n\n\n/write", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(calc, token: (editor.state.text as NSString).range(of: "/calc"), space: true)
+        editor.toolController.submit(editor.state.invocations[0].id); try await pending(editor)
+        try editor.toolController.accept(write, token: (editor.state.text as NSString).range(of: "/write"), space: true)
+        // Rebuild inline controls while preserving the existing prompt.
+        editor.refreshToolPresentation(); editor.refreshToolPresentation()
+        let prompt = try XCTUnwrap(editor.view.subviews.first { $0.accessibilityLabel() == "Tool prompt form" })
+        let merge = try XCTUnwrap(editor.textView.subviews.first { $0.accessibilityLabel() == "Merge" })
+        let frame = editor.view.convert(merge.frame, from: editor.textView)
+        let point = NSPoint(x: frame.midX, y: frame.midY)
+        XCTAssertTrue(prompt.frame.contains(point), "Fixture must place the pending control underneath the prompt")
+        let hit = try XCTUnwrap(editor.view.hitTest(point))
+        XCTAssertTrue(hit === prompt || hit.isDescendant(of: prompt))
+        let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+        editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-feedback5-overlay.png"))
+    }
+
+    func testInlineResultUsesCanonicalCharacterAdvance() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("calc"); editor.toolPackages = [tool]
+        editor.textView.insertText("/calc", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: true)
+        editor.textView.insertText("3+3 ", replacementRange: editor.textView.selectedRange())
+        editor.toolController.submit(editor.state.invocations[0].id); try await pending(editor)
+        let output = try XCTUnwrap(editor.state.invocations[0].output?.resolve(in: editor.state.lines))
+        XCTAssertNil(editor.textView.textStorage?.attribute(.kern, at: output.location - 1, effectiveRange: nil))
+        editor.textView.insertText("a", replacementRange: NSRange(location: editor.state.text.utf16.count, length: 0))
+        editor.refreshToolPresentation()
+        let dismiss = try XCTUnwrap(editor.textView.subviews.first { $0.accessibilityLabel() == "Dismiss" })
+        let suffix = try XCTUnwrap(editor.linePresentation.glyphFrame(at: editor.state.text.utf16.count - 1))
+        XCTAssertLessThanOrEqual(dismiss.frame.maxX, suffix.minX - 1)
+        XCTAssertFalse(editor.toolPresentation.containsDecoration(at: NSPoint(x: suffix.minX, y: suffix.midY), pending: true))
+        let merge = try XCTUnwrap(editor.textView.subviews.first { $0.accessibilityLabel() == "Merge" })
+        let start = try XCTUnwrap(editor.toolPresentation.geometry(for: NSRange(location: output.location, length: 0)).first)
+        let glyphWidth = ("6" as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 15, weight: .regular)]).width
+        XCTAssertGreaterThanOrEqual(merge.frame.minX, start.minX + 3 + glyphWidth)
+    }
+
+    func testEphemeralPromptFlipsAboveBottomAnchor() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("write", mode: .ephemeralMultiline); editor.toolPackages = [tool]
+        editor.textView.insertText(String(repeating: "line\n", count: 12) + "/write", replacementRange: NSRange(location: 0, length: 0))
+        let token = (editor.state.text as NSString).range(of: "/write")
+        try editor.toolController.accept(tool, token: token, space: true)
+        editor.textView.scrollRangeToVisible(token)
+        editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+        editor.refreshToolPresentation()
+        let prompt = try XCTUnwrap(editor.view.subviews.first { $0.accessibilityLabel() == "Tool prompt form" })
+        let anchor = try XCTUnwrap(editor.toolPresentation.geometry(for: token).first)
+        let documentFrame = editor.textView.convert(prompt.frame, from: editor.view)
+        XCTAssertLessThanOrEqual(documentFrame.maxY, anchor.minY)
+        XCTAssertTrue(editor.textView.visibleRect.contains(documentFrame))
+    }
+
+    func testUndoRestylesPendingOutputAndAlignsInlineHeights() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("dedupe", mode: .contextual, output: "apples\nbananas\nmangos\noranges")
+        editor.toolPackages = [tool]
+        editor.textView.insertText("apples\napples\n/dedupe\nbananas\noranges", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: (editor.state.text as NSString).range(of: "/dedupe"), space: false)
+        let id = editor.state.invocations[0].id
+        try editor.toolController.moveBoundary(id, start: true, to: 0)
+        try editor.toolController.moveBoundary(id, start: false, to: editor.state.text.utf16.count)
+        editor.toolController.submit(id); try await pending(editor)
+        let original = editor.state.text
+        try editor.toolController.merge(id)
+        editor.textView.history.undo()
+        XCTAssertEqual(editor.state.text, original)
+        let invocation = editor.state.invocations[0]
+        let output = try XCTUnwrap(invocation.output?.resolve(in: editor.state.lines))
+        XCTAssertEqual(editor.textView.textStorage?.attribute(.kern, at: output.location - 1, effectiveRange: nil) as? Int, 54)
+        let tokenFrame = try XCTUnwrap(editor.toolPresentation.geometry(for: invocation.token.resolve(in: editor.state.lines)!).last)
+        let outputFrame = try XCTUnwrap(editor.toolPresentation.geometry(for: output).first)
+        XCTAssertEqual(tokenFrame.minY, outputFrame.minY, accuracy: 0.01)
+        XCTAssertEqual(tokenFrame.height, outputFrame.height, accuracy: 0.01)
+        let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+        editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-feedback2-undo.png"))
+    }
+
+    func testContainedTrailingEmptyLineRemainsInsideWrapperAndTrimsOneSpace() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("uuid"); editor.toolPackages = [tool]
+        editor.textView.insertText("/uuid", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: true)
+        editor.textView.insertText(" test\n", replacementRange: editor.textView.selectedRange())
+        editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport(); editor.refreshToolPresentation()
+        XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), " test\n")
+        XCTAssertEqual(editor.state.text, "/uuid  test\n")
+        let caret = try XCTUnwrap(editor.toolPresentation.geometry(for: editor.textView.selectedRange()).first)
+        let run = try XCTUnwrap(editor.textView.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "Run" })
+        XCTAssertGreaterThan(caret.minY, 10)
+        XCTAssertEqual(run.frame.minY, caret.minY, accuracy: 1)
+        let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+        editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-feedback2-newline.png"))
+    }
+
+    func testEphemeralHasOnlyPopoverSubmitAndNormalizesOneLeadingSpace() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("write", mode: .ephemeralMultiline); editor.toolPackages = [tool]
+        editor.textView.insertText("/write", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 6), space: true)
+        XCTAssertFalse(editor.textView.subviews.contains { ($0 as? NSButton)?.accessibilityLabel() == "Run" })
+        let prompt = try XCTUnwrap(editor.view.subviews.first { $0.accessibilityLabel() == "Tool prompt form" })
+        XCTAssertTrue(prompt.subviews.contains { ($0 as? NSButton)?.accessibilityLabel() == "Run" })
+        editor.toolController.prompts[editor.state.invocations[0].id] = "  write an email"
+        XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), " write an email")
+    }
     func testContainedCanonicalPublicationLockMergeAndUndo() async throws {
         let (editor, window) = try await editor(); defer { window.orderOut(nil) }
         let package = package("calc"); editor.toolPackages = [package]
@@ -42,7 +365,7 @@ import JortSettings
         editor.textView.insertText("3+3", replacementRange: editor.textView.selectedRange())
         XCTAssertEqual(editor.state.invocations.count, 1, "After typing: \(editor.state)")
         let id = try XCTUnwrap(editor.state.invocations.first?.id)
-        XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), " 3+3")
+        XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), "3+3")
         editor.toolController.submit(id)
         try await pending(editor)
         XCTAssertFalse(editor.textView(editor.textView, shouldChangeTextIn: NSRange(location: 8, length: 1), replacementString: "X"))
@@ -85,8 +408,8 @@ import JortSettings
         editor.toolController.prompts[id] = "Secret prompt"
         XCTAssertFalse(String(data: try PersistenceFormat.encode(editor.state), encoding: .utf8)!.contains("Secret prompt"))
         editor.toolController.submit(id); try await pending(editor)
-        XCTAssertEqual(editor.state.text, "/write")
-        try editor.toolController.merge(id); XCTAssertEqual(editor.state.text, "")
+        XCTAssertEqual(editor.state.text, "/write ")
+        try editor.toolController.merge(id); XCTAssertEqual(editor.state.text, " ")
     }
     func testConnectedUnionRemovesSharedInteriorEdges() {
         let path = ToolInvocationPresentation.union([NSRect(x: 50, y: 0, width: 100, height: 20), NSRect(x: 0, y: 18, width: 150, height: 20), NSRect(x: 0, y: 36, width: 80, height: 20)])
@@ -191,13 +514,13 @@ import JortSettings
         }
         window.makeFirstResponder(editor.textView)
         key("/", code: 44); key("ca"); key("\r", code: 36)
-        XCTAssertEqual(editor.state.text, "/calc")
+        XCTAssertEqual(editor.state.text, "/calc ")
         XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
         XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), "")
         key("3+3"); key("\r", code: 36, modifiers: .shift)
         try await pending(editor)
-        XCTAssertEqual(editor.state.text, "/calc3+36")
-        let actions = editor.textView.subviews.compactMap { ($0 as? NSButton)?.accessibilityLabel() }
+        XCTAssertEqual(editor.state.text, "/calc 3+36")
+        let actions = (editor.textView.accessibilityChildren() ?? []).compactMap { ($0 as? NSButton)?.accessibilityLabel() }
         XCTAssertTrue(actions.contains("Merge")); XCTAssertTrue(actions.contains("Dismiss"))
         let id = editor.state.invocations[0].id
         try editor.toolController.dismiss(id); editor.toolController.cancel(id)
@@ -363,6 +686,19 @@ import JortSettings
         editor.refreshToolPresentation()
         let handles = editor.textView.subviews.filter { $0.accessibilityRole() == .slider }
         XCTAssertEqual(Set(handles.compactMap { $0.accessibilityLabel() }), ["Context start", "Context end"])
+        let end = try XCTUnwrap(handles.first { $0.accessibilityLabel() == "Context end" })
+        let click = NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+        end.mouseDown(with: click)
+        let originalEnd = NSMaxRange(try XCTUnwrap(editor.state.invocations.first { $0.id == context.id }?.scope.resolve(in: editor.state.lines)))
+        let left = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.option, .shift], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 123)!
+        end.keyDown(with: left); XCTAssertTrue(window.firstResponder === end)
+        end.keyDown(with: left); XCTAssertTrue(window.firstResponder === end)
+        XCTAssertEqual(editor.state.invocations.first { $0.id == context.id }?.scope.resolve(in: editor.state.lines).map(NSMaxRange), originalEnd - 2)
+        XCTAssertTrue(end.accessibilityPerformIncrement())
+        XCTAssertEqual(editor.state.invocations.first { $0.id == context.id }?.scope.resolve(in: editor.state.lines).map(NSMaxRange), originalEnd - 1)
+        XCTAssertTrue(end.accessibilityPerformDecrement())
     }
 
     func testEphemeralPromptFitsNarrowWindowAndFollowsAnchorOffscreen() async throws {
@@ -377,10 +713,157 @@ import JortSettings
         editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport(); editor.refreshToolPresentation()
         let input = try XCTUnwrap(window.firstResponder as? NSTextView)
         let prompt = try XCTUnwrap(input.enclosingScrollView?.superview)
-        XCTAssertLessThanOrEqual(prompt.frame.maxX, editor.textView.visibleRect.maxX + 1)
+        XCTAssertLessThanOrEqual(editor.textView.convert(prompt.frame, from: editor.view).maxX, editor.textView.visibleRect.maxX + 1)
         XCTAssertFalse(prompt.isHidden)
         editor.textView.scrollRangeToVisible(NSRange(location: editor.state.text.utf16.count, length: 0))
         editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport(); editor.refreshToolPresentation()
-        XCTAssertTrue(prompt.isHidden || !prompt.frame.intersects(editor.textView.visibleRect))
+        XCTAssertTrue(prompt.isHidden || !editor.textView.convert(prompt.frame, from: editor.view).intersects(editor.textView.visibleRect))
+    }
+
+    func testPublicationUndoRespectsUnrelatedEditChronology() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let package = package("calc"); editor.toolPackages = [package]
+        editor.textView.insertText("/calc tail", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: true)
+        editor.textView.insertText("3+3", replacementRange: editor.textView.selectedRange())
+        let id = editor.state.invocations[0].id, input = editor.state.text
+        editor.textView.history.removeAllActions()
+        editor.toolController.submit(id); try await pending(editor)
+        let published = editor.state.text
+        try await Task.sleep(for: .milliseconds(20))
+        editor.textView.insertText("!", replacementRange: NSRange(location: editor.state.text.utf16.count, length: 0))
+        try await Task.sleep(for: .milliseconds(20))
+        editor.textView.history.undo()
+        XCTAssertEqual(editor.state.text, published)
+        XCTAssertEqual(editor.state.invocations.first?.phase, .pending)
+        editor.textView.history.undo()
+        XCTAssertEqual(editor.state.text, input)
+        XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
+        editor.textView.history.redo()
+        XCTAssertEqual(editor.state.text, published)
+        XCTAssertEqual(editor.state.invocations.first?.phase, .pending)
+    }
+
+    func testPublicationAndMergeKeepSelectedSurroundingText() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let package = package("calc", output: "First result\nSecond result"); editor.toolPackages = [package]
+        editor.textView.insertText("/calc tail\nlast", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
+        let id = editor.state.invocations[0].id, lastLineID = editor.state.lines.last?.id
+        let selected = (editor.state.text as NSString).range(of: "tail")
+        editor.textView.setSelectedRange(selected)
+        let viewport = editor.textView.enclosingScrollView?.contentView.bounds.origin
+        editor.toolController.submit(id); try await pending(editor)
+        XCTAssertEqual((editor.state.text as NSString).substring(with: editor.textView.selectedRange()), "tail")
+        try editor.toolController.merge(id)
+        XCTAssertEqual((editor.state.text as NSString).substring(with: editor.textView.selectedRange()), "tail")
+        XCTAssertEqual(editor.state.lines.last?.id, lastLineID)
+        XCTAssertEqual(editor.textView.enclosingScrollView?.contentView.bounds.origin, viewport)
+        editor.textView.history.undo()
+        XCTAssertEqual((editor.state.text as NSString).substring(with: editor.textView.selectedRange()), "tail")
+    }
+
+    func testMultilineOutputAfterTrailingInputNewlineKeepsActionsInsideTextArea() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let package = package("calc", output: "First result\nSecond result"); editor.toolPackages = [package]
+        editor.textView.insertText("/calc", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: true)
+        editor.textView.insertText("3+3\n", replacementRange: editor.textView.selectedRange())
+        let id = editor.state.invocations[0].id
+        editor.toolController.submit(id); try await pending(editor)
+        editor.refreshToolPresentation()
+        let merge = try XCTUnwrap(editor.textView.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "Merge" })
+        XCTAssertGreaterThanOrEqual(merge.frame.minX, editor.textView.textContainerOrigin.x)
+        XCTAssertEqual(editor.state.text, "/calc 3+3\nFirst result\nSecond result")
+        let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+        editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-tools-newline-pending.png"))
+        try editor.toolController.merge(id)
+        let storage = try XCTUnwrap(editor.textView.textStorage)
+        storage.enumerateAttribute(.paragraphStyle, in: NSRange(location: 0, length: storage.length)) { value, _, _ in
+            XCTAssertEqual((value as? NSParagraphStyle)?.firstLineHeadIndent ?? 0, 0)
+        }
+    }
+
+    func testEmptyOutputAfterTrailingInputNewlineReservesActionsWithoutCanonicalCharacters() async throws {
+        for tail in ["", "unrelated"] {
+            let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+            let package = package("calc", output: ""); editor.toolPackages = [package]
+            editor.textView.insertText("/calc" + tail, replacementRange: NSRange(location: 0, length: 0))
+            try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: true)
+            editor.textView.insertText("input\n", replacementRange: editor.textView.selectedRange())
+            let id = editor.state.invocations[0].id, before = editor.state.text
+            editor.toolController.submit(id); try await pending(editor); editor.refreshToolPresentation()
+            let merge = try XCTUnwrap(editor.textView.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "Merge" })
+            XCTAssertGreaterThanOrEqual(merge.frame.minX, editor.textView.textContainerOrigin.x)
+            XCTAssertEqual(editor.state.text, before)
+            try editor.toolController.merge(id)
+            XCTAssertEqual(editor.state.text, tail)
+        }
+    }
+
+    func testRenderedContextAndEphemeralStateMatrixWithAccessibleActions() async throws {
+        for mode in [ToolInputMode.contextual, .ephemeralSingleLine, .ephemeralMultiline] {
+            let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+            let package = package("test", mode: mode, output: "Subject: New SKUs\nNew products are now available.")
+            editor.toolPackages = [package]
+            editor.textView.insertText("Above the command\n/test\nBelow the command", replacementRange: NSRange(location: 0, length: 0))
+            try editor.toolController.accept(package, token: (editor.state.text as NSString).range(of: "/test"), space: false)
+            let id = editor.state.invocations[0].id
+            if mode == .contextual {
+                try editor.toolController.moveBoundary(id, start: true, to: 0)
+                try editor.toolController.moveBoundary(id, start: false, to: editor.state.text.utf16.count)
+                XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), "Above the command\n\nBelow the command")
+            } else {
+                let input = try XCTUnwrap(window.firstResponder as? NSTextView)
+                input.insertText("Write a concise customer email about new SKUs", replacementRange: input.selectedRange())
+                if mode == .ephemeralSingleLine {
+                    input.doCommand(by: #selector(NSResponder.insertNewline(_:)))
+                    XCTAssertFalse(input.string.contains("\n"))
+                }
+            }
+            func capture(_ phase: String) throws {
+                editor.view.layoutSubtreeIfNeeded(); editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+                editor.refreshToolPresentation()
+                let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
+                editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/jort-tools-\(mode.rawValue)-\(phase).png"))
+            }
+            try capture("input")
+            editor.toolController.submit(id); try await pending(editor); try capture("pending")
+            let actions = (editor.textView.accessibilityChildren() ?? []).compactMap { $0 as? NSButton }
+            XCTAssertEqual(Set(actions.compactMap { $0.accessibilityLabel() }), ["Merge", "Dismiss"])
+            XCTAssertEqual(editor.textView.accessibilityValue() as? String, editor.state.text)
+            let dismiss = try XCTUnwrap(actions.first { $0.accessibilityLabel() == "Dismiss" })
+            XCTAssertTrue(dismiss.accessibilityPerformPress())
+            XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
+        }
+    }
+
+    func testPackageRemovalFallbacksPreserveCanonicalContentInEveryMode() async throws {
+        for mode in [ToolInputMode.contained, .contextual, .ephemeralMultiline] {
+            for output in ["", "RESULT"] {
+                let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+                let package = package("test", mode: mode, output: output)
+                editor.toolPackages = [package]
+                editor.textView.insertText("before /test after\nnext", replacementRange: NSRange(location: 0, length: 0))
+                try editor.toolController.accept(package, token: NSRange(location: 7, length: 5), space: false)
+                if mode == .contained { editor.textView.insertText("input", replacementRange: editor.textView.selectedRange()) }
+                let id = editor.state.invocations[0].id, input = editor.state.text
+                if mode.isEphemeral { editor.toolController.prompts[id] = "Not canonical" }
+                editor.toolPackages = []
+                XCTAssertEqual(editor.state.text, input); XCTAssertTrue(editor.state.invocations.isEmpty)
+                editor.toolPackages = [package]
+                try editor.toolController.accept(package, token: NSRange(location: 7, length: 5), space: false)
+                let running = editor.state.invocations[0].id
+                if mode == .contained { editor.textView.insertText("owned", replacementRange: editor.textView.selectedRange()) }
+                if mode.isEphemeral { editor.toolController.prompts[running] = "Not canonical" }
+                editor.toolController.submit(running); try await pending(editor)
+                editor.toolPackages = []
+                XCTAssertTrue(editor.state.invocations.isEmpty)
+                // The previous contained input was orphaned by removal, so it is unrelated now.
+                XCTAssertEqual(editor.state.text, "before " + output + (mode == .contained ? "input" : "") + " after\nnext")
+            }
+        }
     }
 }

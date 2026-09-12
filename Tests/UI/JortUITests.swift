@@ -96,8 +96,24 @@ import XCTest
         source.typeText("export default async function(input) { return {output: input.content}; }")
         XCTAssertTrue(app.buttons["Save"].isEnabled); app.buttons["Save"].click()
         XCTAssertTrue(app.staticTexts["UI Tool"].waitForExistence(timeout: 3))
+        XCTAssertEqual(app.sheets.count, 0)
+        let enabled = app.checkBoxes["Enabled"]
+        XCTAssertTrue(enabled.exists); XCTAssertTrue(enabled.isHittable)
+        enabled.click(); XCTAssertEqual(enabled.value as? String, "0")
+        app.buttons["Save"].click()
+        XCTAssertTrue(app.staticTexts["Tool saved. Saving does not run it."].waitForExistence(timeout: 3))
+        enabled.click(); XCTAssertEqual(enabled.value as? String, "1")
+        app.buttons["Save"].click()
         app.windows["Jort Settings"].buttons[XCUIIdentifierCloseWindow].click()
         XCTAssertTrue(app.textViews["Jort document"].exists)
+        let document = app.textViews["Jort document"]
+        document.click(); document.typeText("/ui-tool")
+        XCTAssertTrue(app.buttons["/ui-tool  UI Tool"].waitForExistence(timeout: 3))
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertEqual(document.value as? String, "/ui-tool ")
+        document.typeText("hello")
+        app.typeKey(.return, modifierFlags: .shift)
+        XCTAssertTrue(app.buttons["Merge"].waitForExistence(timeout: 5))
     }
 
     func testBundledToolCompletionPendingMergeAndRelaunch() throws {
@@ -113,6 +129,10 @@ import XCTest
         let merge = app.buttons["Merge"]
         XCTAssertTrue(merge.waitForExistence(timeout: 5))
         XCTAssertEqual(editor.value as? String, "I need /calc 3+3 6")
+        XCTAssertTrue(merge.isHittable)
+        merge.hover()
+        XCTAssertTrue(app.buttons["Dismiss"].isHittable)
+        app.buttons["Dismiss"].hover()
         merge.click()
         XCTAssertEqual(editor.value as? String, "I need 6")
         app.typeKey("s", modifierFlags: .command)

@@ -86,7 +86,7 @@ public enum DocumentMutation: Sendable {
     case removeLandmark(LandmarkID)
     case clearLandmarks
     case insertAfter(lineID: UUID, text: String)
-    case tools(DocumentSnapshot)
+    case tools(DocumentSnapshot, edit: NSRange? = nil, replacementLength: Int? = nil)
 }
 public struct DocumentTransaction: Sendable {
     public let baseRevision: Int64
@@ -128,9 +128,16 @@ public struct TransactionResult: Sendable {
         let before = snapshot
         var next = state
         switch transaction.mutation {
-        case .tools(let snapshot):
+        case .tools(let snapshot, let edit, let replacementLength):
             try snapshot.validate()
             guard snapshot.documentID == state.documentID else { throw DocumentError.invalidState }
+            if let edit, let replacementLength {
+                let count = (state.text as NSString).length
+                guard edit.location >= 0, edit.location <= count, edit.length >= 0,
+                      edit.length <= count - edit.location, replacementLength >= 0,
+                      count - edit.length <= Int.max - replacementLength,
+                      count - edit.length + replacementLength == (snapshot.text as NSString).length else { throw DocumentError.invalidRange }
+            }
             next = snapshot.liveState
         case .edit(let text, let range, let length):
             if let range, let length {

@@ -44,7 +44,8 @@ import JortSettings
         guard let editor else { return nil }
         let caret = editor.textView.selectedRange()
         return editor.state.invocations.first {
-            guard let range = $0.scope.resolve(in: editor.state.lines) else { return false }
+            guard let source = $0.scope.resolve(in: editor.state.lines) else { return false }
+            let range = NSUnionRange(source, $0.output?.resolve(in: editor.state.lines) ?? source)
             return caret.location >= range.location && NSMaxRange(caret) <= NSMaxRange(range)
         }
     }
@@ -59,11 +60,11 @@ import JortSettings
         }) else { return }
         let manifest = package.manifest
         let command = manifest.command
-        let replacement = command + (space && !manifest.inputMode.isEphemeral ? " " : "")
+        let replacement = command + (space ? " " : "")
         let plain = try replacing(before, range: range, with: replacement)
         var annotations = ToolRangeEditing.remap(before.invocations, from: before, to: plain, edit: range, replacementLength: replacement.utf16.count)
         let tokenRange = NSRange(location: range.location, length: command.utf16.count)
-        var scopeRange = NSRange(location: range.location, length: replacement.utf16.count)
+        var scopeRange = NSRange(location: range.location, length: manifest.inputMode.isEphemeral ? command.utf16.count : replacement.utf16.count)
         if manifest.inputMode == .contextual {
             scopeRange = (plain.text as NSString).lineRange(for: tokenRange)
             while scopeRange.length > 0 && [10, 13].contains((plain.text as NSString).character(at: NSMaxRange(scopeRange) - 1)) { scopeRange.length -= 1 }
@@ -92,12 +93,15 @@ import JortSettings
     func content(_ invocation: ToolInvocation) -> String? {
         guard let editor, let scope = invocation.scope.resolve(in: editor.state.lines),
               let token = invocation.token.resolve(in: editor.state.lines) else { return nil }
-        if invocation.inputMode.hasPrefix("ephemeral") { return prompts[invocation.id] }
+        func submitted(_ content: String) -> String {
+            content.unicodeScalars.first?.value == 0x20 ? String(content.unicodeScalars.dropFirst()) : content
+        }
+        if invocation.inputMode.hasPrefix("ephemeral") { return prompts[invocation.id].map(submitted) }
         let text = editor.state.text as NSString
         if invocation.inputMode == "contextual" {
-            return (text.substring(with: scope) as NSString).replacingCharacters(in: NSRange(location: token.location - scope.location, length: token.length), with: "")
+            return submitted((text.substring(with: scope) as NSString).replacingCharacters(in: NSRange(location: token.location - scope.location, length: token.length), with: ""))
         }
-        return text.substring(with: NSRange(location: NSMaxRange(token), length: NSMaxRange(scope) - NSMaxRange(token)))
+        return submitted(text.substring(with: NSRange(location: NSMaxRange(token), length: NSMaxRange(scope) - NSMaxRange(token))))
     }
 
     func submit(_ id: UUID) {
@@ -171,14 +175,30 @@ import JortSettings
         let undo = DocumentSnapshot(documentID: before.documentID, text: before.text, revision: before.revision,
             lines: before.lines, landmarks: before.landmarks,
             invocations: before.invocations.map { $0.id == invocation.id ? inputting : $0 })
+        let selection = editor.textView.selectedRange()
         try commit(plain, edit: edit, replacementLength: output.utf16.count, invocations: annotations, undo: .none)
-        editor.registerToolUndo(undo)
+        editor.registerToolUndo(undo, selection: selection)
     }
 
     func cancel(_ id: UUID) {
         jobs.removeValue(forKey: id)?.cancel(); prompts.removeValue(forKey: id)
         guard let editor else { return }
         try? commit(editor.state, edit: nil, replacementLength: nil, invocations: editor.state.invocations.filter { $0.id != id })
+    }
+
+    /// Deletes only the requested characters and drops the whole affected pending
+    /// annotation. Text, annotations and their inverse share one transaction.
+    func deletePending(in range: NSRange, expectedRevision: Int64) throws {
+        guard let editor, editor.state.revision == expectedRevision, range.length > 0 else { return }
+        let before = editor.state
+        let affected = ToolRangeEditing.intersectingLocks(range, snapshot: before)
+        guard !affected.isEmpty, affected.allSatisfy({ $0.phase == .pending }) else { return }
+        let ids = Set(affected.map(\.id))
+        let plain = try replacing(before, range: range, with: "")
+        let annotations = ToolRangeEditing.remap(before.invocations.filter { !ids.contains($0.id) },
+            from: before, to: plain, edit: range, replacementLength: 0)
+        try commit(plain, edit: range, replacementLength: 0, invocations: annotations)
+        editor.textView.setSelectedRange(NSRange(location: range.location, length: 0))
     }
 
     func dismiss(_ id: UUID) throws {
@@ -255,7 +275,7 @@ import JortSettings
         let snapshot = DocumentSnapshot(documentID: plain.documentID, text: plain.text, revision: plain.revision,
             lines: plain.lines, landmarks: plain.landmarks, invocations: invocations)
         try editor.apply(.init(baseRevision: editor.state.revision, origin: .automation, undoPolicy: undo,
-            mutation: .tools(snapshot)))
+            mutation: .tools(snapshot, edit: edit, replacementLength: replacementLength)))
         editor.refreshToolPresentation()
     }
 }

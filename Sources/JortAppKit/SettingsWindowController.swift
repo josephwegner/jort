@@ -79,7 +79,8 @@ import AppKit
         window.title = "Jort Settings"; window.isReleasedWhenClosed = false; window.minSize = NSSize(width: 680, height: 480)
         window.contentViewController = split; window.setFrameAutosaveName("JortSettingsWindow")
         super.init(window: window); window.delegate = self; window.setAccessibilityLabel("Jort Settings")
-        sidebar.panes = panes; sidebar.onSelect = { [weak self] in self?.requestSelection(index: $0) }
+        sidebar.panes = panes; sidebar.table.reloadData()
+        sidebar.onSelect = { [weak self] in self?.requestSelection(index: $0) }
         let remembered = defaults.string(forKey: selectedKey)
         let index = panes.firstIndex(where: { $0.id == remembered }) ?? 0
         select(index: index)

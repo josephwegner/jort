@@ -32,6 +32,10 @@ getter. Return exactly one of `{output: string}` or `{error: string}`. There are
 no separately parsed arguments. The host owns publication and Merge; scripts
 never receive the document or editor. Empty output is a successful result.
 
+The editor removes exactly one leading ASCII space from extracted content before
+validation and execution. Additional spaces, tabs, newlines, and all other text
+are preserved; the canonical input in the document is never trimmed.
+
 Execution has a 16 MiB heap, 512 KiB stack, five-second timeout, and manifest
 input/output bounds. Cancellation interrupts execution. There are no filesystem,
 network, process, native bridge, module loading, `eval`, or function-constructor
@@ -49,3 +53,7 @@ The bundled date format is `YYYY-MM-DD` in UTC; time is `HH:mm:ssZ`. Calculator
 power is right associative, binds more tightly than a leading unary sign, and
 rejects non-finite results. Sort uses literal JavaScript string ordering; dedupe
 keeps the first exact line. Neither normalizes whitespace or Unicode.
+
+Date, time, and UUID append the exact `input.content` after their generated value,
+including spaces and newlines. New tools created in Settings default to enabled;
+saving registers the package for completion in open editors without executing it.

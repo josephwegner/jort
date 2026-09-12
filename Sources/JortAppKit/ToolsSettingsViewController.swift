@@ -40,6 +40,10 @@ import JortSettings
         let root = NSView(), split = NSSplitView(); split.isVertical = true; split.dividerStyle = .thin
         split.translatesAutoresizingMaskIntoConstraints = false; root.addSubview(split)
         let master = NSView(), detail = NSView(); split.addArrangedSubview(master); split.addArrangedSubview(detail)
+        split.setHoldingPriority(.defaultHigh, forSubviewAt: 0)
+        split.setHoldingPriority(.defaultLow, forSubviewAt: 1)
+        let preferredWidth = master.widthAnchor.constraint(equalToConstant: 240)
+        preferredWidth.priority = .defaultLow; preferredWidth.isActive = true
         master.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true; detail.widthAnchor.constraint(greaterThanOrEqualToConstant: 430).isActive = true
         let toolsScroll = NSScrollView(); toolsScroll.hasVerticalScroller = true; toolsScroll.documentView = toolsTable
         toolsScroll.translatesAutoresizingMaskIntoConstraints = false; newButton.translatesAutoresizingMaskIntoConstraints = false
@@ -82,12 +86,13 @@ import JortSettings
         inputModeButton.target = self; inputModeButton.action = #selector(changeContract)
         outputOperationButton.target = self; outputOperationButton.action = #selector(changeContract)
         let contract = NSStackView(views: [inputModeButton, outputOperationButton]); contract.orientation = .horizontal
-        let buttons = NSStackView(views: [enabledButton, duplicateButton, deleteButton, retryButton, NSView(), discardButton, saveButton]); buttons.orientation = .horizontal; buttons.spacing = 8
-        for item in [title, status, nameField, commandField, summaryField, sourceLabel, sourceEditor, diagnosticScroll, buttons] { item.translatesAutoresizingMaskIntoConstraints = false; detail.addSubview(item) }
+        let buttons = NSStackView(views: [duplicateButton, deleteButton, retryButton, NSView(), discardButton, saveButton]); buttons.orientation = .horizontal; buttons.spacing = 8
+        for item in [title, enabledButton, status, nameField, commandField, summaryField, sourceLabel, sourceEditor, diagnosticScroll, buttons] { item.translatesAutoresizingMaskIntoConstraints = false; detail.addSubview(item) }
         contract.translatesAutoresizingMaskIntoConstraints = false; detail.addSubview(contract)
         sourceEditor.setAccessibilityIdentifier("settings.sourceEditor"); saveButton.identifier = .init("settings.saveTool")
         NSLayoutConstraint.activate([
             title.leadingAnchor.constraint(equalTo: detail.leadingAnchor, constant: 20), title.topAnchor.constraint(equalTo: detail.topAnchor, constant: 18),
+            enabledButton.trailingAnchor.constraint(equalTo: detail.trailingAnchor, constant: -20), enabledButton.centerYAnchor.constraint(equalTo: title.centerYAnchor),
             status.leadingAnchor.constraint(equalTo: title.leadingAnchor), status.trailingAnchor.constraint(equalTo: detail.trailingAnchor, constant: -20), status.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 4),
             nameField.leadingAnchor.constraint(equalTo: title.leadingAnchor), nameField.topAnchor.constraint(equalTo: status.bottomAnchor, constant: 14), nameField.widthAnchor.constraint(equalTo: detail.widthAnchor, multiplier: 0.45),
             commandField.leadingAnchor.constraint(equalTo: nameField.trailingAnchor, constant: 10), commandField.trailingAnchor.constraint(equalTo: status.trailingAnchor), commandField.centerYAnchor.constraint(equalTo: nameField.centerYAnchor),
@@ -107,6 +112,8 @@ import JortSettings
     }
     private var availabilityMessage: String { if case .unavailable(let message) = snapshot.availability { return message }; return "Settings are unavailable." }
     private func rebuild(select id: ToolID? = nil) {
+        updatingFields = true
+        defer { updatingFields = false; selectionBeforeChange = toolsTable.selectedRow }
         tools = builder.configuredTools(templates: templates, snapshot: snapshot); toolsTable.reloadData()
         if let id, let index = tools.firstIndex(where: { $0.id == id }) { toolsTable.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false); present(tool: tools[index]) }
         else if tools.indices.contains(toolsTable.selectedRow) { present(tool: tools[toolsTable.selectedRow]) }
@@ -126,6 +133,7 @@ import JortSettings
         cell.setAccessibilityLabel("\(label.stringValue), \(detail.stringValue)"); return cell
     }
     public func tableViewSelectionDidChange(_ notification: Notification) {
+        guard !updatingFields else { return }
         guard tools.indices.contains(toolsTable.selectedRow), toolsTable.selectedRow != selectionBeforeChange else { return }
         let target = toolsTable.selectedRow
         if hasUnsavedChanges, let window = view.window {
@@ -140,6 +148,7 @@ import JortSettings
         updatingFields = true; draft = nil; diagnostics = tool.diagnostics
         nameField.stringValue = tool.displayName; commandField.stringValue = tool.commandName; summaryField.stringValue = tool.summary; sourceEditor.source = tool.source
         enabledButton.state = tool.isEnabled ? .on : .off
+        enabledButton.isHidden = false
         let custom = tool.origin == .custom; nameField.isEditable = custom; commandField.isEditable = custom; summaryField.isEditable = custom; sourceEditor.isSourceEditable = custom
         let manifest = snapshot.customTools.first(where: { $0.id == tool.id })?.manifest ?? templates.first(where: { $0.id == tool.id })?.manifest
         duplicateButton.title = manifest == nil ? "Duplicate to Customize" : "Customize"
@@ -191,6 +200,7 @@ import JortSettings
     private func begin(_ draft: ToolDraft) {
         if hasUnsavedChanges, let window = view.window { resolvePendingChanges(in: window) { [weak self] allowed in if allowed { self?.begin(draft) } }; return }
         self.draft = draft; updatingFields = true; nameField.stringValue = draft.definition.displayName; commandField.stringValue = draft.definition.commandName; summaryField.stringValue = draft.definition.summary; sourceEditor.source = draft.definition.source; sourceEditor.isSourceEditable = true
+        enabledButton.isHidden = false
         inputModeButton.isEnabled = true; outputOperationButton.isEnabled = true
         inputModeButton.selectItem(withTitle: (draft.definition.manifest?.inputMode ?? .contained).rawValue)
         outputOperationButton.selectItem(withTitle: (draft.definition.manifest?.outputOperation ?? .replaceInvocation).rawValue)
@@ -206,13 +216,17 @@ import JortSettings
             guard let self else { return }
             let injected = await validator.diagnostics(for: local.definition)
             guard !injected.contains(where: \.isBlocking) else { diagnostics = injected; diagnosticsTable.reloadData(); status.stringValue = "Fix validation errors before saving."; return }
-            do { snapshot = try await store.save(local.definition, expectedRevision: local.baseRevision); rebuild(select: local.definition.id); status.stringValue = "Tool saved. Saving does not run it." }
+            do { snapshot = try await store.save(local.definition, expectedRevision: local.baseRevision); self.draft = nil; rebuild(select: local.definition.id); status.stringValue = "Tool saved. Saving does not run it." }
             catch SettingsStoreError.conflict { status.stringValue = "This tool changed while you were editing. Your draft was kept." }
             catch { status.stringValue = "Could not save: \(error.localizedDescription)" }
         }
     }
     @objc public func discardDraft() { if let original = draft?.original, let tool = tools.first(where: { $0.id == original.id }) { present(tool: tool) } else { rebuild() } }
     @objc public func toggleEnabled() {
+        if draft != nil {
+            updateDraft { $0.isEnabled = enabledButton.state == .on }
+            return
+        }
         guard tools.indices.contains(toolsTable.selectedRow) else { return }
         let tool = tools[toolsTable.selectedRow], enabled = enabledButton.state == .on
         Task { [weak self] in guard let self else { return }; do {
