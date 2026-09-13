@@ -92,4 +92,39 @@ import JortDocument
         misplaced.sourceHash = ToolInvocation.hash("/calc +3")
         XCTAssertFalse(misplaced.validated(in: original))
     }
+
+    func testRestorationRoundTripsAndOlderInvocationPayloadDefaultsSafely() throws {
+        var snapshot = try pending()
+        var invocation = snapshot.invocations[0]
+        var original = invocation
+        original.phase = .inputting; original.output = nil; original.outputHash = nil
+        invocation.restoration = ToolInvocationRestoration(invocation: original,
+            selection: try .init(NSRange(location: 6, length: 3), lines: snapshot.lines),
+            viewportLineID: snapshot.lines[0].id, viewportOffset: 17.5)
+        snapshot = DocumentSnapshot(documentID: snapshot.documentID, text: snapshot.text,
+            revision: snapshot.revision, lines: snapshot.lines, invocations: [invocation])
+        let decoded = try PersistenceFormat.decode(PersistenceFormat.encode(snapshot)).snapshot
+        XCTAssertEqual(decoded, snapshot)
+        XCTAssertEqual(decoded.invocations[0].restoration?.invocation(id: original.id), original)
+
+        let legacy = try PersistenceFormat.decode(PersistenceFormat.encode(try pending())).snapshot
+        XCTAssertEqual(legacy.invocations.count, 1)
+        XCTAssertNil(legacy.invocations.first?.restoration)
+    }
+
+    func testLegacyInputtingMessageDecodesAsTransientPresentationState() throws {
+        let model = try DocumentCoordinator()
+        let plain = try model.apply(.init(baseRevision: 0, origin: .native,
+            mutation: .edit(text: "/test", range: NSRange(location: 0, length: 0), replacementLength: 5))).after
+        var invocation = ToolInvocation(packageID: "dev.jort.test", packageVersion: 1, entryContract: 1,
+            inputMode: "contained", outputOperation: "replace-invocation", command: "/test",
+            token: try .init(NSRange(location: 0, length: 5), lines: plain.lines),
+            scope: try .init(NSRange(location: 0, length: 5), lines: plain.lines), sourceHash: ToolInvocation.hash("/test"))
+        invocation.message = "Old validation warning"
+        let snapshot = DocumentSnapshot(documentID: plain.documentID, text: plain.text, revision: plain.revision,
+            lines: plain.lines, invocations: [invocation])
+        let decoded = try PersistenceFormat.decode(PersistenceFormat.encode(snapshot)).snapshot
+        XCTAssertNil(decoded.invocations[0].message)
+        XCTAssertEqual(decoded.text, snapshot.text)
+    }
 }

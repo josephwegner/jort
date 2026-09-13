@@ -6,9 +6,9 @@ import JortSettings
 @testable import JortAppKit
 
 @MainActor final class ToolInvocationTests: XCTestCase {
-    private func editor() async throws -> (EditorViewController, NSWindow) {
+    private func editor(directory: URL? = nil) async throws -> (EditorViewController, NSWindow) {
         _ = NSApplication.shared
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ToolEditor-\(UUID())")
+        let directory = directory ?? FileManager.default.temporaryDirectory.appendingPathComponent("ToolEditor-\(UUID())")
         let editor = EditorViewController(persistence: PersistenceController(directory: directory))
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false; window.contentViewController = editor
@@ -16,6 +16,13 @@ import JortSettings
         for _ in 0..<500 where editor.coordinator.onTransaction == nil { try await Task.sleep(for: .milliseconds(10)) }
         XCTAssertTrue(editor.textView.isEditable)
         return (editor, window)
+    }
+    private func key(_ characters: String, code: UInt16, modifiers: NSEvent.ModifierFlags = [],
+                     in editor: EditorViewController, window: NSWindow) {
+        let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers,
+            timestamp: 0, windowNumber: window.windowNumber, context: nil, characters: characters,
+            charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
+        editor.textView.keyDown(with: event)
     }
     private func package(_ command: String, mode: ToolInputMode = .contained, output: String = "6") -> ToolPackage {
         let encoded = String(data: try! JSONEncoder().encode(output), encoding: .utf8)!
@@ -28,6 +35,235 @@ import JortSettings
             try await Task.sleep(for: .milliseconds(10))
         }
         XCTFail("Tool did not enter pending: \(editor.state.invocations)")
+    }
+    private func pending(_ editor: EditorViewController, id: UUID) async throws {
+        for _ in 0..<500 {
+            if editor.state.invocations.first(where: { $0.id == id })?.phase == .pending { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Tool did not enter pending: \(editor.state.invocations)")
+    }
+    private func error(_ editor: EditorViewController, id: UUID) async throws {
+        for _ in 0..<500 {
+            if editor.state.invocations.first(where: { $0.id == id })?.phase == .error { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Tool did not enter error: \(editor.state.invocations)")
+    }
+
+    func testCompletionEscapePreservesTypedTextAndEditorFocus() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        editor.toolPackages = [package("calc")]
+        window.makeFirstResponder(editor.textView)
+        key("/", code: 44, in: editor, window: window)
+        key("ca", code: 0, in: editor, window: window)
+        XCTAssertNotNil(editor.view.subviews.first { $0.accessibilityLabel() == "Tool completions" })
+
+        editor.textView.cancelOperation(nil)
+
+        XCTAssertEqual(editor.state.text, "/ca")
+        XCTAssertEqual(editor.textView.selectedRange(), NSRange(location: 3, length: 0))
+        XCTAssertTrue(window.firstResponder === editor.textView)
+        XCTAssertNil(editor.view.subviews.first { $0.accessibilityLabel() == "Tool completions" })
+        XCTAssertTrue(editor.state.invocations.isEmpty)
+    }
+
+    func testNativeReturnAfterCompletionAcceptanceInsertsNewlineWithoutSubmitting() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        editor.toolPackages = [package("calc")]
+        window.makeFirstResponder(editor.textView)
+        key("/", code: 44, in: editor, window: window)
+        key("ca", code: 0, in: editor, window: window)
+        key("\r", code: 36, in: editor, window: window)
+        let id = try XCTUnwrap(editor.state.invocations.first?.id)
+
+        key("typed", code: 0, in: editor, window: window)
+        key("\r", code: 36, in: editor, window: window)
+
+        XCTAssertEqual(editor.state.text, "/calc typed\n")
+        XCTAssertEqual(editor.state.invocations.first?.id, id)
+        XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
+        XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), "typed\n")
+    }
+
+    func testLeavingContainedInputKeepsExistingContentOwnership() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("calc"); editor.toolPackages = [tool]
+        editor.textView.insertText("/calc tail", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: true)
+        editor.textView.insertText("owned", replacementRange: editor.textView.selectedRange())
+        let invocation = try XCTUnwrap(editor.state.invocations.first)
+
+        editor.textView.setSelectedRange(NSRange(location: editor.state.text.utf16.count, length: 0))
+        editor.textView.insertText("!", replacementRange: editor.textView.selectedRange())
+
+        XCTAssertEqual(editor.state.text, "/calc owned tail!")
+        XCTAssertEqual(editor.toolController.content(try XCTUnwrap(editor.state.invocations.first { $0.id == invocation.id })), "owned")
+        XCTAssertEqual(editor.state.invocations.first?.sourceHash, ToolInvocation.hash("/calc owned"))
+    }
+
+    func testEditingCommandTokenInvalidatesMetadataWithoutTextLoss() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("calc"); editor.toolPackages = [tool]
+        editor.textView.insertText("before /calc input after", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: (editor.state.text as NSString).range(of: "/calc"), space: false)
+        let before = editor.state.text
+        let token = (before as NSString).range(of: "/calc")
+
+        editor.textView.insertText("X", replacementRange: NSRange(location: token.location + 1, length: 1))
+
+        XCTAssertEqual(editor.state.text, (before as NSString).replacingCharacters(in: NSRange(location: token.location + 1, length: 1), with: "X"))
+        XCTAssertEqual(editor.textView.string, editor.state.text)
+        XCTAssertTrue(editor.state.invocations.isEmpty)
+    }
+
+    func testFastToolPublishesWithoutProcessingChrome() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let tool = package("fast", output: "RESULT"); editor.toolPackages = [tool]
+        editor.textView.insertText("/fast", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+        let id = editor.state.invocations[0].id
+        var phases: [ToolInvocationPhase] = []
+        editor.coordinator.onTransaction = { result in
+            phases.append(contentsOf: result.after.invocations.filter { $0.id == id }.map(\.phase))
+        }
+
+        editor.toolController.submit(id)
+        try await pending(editor)
+
+        XCTAssertFalse(phases.contains(.processing), "Observed phases: \(phases)")
+        XCTAssertFalse(editor.textView.subviews.contains { $0 is NSProgressIndicator })
+        XCTAssertTrue(editor.textView.subviews.contains { $0.accessibilityLabel() == "Merge" })
+    }
+
+    func testSameLineInvocationsKeepIndependentFocusControlsAndActions() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let first = package("one", output: "ONE"), second = package("two", output: "TWO")
+        editor.toolPackages = [first, second]
+        editor.textView.insertText("/one left /two right", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(first, token: (editor.state.text as NSString).range(of: "/one"), space: false)
+        try editor.toolController.accept(second, token: (editor.state.text as NSString).range(of: "/two"), space: false)
+        let ids = editor.state.invocations.map(\.id)
+        XCTAssertEqual(editor.textView.subviews.filter { $0.accessibilityLabel() == "Run" }.count, 2)
+
+        for invocation in editor.state.invocations {
+            let scope = try XCTUnwrap(invocation.scope.resolve(in: editor.state.lines))
+            editor.textView.setSelectedRange(NSRange(location: NSMaxRange(scope), length: 0))
+            XCTAssertEqual(editor.toolController.focused()?.id, invocation.id)
+        }
+        editor.toolController.submit(ids[0]); try await pending(editor, id: ids[0])
+        XCTAssertEqual(editor.state.invocations.first { $0.id == ids[1] }?.phase, .inputting)
+        XCTAssertEqual(editor.textView.subviews.filter { $0.accessibilityLabel() == "Run" }.count, 1)
+        XCTAssertEqual(editor.textView.subviews.filter { $0.accessibilityLabel() == "Merge" }.count, 1)
+        try editor.toolController.merge(ids[0])
+        XCTAssertTrue(editor.state.text.contains("ONE")); XCTAssertTrue(editor.state.text.contains("/two"))
+        editor.toolController.submit(ids[1]); try await pending(editor, id: ids[1])
+        try editor.toolController.dismiss(ids[1])
+        XCTAssertTrue(editor.state.text.contains("/two")); XCTAssertFalse(editor.state.text.contains("TWO"))
+    }
+
+    func testContextualEmptyValidationIsTransientAndDoesNotExecute() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        var tool = package("context", mode: .contextual, output: "EXECUTED")
+        tool.manifest.outputOperation = .replaceContext
+        editor.toolPackages = [tool]
+        editor.textView.insertText("/context", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(tool, token: NSRange(location: 0, length: 8), space: false)
+        let id = editor.state.invocations[0].id, before = editor.state
+        editor.textView.history.removeAllActions()
+
+        editor.toolController.submit(id)
+
+        XCTAssertEqual(editor.toolController.warning(for: id), "Enter content within the tool’s input limit.")
+        XCTAssertEqual(editor.state, before)
+        XCTAssertFalse(editor.textView.history.canUndo)
+        XCTAssertFalse(editor.state.text.contains("EXECUTED"))
+        editor.textView.insertText("source ", replacementRange: NSRange(location: 0, length: 0))
+        XCTAssertNil(editor.toolController.warning(for: id))
+    }
+
+    func testEditorInputByteAndOutputLineCapsPublishNoPartialOutput() async throws {
+        for cap in ["input", "output"] {
+            let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+            var tool = package("limit", output: "first\nsecond\nthird")
+            if cap == "input" { tool.manifest.maximumInputBytes = 4 }
+            else { tool.manifest.maximumOutputLines = 2 }
+            editor.toolPackages = [tool]
+            editor.textView.insertText("/limit", replacementRange: NSRange(location: 0, length: 0))
+            try editor.toolController.accept(tool, token: NSRange(location: 0, length: 6), space: true)
+            if cap == "input" { editor.textView.insertText("🌲a", replacementRange: editor.textView.selectedRange()) }
+            let id = editor.state.invocations[0].id, before = editor.state.text
+            editor.toolController.submit(id)
+            if cap == "input" {
+                XCTAssertEqual(editor.toolController.warning(for: id), "Enter content within the tool’s input limit.")
+                XCTAssertEqual(editor.state.invocations[0].phase, .inputting)
+            } else {
+                try await error(editor, id: id)
+                XCTAssertEqual(editor.state.invocations[0].message, "Output exceeds the tool limit.")
+            }
+            XCTAssertEqual(editor.state.text, before)
+            XCTAssertNil(editor.state.invocations[0].output)
+            XCTAssertFalse(editor.state.text.contains("first"))
+        }
+    }
+
+    func testPendingRelaunchRestoresActionsWithoutReexecution() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ToolRelaunch-\(UUID())")
+        let tool = package("test", output: "REEXECUTED")
+        let snapshot = try persistedPendingSnapshot(package: tool, packageVersion: 1, output: "PERSISTED")
+        let store = SQLiteStore(directory: directory)
+        let initial = try await store.load()
+        _ = try await store.save(DocumentSnapshot(documentID: initial.documentID, text: snapshot.text,
+            revision: snapshot.revision, lines: snapshot.lines, invocations: snapshot.invocations))
+        try await store.close()
+
+        let (editor, window) = try await editor(directory: directory); defer { window.orderOut(nil) }
+        editor.toolPackages = [tool]
+        try await Task.sleep(for: .milliseconds(100))
+
+        XCTAssertEqual(editor.state.text, "/testPERSISTED")
+        XCTAssertEqual(editor.state.invocations.first?.phase, .pending)
+        XCTAssertEqual(Set(editor.textView.subviews.compactMap { $0.accessibilityLabel() }), ["Merge", "Dismiss"])
+        XCTAssertFalse(editor.state.text.contains("REEXECUTED"))
+    }
+
+    func testRelaunchMapsOlderCompatiblePackageWithoutReexecution() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ToolRelaunch-\(UUID())")
+        var tool = package("test", output: "REEXECUTED")
+        tool.manifest.version = 2; tool.manifest.compatibleVersions = [1]
+        let snapshot = try persistedPendingSnapshot(package: tool, packageVersion: 1, output: "PERSISTED")
+        let store = SQLiteStore(directory: directory)
+        let initial = try await store.load()
+        _ = try await store.save(DocumentSnapshot(documentID: initial.documentID, text: snapshot.text,
+            revision: snapshot.revision, lines: snapshot.lines, invocations: snapshot.invocations))
+        try await store.close()
+
+        let (editor, window) = try await editor(directory: directory); defer { window.orderOut(nil) }
+        editor.toolPackages = [tool]
+        try await Task.sleep(for: .milliseconds(100))
+
+        XCTAssertEqual(editor.state.text, "/testPERSISTED")
+        XCTAssertEqual(editor.state.invocations.first?.packageVersion, 2)
+        XCTAssertEqual(editor.state.invocations.first?.phase, .pending)
+        XCTAssertFalse(editor.state.text.contains("REEXECUTED"))
+    }
+
+    private func persistedPendingSnapshot(package: ToolPackage, packageVersion: Int, output: String) throws -> DocumentSnapshot {
+        let model = try DocumentCoordinator()
+        let text = package.manifest.command + output
+        let plain = try model.apply(.init(baseRevision: 0, origin: .native,
+            mutation: .edit(text: text, range: NSRange(location: 0, length: 0), replacementLength: text.utf16.count))).after
+        let token = NSRange(location: 0, length: package.manifest.command.utf16.count)
+        var invocation = ToolInvocation(packageID: package.manifest.id, packageVersion: packageVersion,
+            entryContract: package.manifest.entryContract, inputMode: package.manifest.inputMode.rawValue,
+            outputOperation: package.manifest.outputOperation.rawValue, command: package.manifest.command,
+            token: try .init(token, lines: plain.lines), scope: try .init(token, lines: plain.lines),
+            sourceHash: ToolInvocation.hash(package.manifest.command))
+        invocation.phase = .pending
+        invocation.output = try .init(NSRange(location: NSMaxRange(token), length: output.utf16.count), lines: plain.lines)
+        invocation.outputHash = ToolInvocation.hash(output)
+        return DocumentSnapshot(documentID: plain.documentID, text: text, revision: plain.revision,
+            lines: plain.lines, invocations: [invocation])
     }
 
     func testPendingDeletionConfirmationPartialTextUndoAndEscape() async throws {
@@ -449,9 +685,10 @@ import JortSettings
         try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
         let id = try XCTUnwrap(editor.state.invocations.first?.id)
         editor.toolController.submit(id)
-        for _ in 0..<500 where editor.state.invocations.first?.message == nil { try await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<500 where editor.toolController.warning(for: id) == nil { try await Task.sleep(for: .milliseconds(10)) }
         XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
-        XCTAssertEqual(editor.state.invocations.first?.message, "Please revise")
+        XCTAssertEqual(editor.toolController.warning(for: id), "Please revise")
+        XCTAssertNil(editor.state.invocations.first?.message)
         XCTAssertEqual(editor.state.text, "/test")
         editor.toolController.cancel(id)
         XCTAssertTrue(editor.state.invocations.isEmpty)
@@ -464,6 +701,109 @@ import JortSettings
         editor.toolController.cancel(runningID)
         try await Task.sleep(for: .milliseconds(50))
         XCTAssertEqual(editor.state.text, "/test"); XCTAssertTrue(editor.state.invocations.isEmpty)
+    }
+
+    func testValidationWarningIsTransientUsesCapturedInputAndClearsOnlyForInvocationChanges() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let uuid = UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!
+        let clock = ISO8601DateFormatter().string(from: date)
+        var package = package("test")
+        package.source = """
+            export async function validate(input) {
+              return input.clock === '\(clock)' && input.uuid === '\(uuid.uuidString.lowercased())'
+                ? {error: 'Revise captured input'} : {error: 'Input was recaptured'};
+            }
+            export default async function(input) { return {output: input.clock + '|' + input.uuid}; }
+            """
+        editor.toolPackages = [package]
+        editor.toolController.executionInputFactory = { ToolExecutionInput(content: $0, date: date, uuid: uuid) }
+        editor.textView.insertText("/test\nunrelated", replacementRange: NSRange(location: 0, length: 0))
+        try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
+        let id = editor.state.invocations[0].id
+        editor.textView.history.removeAllActions()
+        let before = editor.state
+        editor.toolController.submit(id)
+        for _ in 0..<500 where editor.toolController.warning(for: id) == nil { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(editor.toolController.warning(for: id), "Revise captured input")
+        XCTAssertEqual(editor.state, before)
+        XCTAssertFalse(editor.textView.history.canUndo)
+        editor.refreshToolPresentation()
+        XCTAssertEqual(editor.toolController.warning(for: id), "Revise captured input")
+        editor.textView.insertText("!", replacementRange: NSRange(location: editor.state.text.utf16.count, length: 0))
+        XCTAssertEqual(editor.toolController.warning(for: id), "Revise captured input")
+        editor.toolController.submit(id)
+        XCTAssertNil(editor.toolController.warning(for: id))
+        for _ in 0..<500 where editor.toolController.warning(for: id) == nil { try await Task.sleep(for: .milliseconds(10)) }
+        editor.textView.insertText("x", replacementRange: NSRange(location: 5, length: 0))
+        XCTAssertNil(editor.toolController.warning(for: id))
+        editor.toolController.cancel(id)
+        XCTAssertNil(editor.toolController.warning(for: id))
+
+        var success = package
+        success.source = """
+            export async function validate(input) {
+              return input.clock === '\(clock)' && input.uuid === '\(uuid.uuidString.lowercased())'
+                ? {output: ''} : {error: 'Input was recaptured'};
+            }
+            export default async function(input) { return {output: input.clock + '|' + input.uuid}; }
+            """
+        editor.toolPackages = [success]
+        let token = (editor.state.text as NSString).range(of: "/test")
+        try editor.toolController.accept(success, token: token, space: false)
+        let successID = editor.state.invocations[0].id
+        editor.toolController.submit(successID); try await pending(editor)
+        XCTAssertTrue(editor.state.text.contains("\(clock)|\(uuid.uuidString.lowercased())"))
+    }
+
+    func testPendingAndErrorDismissRestorePreSubmitMetadataSelectionAndViewport() async throws {
+        for fails in [false, true] {
+            let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+            var package = package("test", output: "RESULT")
+            if fails { package.source = "export default async function() { return {error:'failed'}; }" }
+            editor.toolPackages = [package]
+            editor.textView.insertText(String(repeating: "line\n", count: 30) + "/test tail", replacementRange: NSRange(location: 0, length: 0))
+            let token = (editor.state.text as NSString).range(of: "/test")
+            try editor.toolController.accept(package, token: token, space: false)
+            let id = editor.state.invocations[0].id
+            editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+            editor.textView.scrollRangeToVisible(token)
+            editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+            let selection = (editor.state.text as NSString).range(of: "tail")
+            editor.textView.setSelectedRange(selection)
+            let viewport = editor.scroll.contentView.bounds.origin
+            let original = editor.state.invocations[0]
+            editor.toolController.submit(id)
+            if fails {
+                for _ in 0..<500 where editor.state.invocations[0].phase != .error { try await Task.sleep(for: .milliseconds(10)) }
+            } else { try await pending(editor) }
+            editor.textView.setSelectedRange(NSRange(location: 0, length: 0))
+            editor.scroll.contentView.scroll(to: .zero)
+            try editor.toolController.dismiss(id)
+            XCTAssertEqual(editor.state.invocations[0], original)
+            XCTAssertEqual(editor.textView.selectedRange(), selection)
+            XCTAssertEqual(editor.scroll.contentView.bounds.origin.y, viewport.y, accuracy: 1)
+        }
+    }
+
+    func testImmediatePublicationUndoRestoresPreSubmitMetadataSelectionAndViewport() async throws {
+        let (editor, window) = try await editor(); defer { window.orderOut(nil) }
+        let package = package("test", output: "RESULT"); editor.toolPackages = [package]
+        editor.textView.insertText(String(repeating: "line\n", count: 30) + "/test tail", replacementRange: NSRange(location: 0, length: 0))
+        let token = (editor.state.text as NSString).range(of: "/test")
+        try editor.toolController.accept(package, token: token, space: false)
+        editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+        editor.textView.scrollRangeToVisible(token); editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+        let selection = (editor.state.text as NSString).range(of: "tail")
+        editor.textView.setSelectedRange(selection)
+        let viewport = editor.scroll.contentView.bounds.origin
+        let original = editor.state.invocations[0]
+        editor.textView.history.removeAllActions()
+        editor.toolController.submit(original.id); try await pending(editor)
+        editor.textView.history.undo()
+        XCTAssertEqual(editor.state.invocations[0], original)
+        XCTAssertEqual(editor.textView.selectedRange(), selection)
+        XCTAssertEqual(editor.scroll.contentView.bounds.origin.y, viewport.y, accuracy: 1)
     }
     func testRenderedWrappedMultilineAndProcessingStates() async throws {
         let (editor, window) = try await editor(); defer { window.orderOut(nil) }

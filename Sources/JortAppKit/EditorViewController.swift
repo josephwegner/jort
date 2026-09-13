@@ -435,7 +435,23 @@ import JortSettings
             } catch { assertionFailure("Invalid undo snapshot: \(error)") }
         }
     }
-    func registerToolUndo(_ snapshot: DocumentSnapshot, selection: NSRange) { recordUndo(snapshot, selection: selection) }
+    func registerToolUndo(_ snapshot: DocumentSnapshot, restoration: ToolInvocationRestoration?) {
+        let selection = restoration?.selection?.resolve(in: snapshot.lines) ?? textView.selectedRange()
+        let viewport = restoration.flatMap { value -> NSPoint? in
+            guard let id = value.viewportLineID, let offset = value.viewportOffset,
+                  let band = linePresentation.band(for: id) else { return nil }
+            return NSPoint(x: scroll.contentView.bounds.minX, y: band.frame.minY + CGFloat(offset))
+        }
+        recordUndo(snapshot, selection: selection, viewport: viewport)
+    }
+    func restoreToolPresentation(_ restoration: ToolInvocationRestoration?) {
+        guard let restoration else { return }
+        if let selection = restoration.selection?.resolve(in: state.lines) { textView.setSelectedRange(selection) }
+        if let id = restoration.viewportLineID, let offset = restoration.viewportOffset,
+           let band = linePresentation.band(for: id) {
+            scroll.contentView.scroll(to: NSPoint(x: scroll.contentView.bounds.minX, y: band.frame.minY + CGFloat(offset)))
+        }
+    }
     func refreshToolPresentation() { toolPresentation?.refresh() }
     /// Future commands and captures submit transactions here; they never receive NSTextStorage.
     @discardableResult public func apply(_ transaction: DocumentTransaction) throws -> TransactionResult {

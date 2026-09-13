@@ -1,6 +1,6 @@
 ## 1. Tool-package schema and registry
 
-- [x] 1.1 Define the versioned `tool.json` schema for stable ID, package version, display metadata, slash command, script-entry contract, input mode and shape, output operation, and byte and line caps.
+- [x] 1.1 Define the versioned `tool.json` schema for stable ID, package version, display metadata, slash command, script-entry contract, input mode, output operation, and byte and line caps.
 - [x] 1.2 Define bundled and installed package locations, lazy discovery, schema and script validation, duplicate-ID and command resolution, and bounded diagnostics that isolate invalid packages.
 - [x] 1.3 Implement non-UI registry operations to inspect, validate, install, enable, disable, update, remove, and restore tool packages.
 - [x] 1.4 Implement immutable bundled definitions, persistent user overrides, resolution precedence, update preservation, and explicit restore behavior.
@@ -55,7 +55,7 @@
 - [x] 7.3 Integrate range geometry, contextual handles, control hit targets, gutter positions, noncanonical expanded rows, scroll destinations, and viewport restoration through `LinePresentationLayout` with bounded overscan.
 - [x] 7.4 Place per-invocation spinner and Cancel controls inside green regions and icon-only Merge and Dismiss controls inside purple regions near the command token, with hover/focus labels and named accessibility actions.
 - [x] 7.5 Preserve canonical line numbers for real newlines, blank gutter space for wraps and accessory rows, separate silhouettes for concurrent invocations, and canonical-only document accessibility values.
-- [ ] 7.6 Add rendered snapshots and interaction tests for midline, narrow-width, multiline, wrap, context-above/below, empty output, multiple-same-line, scrolling, focus, hit-target, VoiceOver, and large-document cases.
+- [x] 7.6 Add rendered snapshots and interaction tests for midline, narrow-width, multiline, wrap, context-above/below, empty output, multiple-same-line, scrolling, focus, hit-target, VoiceOver, and large-document cases.
 
 ## 8. Canonical output and merge transactions
 
@@ -79,7 +79,7 @@
 ## 10. Release gates
 
 - [x] 10.1 Benchmark package discovery, manifest validation, JavaScript-host startup, invocation parsing, connected geometry, contextual movement, lifecycle transitions, and command commit with `CrawlLargeDocument`.
-- [ ] 10.2 Re-run prior launch, typing, scrolling, search, history, persistence, recovery, gutter, landmark, IME, native Find, command-palette, and accessibility gates.
+- [x] 10.2 Re-run prior launch, typing, scrolling, search, history, persistence, recovery, gutter, landmark, IME, native Find, command-palette, and accessibility gates.
 - [x] 10.3 Audit bundled and installed packages to prove loader/runtime parity and no ambient network, filesystem, provider, native bridge, dynamic evaluation, plugin, shell, process, or external-executable authority.
 - [x] 10.4 Confirm no new Settings panel, marketplace/distribution UI, permission-granting system, `@agent`, model provider, streaming output, background agent run, or provider configuration is implemented in this slice. The existing Tools settings panel is adapted as explicitly authorized during implementation.
 

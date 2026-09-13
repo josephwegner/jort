@@ -7,6 +7,9 @@ import JortSettings
     var packages: [ToolPackage] = []
     var activeID: UUID?
     var prompts: [UUID: String] = [:]
+    private(set) var warnings: [UUID: String] = [:]
+    var executionInputFactory: (String) -> ToolExecutionInput = { ToolExecutionInput(content: $0) }
+    private var warningContent: [UUID: String] = [:]
     private var jobs: [UUID: Task<Void, Never>] = [:]
     init(editor: EditorViewController) { self.editor = editor }
     func documentChanged() {
@@ -14,6 +17,12 @@ import JortSettings
         let ids = Set(editor.state.invocations.map(\.id))
         for id in Array(jobs.keys) where !ids.contains(id) { jobs.removeValue(forKey: id)?.cancel() }
         for id in Array(prompts.keys) where !ids.contains(id) { prompts.removeValue(forKey: id) }
+        for id in Array(warnings.keys) {
+            guard let invocation = editor.state.invocations.first(where: { $0.id == id }),
+                  invocation.phase == .inputting, content(invocation) == warningContent[id] else {
+                clearWarning(id); continue
+            }
+        }
     }
 
     func reconcilePackages() {
@@ -108,39 +117,44 @@ import JortSettings
         guard let editor, var invocation = editor.state.invocations.first(where: { $0.id == id }),
               invocation.phase == .inputting,
               let package = packages.first(where: { $0.manifest.id == invocation.packageID }),
-              let content = content(invocation) else { return }
+               let content = content(invocation) else { return }
+        clearWarning(id)
         guard content.utf8.count <= package.manifest.maximumInputBytes,
-              invocation.inputMode != "contextual" || !content.isEmpty else {
-            invocation.message = "Enter content within the tool’s input limit."
-            try? update(invocation); return
+               invocation.inputMode != "contextual" || !content.isEmpty else {
+            setWarning("Enter content within the tool’s input limit.", content: content, for: id); return
         }
         guard jobs[id] == nil else { return }
         let sourceHash = invocation.sourceHash
+        let captured = executionInputFactory(content)
         jobs[id] = Task { [weak self] in
-            let validation = await ToolRuntime.execute(package, input: .init(content: content), validationOnly: true)
+            let validation = await ToolRuntime.execute(package, input: captured, validationOnly: true)
             guard let self, !Task.isCancelled else { return }
             self.jobs.removeValue(forKey: id)
             guard var current = self.editor?.state.invocations.first(where: { $0.id == id }),
                   current.phase == .inputting, current.sourceHash == sourceHash, self.content(current) == content else { return }
-            if let error = validation.error { current.message = error; try? self.update(current) }
-            else { self.start(current, package: package, content: content) }
+            if let error = validation.error { self.setWarning(error, content: content, for: id) }
+            else { self.start(current, package: package, input: captured) }
         }
     }
 
-    private func start(_ value: ToolInvocation, package: ToolPackage, content: String) {
+    private func start(_ value: ToolInvocation, package: ToolPackage, input: ToolExecutionInput) {
+        guard let editor else { return }
         var invocation = value
         let id = invocation.id
+        let selection = try? ToolAnchoredRange(editor.textView.selectedRange(), lines: editor.state.lines)
+        let viewport = editor.linePresentation.viewportAnchor()
+        invocation.restoration = ToolInvocationRestoration(invocation: invocation, selection: selection,
+            viewportLineID: viewport?.0, viewportOffset: viewport.map { Double($0.1) })
         invocation.phase = .submitted; invocation.generation = UUID(); invocation.message = nil
         let generation = invocation.generation
         do { try update(invocation) } catch { return }
-        let captured = ToolExecutionInput(content: content)
         jobs[id] = Task { [weak self] in
             let indicator = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(1))
                 guard !Task.isCancelled, let self, var current = self.current(id, generation), current.phase == .submitted else { return }
                 current.phase = .processing; try? self.update(current)
             }
-            let result = await ToolRuntime.execute(package, input: captured)
+            let result = await ToolRuntime.execute(package, input: input)
             indicator.cancel()
             guard let self, !Task.isCancelled, var current = self.current(id, generation),
                   [.submitted, .processing].contains(current.phase) else { return }
@@ -171,17 +185,16 @@ import JortSettings
         pending.outputHash = ToolInvocation.hash(output)
         annotations.append(pending)
         // Publication's inverse is the editable pre-submit invocation, not a dead job.
-        var inputting = invocation; inputting.phase = .inputting
+        var inputting = restored(invocation)
         let undo = DocumentSnapshot(documentID: before.documentID, text: before.text, revision: before.revision,
             lines: before.lines, landmarks: before.landmarks,
             invocations: before.invocations.map { $0.id == invocation.id ? inputting : $0 })
-        let selection = editor.textView.selectedRange()
         try commit(plain, edit: edit, replacementLength: output.utf16.count, invocations: annotations, undo: .none)
-        editor.registerToolUndo(undo, selection: selection)
+        editor.registerToolUndo(undo, restoration: invocation.restoration)
     }
 
     func cancel(_ id: UUID) {
-        jobs.removeValue(forKey: id)?.cancel(); prompts.removeValue(forKey: id)
+        jobs.removeValue(forKey: id)?.cancel(); prompts.removeValue(forKey: id); clearWarning(id)
         guard let editor else { return }
         try? commit(editor.state, edit: nil, replacementLength: nil, invocations: editor.state.invocations.filter { $0.id != id })
     }
@@ -204,17 +217,20 @@ import JortSettings
     func dismiss(_ id: UUID) throws {
         guard let editor, var invocation = editor.state.invocations.first(where: { $0.id == id }) else { return }
         if invocation.phase == .inputting { cancel(id); return }
+        let restoration = invocation.restoration
         let before = editor.state
         if let output = invocation.output?.resolve(in: before.lines) {
             let plain = try replacing(before, range: output, with: "")
             guard let token = invocation.token.resolve(in: before.lines), let scope = invocation.scope.resolve(in: before.lines) else { return }
             invocation.token = try .init(token, lines: plain.lines)
             invocation.scope = try .init(NSRange(location: scope.location, length: scope.length - (invocation.inputMode == "contextual" ? output.length : 0)), lines: plain.lines)
-            invocation.output = nil; invocation.outputHash = nil; invocation.phase = .inputting; invocation.message = nil
+            invocation = restored(invocation, token: invocation.token, scope: invocation.scope)
             var values = ToolRangeEditing.remap(before.invocations.filter { $0.id != id }, from: before, to: plain, edit: output, replacementLength: 0)
             values.append(invocation)
             try commit(plain, edit: output, replacementLength: 0, invocations: values)
-        } else { invocation.phase = .inputting; invocation.message = nil; try update(invocation) }
+        } else { invocation = restored(invocation); try update(invocation) }
+        clearWarning(id)
+        editor.restoreToolPresentation(restoration)
     }
 
     func merge(_ id: UUID) throws {
@@ -263,6 +279,23 @@ import JortSettings
         guard let editor else { return }
         try commit(editor.state, edit: nil, replacementLength: nil,
             invocations: editor.state.invocations.map { $0.id == invocation.id ? invocation : $0 }, undo: .none)
+    }
+    func warning(for id: UUID) -> String? { warnings[id] }
+    private func setWarning(_ warning: String, content: String, for id: UUID) {
+        warnings[id] = warning; warningContent[id] = content; editor?.refreshToolPresentation()
+    }
+    private func clearWarning(_ id: UUID) {
+        warnings.removeValue(forKey: id); warningContent.removeValue(forKey: id)
+    }
+    private func restored(_ invocation: ToolInvocation, token: ToolAnchoredRange? = nil,
+                          scope: ToolAnchoredRange? = nil) -> ToolInvocation {
+        guard let restoration = invocation.restoration else {
+            var value = invocation; value.phase = .inputting; value.message = nil
+            value.output = nil; value.outputHash = nil; return value
+        }
+        var value = restoration.invocation(id: invocation.id)
+        value.token = token ?? restoration.token; value.scope = scope ?? restoration.scope
+        return value
     }
     private func replacing(_ snapshot: DocumentSnapshot, range: NSRange, with text: String) throws -> DocumentSnapshot {
         let plain = DocumentSnapshot(documentID: snapshot.documentID, text: snapshot.text, revision: snapshot.revision, lines: snapshot.lines, landmarks: snapshot.landmarks)

@@ -107,7 +107,13 @@ public enum PersistenceFormat {
                 let stored = value.invocations ?? []
                 let annotationHash = checksum(try encoder().encode(stored))
                 let metadataValid = version >= 4 && stored.count <= 1000 && envelope.annotationChecksum == annotationHash
-                let annotations = metadataValid ? ToolInvocation.sanitized(stored, in: plain) : []
+                let annotations: [ToolInvocation]
+                if metadataValid {
+                    annotations = ToolInvocation.sanitized(stored, in: plain).map { value in
+                        guard value.phase == .inputting, value.message != nil else { return value }
+                        var normalized = value; normalized.message = nil; return normalized
+                    }
+                } else { annotations = [] }
                 snapshot = DocumentSnapshot(documentID: value.id, text: value.content, revision: value.liveRevision, lines: value.lines, landmarks: value.landmarks, invocations: annotations)
             default: throw StoreError.invalidPayload
             }

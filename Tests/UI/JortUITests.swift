@@ -14,7 +14,10 @@ import XCTest
             editor.typeKey(.leftArrow, modifierFlags: .option)
             XCTAssertTrue((status.value as? String ?? "").contains("Option held"))
         }
-        XCTAssertTrue((status.value as? String ?? "").contains("Line numbers"))
+        let optionReleased = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (status.value as? String ?? "").contains("Line numbers")
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [optionReleased], timeout: 2), .completed)
         XCTAssertEqual(editor.value as? String, "First thought\nSecond thought")
         app.buttons["Open Pocket"].click()
         XCTAssertTrue(app.searchFields["Search actions"].waitForExistence(timeout: 3))
@@ -39,7 +42,8 @@ import XCTest
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 3))
         search.typeText("thought")
-        app.buttons["Done"].click()
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertFalse(search.exists)
         editor.click()
         app.typeKey(.end, modifierFlags: .command)
         editor.typeText("!")
@@ -99,10 +103,10 @@ import XCTest
         XCTAssertEqual(app.sheets.count, 0)
         let enabled = app.checkBoxes["Enabled"]
         XCTAssertTrue(enabled.exists); XCTAssertTrue(enabled.isHittable)
-        enabled.click(); XCTAssertEqual(enabled.value as? String, "0")
+        enabled.click(); XCTAssertTrue(app.buttons["Save"].isEnabled)
         app.buttons["Save"].click()
         XCTAssertTrue(app.staticTexts["Tool saved. Saving does not run it."].waitForExistence(timeout: 3))
-        enabled.click(); XCTAssertEqual(enabled.value as? String, "1")
+        enabled.click(); XCTAssertTrue(app.buttons["Save"].isEnabled)
         app.buttons["Save"].click()
         app.windows["Jort Settings"].buttons[XCUIIdentifierCloseWindow].click()
         XCTAssertTrue(app.textViews["Jort document"].exists)

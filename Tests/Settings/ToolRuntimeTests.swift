@@ -38,6 +38,28 @@ final class ToolRuntimeTests: XCTestCase {
         let healthy = await ToolRuntime.execute(package("export default async function() { return {output: 'ok'}; }"), input: .init(content: ""))
         XCTAssertEqual(healthy.output, "ok")
     }
+    func testInputLimitCountsUTF8Bytes() async {
+        var p = package("export default async function(input) { return {output: input.content}; }")
+        p.manifest.maximumInputBytes = 4
+        let exact = await ToolRuntime.execute(p, input: .init(content: "🌲"))
+        XCTAssertEqual(exact, .init(output: "🌲"))
+        let oversized = await ToolRuntime.execute(p, input: .init(content: "🌲a"))
+        XCTAssertEqual(oversized, .init(error: "Input exceeds the tool limit."))
+    }
+    func testOutputLineLimitCountsEveryLogicalSeparatorAndCRLFOnce() async {
+        for separator in ["\n", "\r", "\r\n", "\u{85}", "\u{2028}", "\u{2029}"] {
+            let codePoints = separator.unicodeScalars.map { String($0.value) }.joined(separator: ",")
+            var exact = package("export default async function() { return {output: 'a' + String.fromCodePoint(\(codePoints)) + 'b'}; }")
+            exact.manifest.maximumOutputLines = 2
+            let accepted = await ToolRuntime.execute(exact, input: .init(content: ""))
+            XCTAssertEqual(accepted.output, "a\(separator)b", "separator: \(separator.unicodeScalars.map { String(format: "U+%04X", $0.value) }.joined(separator: " "))")
+
+            var oversized = exact
+            oversized.source = "export default async function() { return {output: 'a' + String.fromCodePoint(\(codePoints)) + 'b' + String.fromCodePoint(\(codePoints)) + 'c'}; }"
+            let rejected = await ToolRuntime.execute(oversized, input: .init(content: ""))
+            XCTAssertEqual(rejected, .init(error: "Output exceeds the tool limit."))
+        }
+    }
     func testCancellationInterruptsLoop() async {
         let p = package("export default async function() { while(true) {} }")
         let task = Task { await ToolRuntime.execute(p, input: .init(content: "")) }

@@ -32,6 +32,42 @@ public struct ToolAnchoredRange: Codable, Equatable, Sendable {
 
 public enum ToolInvocationPhase: String, Codable, Sendable { case inputting, submitted, processing, error, pending }
 
+public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
+    public var packageID: String
+    public var packageVersion: Int
+    public var entryContract: Int
+    public var inputMode: String
+    public var outputOperation: String
+    public var command: String
+    public var token: ToolAnchoredRange
+    public var scope: ToolAnchoredRange
+    public var generation: UUID
+    public var sourceHash: String
+    public var timestamp: Date
+    public var message: String?
+    public var selection: ToolAnchoredRange?
+    public var viewportLineID: UUID?
+    public var viewportOffset: Double?
+
+    public init(invocation: ToolInvocation, selection: ToolAnchoredRange? = nil,
+                viewportLineID: UUID? = nil, viewportOffset: Double? = nil) {
+        packageID = invocation.packageID; packageVersion = invocation.packageVersion
+        entryContract = invocation.entryContract; inputMode = invocation.inputMode
+        outputOperation = invocation.outputOperation; command = invocation.command
+        token = invocation.token; scope = invocation.scope; generation = invocation.generation
+        sourceHash = invocation.sourceHash; timestamp = invocation.timestamp; message = invocation.message
+        self.selection = selection; self.viewportLineID = viewportLineID; self.viewportOffset = viewportOffset
+    }
+
+    public func invocation(id: UUID) -> ToolInvocation {
+        var value = ToolInvocation(packageID: packageID, packageVersion: packageVersion,
+            entryContract: entryContract, inputMode: inputMode, outputOperation: outputOperation,
+            command: command, token: token, scope: scope, sourceHash: sourceHash)
+        value.id = id; value.generation = generation; value.timestamp = timestamp; value.message = message
+        return value
+    }
+}
+
 /// All stored content lives in the document. In particular, this type has no prompt field.
 public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID = UUID()
@@ -50,6 +86,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     public var outputHash: String?
     public var timestamp: Date = Date()
     public var message: String?
+    public var restoration: ToolInvocationRestoration?
     public var isLocked: Bool { phase != .inputting }
     public init(packageID: String, packageVersion: Int, entryContract: Int, inputMode: String,
                 outputOperation: String, command: String, token: ToolAnchoredRange,
@@ -71,12 +108,22 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
               ["contained", "contextual", "ephemeralSingleLine", "ephemeralMultiline"].contains(inputMode),
               ["replace-invocation", "replace-context", "insert-at-invocation"].contains(outputOperation),
               outputOperation != "replace-context" || inputMode == "contextual",
-              message?.utf8.count ?? 0 <= 2048,
+               message?.utf8.count ?? 0 <= 2048,
               let token = token.resolve(in: snapshot.lines), let scope = scope.resolve(in: snapshot.lines),
               NSMaxRange(scope) <= text.length, token.location >= scope.location, NSMaxRange(token) <= NSMaxRange(scope),
               text.substring(with: token) == command else { return false }
         guard inputMode == "contextual" || scope.location == token.location,
-              !inputMode.hasPrefix("ephemeral") || scope == token else { return false }
+               !inputMode.hasPrefix("ephemeral") || scope == token else { return false }
+        if let restoration {
+            guard restoration.packageID.utf8.count <= 256, restoration.packageVersion > 0,
+                  restoration.entryContract == 1, restoration.command.utf8.count <= 65,
+                  restoration.timestamp.timeIntervalSinceReferenceDate.isFinite,
+                  restoration.message?.utf8.count ?? 0 <= 2048,
+                  restoration.token.resolve(in: snapshot.lines) != nil,
+                  restoration.scope.resolve(in: snapshot.lines) != nil,
+                  restoration.selection?.resolve(in: snapshot.lines) != nil || restoration.selection == nil,
+                  restoration.viewportOffset?.isFinite != false else { return false }
+        }
         var source = text.substring(with: scope)
         if let output {
             guard let range = output.resolve(in: snapshot.lines), NSMaxRange(range) <= text.length,
@@ -150,6 +197,13 @@ public enum ToolRangeEditing {
                                     growStart: !value.isLocked && value.inputMode == "contextual") else { return nil }
             value.token = token; value.scope = scope
             if let output = value.output { value.output = range(output, grow: false) }
+            if var restoration = value.restoration {
+                guard let token = range(restoration.token, grow: false),
+                      let scope = range(restoration.scope, grow: false) else { return nil }
+                restoration.token = token; restoration.scope = scope
+                if let selection = restoration.selection { restoration.selection = range(selection, grow: false) }
+                value.restoration = restoration
+            }
             if !value.isLocked, let source = scope.resolve(in: new.lines), NSMaxRange(source) <= new.text.utf16.count {
                 value.sourceHash = ToolInvocation.hash((new.text as NSString).substring(with: source))
             }

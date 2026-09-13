@@ -363,7 +363,8 @@ import JortSettings
                 sourceRects[sourceRects.count - 1].size.width -= output.length == 0 && !emptyAtLineStart ? 42 : leading && !indented ? 30 : 3
             }
             sourceRects = clippedBeforeFollowingGlyph(sourceRects, end: NSMaxRange(scope), text: snapshot.text)
-            let color: NSColor = invocation.phase == .error ? .systemRed : invocation.message == nil ? .systemTeal : .systemOrange
+            let warning = editor.toolController.warning(for: invocation.id)
+            let color: NSColor = invocation.phase == .error ? .systemRed : warning == nil ? .systemTeal : .systemOrange
             shapes.append((Self.union(sourceRects), color))
             let outputRects: [NSRect]
             if let output {
@@ -541,7 +542,9 @@ import JortSettings
     private func updateErrorAccessories(_ snapshot: DocumentSnapshot) {
         guard let editor else { return }
         var values = editor.linePresentation.accessories.values.filter { !errorAccessoryIDs.contains($0.lineID) }
-        let messages = Dictionary(grouping: snapshot.invocations.filter { $0.message != nil }, by: { $0.token.start.lineID })
+        let messages = Dictionary(grouping: snapshot.invocations.filter {
+            $0.message != nil || editor.toolController.warning(for: $0.id) != nil
+        }, by: { $0.token.start.lineID })
         let previous = errorAccessoryIDs
         errorAccessoryIDs = Set(messages.keys)
         guard !messages.isEmpty || !previous.isEmpty else { return }
@@ -549,7 +552,8 @@ import JortSettings
             let rows = NSStackView(); rows.orientation = .vertical; rows.alignment = .leading; rows.spacing = 4
             var height: CGFloat = 8
             for invocation in invocations {
-                let label = NSTextField(wrappingLabelWithString: "\(invocation.command): \(invocation.message ?? "Execution failed")")
+                let message = invocation.message ?? editor.toolController.warning(for: invocation.id) ?? "Execution failed"
+                let label = NSTextField(wrappingLabelWithString: "\(invocation.command): \(message)")
                 label.font = .systemFont(ofSize: 12)
                 let width = max(120, editor.scroll.contentSize.width - editor.textView.textContainerOrigin.x * 2 - 12)
                 label.preferredMaxLayoutWidth = width

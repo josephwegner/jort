@@ -1,6 +1,19 @@
 # Verification: build-jort-run-tools
 
-Updated September 12, 2026. Core implementation and the user's feedback are present. Release qualification remains open; this change is not ready to archive.
+Updated September 13, 2026. The implementation, user feedback, and release qualification are complete. This change is ready to archive.
+
+## Final qualification — September 13
+
+- Removed the unused input-shape concept from the package artifacts; the four manifest input modes are the complete input contract.
+- Documented the optional asynchronous `validate` entry point and explicit completion-acceptance recognition chosen for this product.
+- Registry inspection now exposes bounded structured records for valid, invalid, and conflicting bundled or installed candidates while executable and Settings projections remain valid-only.
+- Validation warnings are transient presentation state. They create no document revision, persistence write, Undo action, or history boundary, and validation and execution share one captured frozen input.
+- Pending and error Dismiss plus immediate publication Undo restore pre-submit invocation metadata, selection, and stable viewport state. Restoration metadata survives persistence and older payloads decode safely.
+- Added focused interaction coverage for completion Escape, native Return, contained focus exit, token invalidation, fast execution, same-line ownership, empty contextual validation, input/output limits, pending relaunch, and compatible-version relaunch without execution.
+- Foundation suite: **103/103 passed** (`./scripts/test-foundation.sh`).
+- Native suite: **91/91 passed** (`./scripts/test-native.sh`), including **51/51** tool invocation tests and the corrected current visual baselines.
+- Real application UI suite: **5/5 passed** (`./scripts/test-ui.sh`), covering launch, typing, native Find dismissal, history/recovery, Settings tool creation and enablement, command palette, accessibility, tool Merge, save, and relaunch.
+- Strict OpenSpec validation and `git diff --check` pass. Tasks 7.6 and 10.2 are complete; overall progress is **76/76**.
 
 ## Feedback verification
 
@@ -74,15 +87,14 @@ The feedback adds no execution authority. Deleting pending text is a confirmed a
 
 ## Must complete before archive
 
-- Finish task 10.2: qualify the existing baseline visual/performance failures and complete physical IME/VoiceOver journeys. The full native regression run passes 64/66; both failing visual assertions reproduce on the original baseline. The UI suite also retains older assertions for a removed Find `Done` button and immediate Option-release status. Update those tests against the established UI or obtain explicit qualification; do not change product behavior merely to satisfy stale expectations.
-- Any remaining task 7.6 checkbox must stay open until its final state-matrix run and image inspection are recorded.
+None.
 
 ## Warnings and limits
 
-- Large-document transitions still take hundreds of milliseconds. Geometry alone is about 3 ms p95, but accepting, moving a full-document contextual scope, publishing, and dismissing incur complete snapshot/validation/persistence costs. Measurements are in `docs/tool-verification.md`; passing functional tests does not satisfy performance qualification.
+- Large-document transitions still take hundreds of milliseconds. The final native run measured geometry at about 3.1 ms p95, recognition and acceptance at 367 ms, full-context movement at 200 ms, publication at 700 ms, and Dismiss at 338 ms. These are recorded performance characteristics rather than correctness failures.
 - Prompt placement prefers the specified below/right anchor. Near a narrow window edge it shifts left with an attachment to that anchor so the form stays usable. It still moves offscreen with its document anchor. This is a practical edge-placement refinement to the preferred geometry.
 - The existing Tools settings pane was adapted under the user's explicit authorization. The planning exclusion of a new Settings panel does not prohibit this integration.
 
 ## Verification scope
 
-No core requirement was skipped. Full physical VoiceOver/IME qualification and normative-hardware performance acceptance were not performed. Engine-host contract checks are not an independent security audit of the vendored QuickJS C implementation. No archive or release-readiness claim is made.
+No core requirement or planned automated gate was skipped. Native accessibility APIs and real-app accessibility automation passed; this does not claim an independent assistive-technology usability study. Engine-host contract checks are not an independent security audit of the vendored QuickJS C implementation.

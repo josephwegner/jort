@@ -8,8 +8,26 @@ public struct RegisteredToolPackage: Identifiable, Equatable, Sendable {
     public let isEnabled: Bool
 }
 
+public enum ToolPackageOrigin: String, Equatable, Sendable {
+    case bundled, installed
+}
+
+public enum ToolPackageValidation: String, Equatable, Sendable {
+    case valid, invalid, conflicting
+}
+
+public struct ToolPackageCandidate: Equatable, Sendable {
+    public let packageID: String?
+    public let origin: ToolPackageOrigin
+    public let isOverride: Bool
+    public let isEnabled: Bool
+    public let validation: ToolPackageValidation
+    public let diagnostic: String?
+}
+
 public struct ToolRegistrySnapshot: Equatable, Sendable {
     public var packages: [RegisteredToolPackage] = []
+    public var candidates: [ToolPackageCandidate] = []
     public var diagnostics: [String] = []
     public var executable: [ToolPackage] { packages.filter(\.isEnabled).map(\.package) }
 }
@@ -21,6 +39,10 @@ public actor ToolPackageRegistry {
         var schemaVersion = 1
         var installed: [String: String] = [:]
         var disabled: Set<String> = []
+    }
+    private struct ResolutionCandidate {
+        var inspection: ToolPackageCandidate
+        var package: ToolPackage?
     }
     public let bundledDirectory: URL
     public let installedDirectory: URL
@@ -101,36 +123,89 @@ public actor ToolPackageRegistry {
 
     private func resolve(_ index: Index) -> ToolRegistrySnapshot {
         var result = ToolRegistrySnapshot()
-        var bundles: [String: [ToolPackage]] = [:]
+        var candidates: [ResolutionCandidate] = []
+        var bundles: [String: [Int]] = [:]
+        func diagnostic(_ value: String) -> String { String(value.prefix(256)) }
+        func manifestID(at directory: URL) -> String? {
+            let manifest = directory.appendingPathComponent("tool.json")
+            guard let directoryValues = try? directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]),
+                  directoryValues.isDirectory == true, directoryValues.isSymbolicLink != true,
+                  let values = try? manifest.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]),
+                  values.isRegularFile == true, values.isSymbolicLink != true, (values.fileSize ?? Int.max) <= 16_384,
+                  let data = try? Data(contentsOf: manifest), data.count <= 16_384,
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let id = object["id"] as? String, id.utf8.count <= 256 else { return nil }
+            return id
+        }
+        func appendDiagnostic(_ value: String) { result.diagnostics.append(diagnostic(value)) }
         let urls = (try? FileManager.default.contentsOfDirectory(at: bundledDirectory,
             includingPropertiesForKeys: [.isDirectoryKey], options: .skipsHiddenFiles)) ?? []
         for url in urls.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }).prefix(1000) {
             do {
                 let package = try ToolPackage.load(from: url); try ToolRuntime.validate(package)
-                bundles[package.manifest.id, default: []].append(package)
-            } catch { result.diagnostics.append("Invalid bundled package: \(url.lastPathComponent.prefix(80))") }
+                let candidate = ResolutionCandidate(inspection: .init(packageID: package.manifest.id, origin: .bundled,
+                    isOverride: false, isEnabled: !index.disabled.contains(package.manifest.id), validation: .valid, diagnostic: nil), package: package)
+                bundles[package.manifest.id, default: []].append(candidates.count); candidates.append(candidate)
+            } catch {
+                let message = diagnostic("Invalid bundled package: \(url.lastPathComponent.prefix(80))")
+                let id = manifestID(at: url)
+                candidates.append(.init(inspection: .init(packageID: id, origin: .bundled,
+                    isOverride: false, isEnabled: id.map { !index.disabled.contains($0) } ?? true,
+                    validation: .invalid, diagnostic: message), package: nil))
+                appendDiagnostic(message)
+            }
         }
         var resolved: [String: RegisteredToolPackage] = [:]
-        for (id, packages) in bundles {
-            if packages.count == 1 {
-                resolved[id] = .init(package: packages[0], isOverride: false, isBundled: true, isEnabled: !index.disabled.contains(id))
-            } else { result.diagnostics.append("Duplicate bundled ID: \(id.prefix(80))") }
+        var resolvedCandidate: [String: Int] = [:]
+        for (id, indices) in bundles {
+            if indices.count == 1, let package = candidates[indices[0]].package {
+                resolved[id] = .init(package: package, isOverride: false, isBundled: true, isEnabled: !index.disabled.contains(id))
+                resolvedCandidate[id] = indices[0]
+            } else {
+                let message = diagnostic("Duplicate bundled ID: \(id.prefix(80))")
+                for index in indices {
+                    candidates[index].inspection = .init(packageID: id, origin: .bundled, isOverride: false,
+                        isEnabled: candidates[index].inspection.isEnabled, validation: .conflicting, diagnostic: message)
+                }
+                appendDiagnostic(message)
+            }
         }
-        for (id, generation) in index.installed {
+        let bundledIDs = Set(candidates.compactMap(\.inspection.packageID))
+        for (id, generation) in index.installed.sorted(by: { $0.key < $1.key }) {
+            let isOverride = bundledIDs.contains(id)
             do {
                 guard UUID(uuidString: generation) != nil else { throw ToolPackageError.invalidPath }
                 let package = try ToolPackage.load(from: installedDirectory.appendingPathComponent(generation))
                 guard package.manifest.id == id else { throw ToolPackageError.invalidManifest }
                 try ToolRuntime.validate(package)
-                resolved[id] = .init(package: package, isOverride: bundles[id] != nil, isBundled: false, isEnabled: !index.disabled.contains(id))
-            } catch { result.diagnostics.append("Invalid installed package: \(id.prefix(80))") }
+                let candidate = ResolutionCandidate(inspection: .init(packageID: id, origin: .installed,
+                    isOverride: isOverride, isEnabled: !index.disabled.contains(id), validation: .valid, diagnostic: nil), package: package)
+                resolved[id] = .init(package: package, isOverride: isOverride, isBundled: false, isEnabled: !index.disabled.contains(id))
+                resolvedCandidate[id] = candidates.count; candidates.append(candidate)
+            } catch {
+                let message = diagnostic("Invalid installed package: \(id.prefix(80))")
+                candidates.append(.init(inspection: .init(packageID: id, origin: .installed, isOverride: isOverride,
+                    isEnabled: !index.disabled.contains(id), validation: .invalid, diagnostic: message), package: nil))
+                appendDiagnostic(message)
+            }
         }
         let groups = Dictionary(grouping: resolved.values, by: { $0.package.manifest.command })
-        for (command, packages) in groups {
+        for (command, packages) in groups.sorted(by: { $0.key < $1.key }) {
             if packages.count == 1 { result.packages.append(packages[0]) }
-            else { result.diagnostics.append("Command conflict: \(command.prefix(80))") }
+            else {
+                let message = diagnostic("Command conflict: \(command.prefix(80))")
+                for package in packages {
+                    if let index = resolvedCandidate[package.id] {
+                        candidates[index].inspection = .init(packageID: package.id, origin: candidates[index].inspection.origin,
+                            isOverride: candidates[index].inspection.isOverride, isEnabled: candidates[index].inspection.isEnabled,
+                            validation: .conflicting, diagnostic: message)
+                    }
+                }
+                appendDiagnostic(message)
+            }
         }
         result.packages.sort { $0.package.manifest.command < $1.package.manifest.command }
+        result.candidates = candidates.map(\.inspection)
         result.diagnostics = Array(result.diagnostics.sorted().prefix(100))
         return result
     }

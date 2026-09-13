@@ -1,10 +1,10 @@
 ## ADDED Requirements
 
 ### Requirement: Registered package commands are recognized in place
-Jort SHALL recognize an exact slash command from an enabled valid tool package at its actual logical-line and character position after committed text input and SHALL leave unmatched, pasted, abandoned, or provisional slash text as ordinary canonical text.
+Jort SHALL recognize an exact slash command from an enabled valid tool package at its actual logical-line and character position when completion is explicitly accepted after committed text input and SHALL leave unmatched, unaccepted, pasted, abandoned, or provisional slash text as ordinary canonical text.
 
-#### Scenario: Registered command is typed
-- **WHEN** a slash token at line start or after whitespace exactly matches an enabled registered command
+#### Scenario: Registered command is accepted
+- **WHEN** a slash token at line start or after whitespace matches an enabled registered command and the user accepts its completion
 - **THEN** Jort records invocation state using stable line identities and line-relative anchors
 - **AND** decorates the actual token without adding characters to canonical text
 

@@ -1,11 +1,17 @@
-## ADDED Requirements
+# deterministic-builtins Specification
+
+## Purpose
+
+Define Jort's shared declarative JavaScript tool-package runtime, deterministic bundled commands, registry behavior, canonical output publication, merge transactions, and bounded provenance.
+
+## Requirements
 
 ### Requirement: Every tool uses one declarative JavaScript package format
 Jort SHALL define each tool as a package containing a schema-valid `tool.json` manifest and one `tool.js` implementation and SHALL use that format for bundled and user-installed tools without a privileged native execution path.
 
 #### Scenario: A package manifest is loaded
 - **WHEN** Jort discovers a candidate tool package
-- **THEN** it validates the manifest's stable reverse-DNS-style ID, positive integer version, display name, slash command, description, script-entry contract version, input mode, input shape, output operation, and byte and line caps
+- **THEN** it validates the manifest's stable reverse-DNS-style ID, positive integer version, display name, slash command, description, script-entry contract version, input mode, output operation, and byte and line caps
 - **AND** does not evaluate `tool.js` merely to discover or display the package
 
 #### Scenario: A valid package is enabled
@@ -56,6 +62,11 @@ Jort SHALL evaluate `tool.js` inside a bounded JavaScript host that exposes only
 - **WHEN** a registered tool is submitted
 - **THEN** its asynchronous entry point receives exactly one canonical or ephemeral `content` string plus explicitly injected captured clock, UUID, and cancellation facilities supported by the entry contract
 - **AND** receives no mutable document or application object
+
+#### Scenario: Script validates input before execution
+- **WHEN** a package exports the optional asynchronous `validate` entry point
+- **THEN** Jort invokes it with the same captured frozen input used by the main entry point before locking source or executing the tool
+- **AND** a structured validation failure remains presentation-only and creates no document mutation or history boundary
 
 #### Scenario: Script requests ambient authority
 - **WHEN** script code attempts network, filesystem, process, shell, application-state, native-bridge, plugin, dynamic-import, external-executable, package-discovery, or dynamic-evaluation access

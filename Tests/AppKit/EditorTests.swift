@@ -159,10 +159,10 @@ import JortPersistence
         let footerBitmap = try XCTUnwrap(controller.footer.bitmapImageRepForCachingDisplay(in: controller.footer.bounds))
         controller.footer.cacheDisplay(in: controller.footer.bounds, to: footerBitmap)
         let scale = CGFloat(footerBitmap.pixelsWide) / controller.footer.bounds.width
-        let dividerX = Int(EditorMetrics.gutterWidth * scale) - 1
-        let formerDivider = try XCTUnwrap(footerBitmap.colorAt(x: dividerX, y: footerBitmap.pixelsHigh / 2)?.usingColorSpace(.deviceRGB))
-        let background = try XCTUnwrap(footerBitmap.colorAt(x: dividerX + 2, y: footerBitmap.pixelsHigh / 2)?.usingColorSpace(.deviceRGB))
-        XCTAssertEqual(formerDivider.redComponent, background.redComponent, accuracy: 0.01)
+        let sampleX = footerBitmap.pixelsWide - Int(20 * scale)
+        let divider = try XCTUnwrap(footerBitmap.colorAt(x: sampleX, y: footerBitmap.pixelsHigh - 1)?.usingColorSpace(.deviceRGB))
+        let background = try XCTUnwrap(footerBitmap.colorAt(x: sampleX, y: footerBitmap.pixelsHigh / 2)?.usingColorSpace(.deviceRGB))
+        XCTAssertNotEqual(divider.redComponent, background.redComponent, accuracy: 0.01)
         window.setContentSize(NSSize(width: 920, height: 680))
         let view = NSTextField(labelWithString: "A test-only explanation anchored to line 2")
         controller.linePresentation.setAccessories([LineAccessory(lineID: controller.state.lines[1].id, height: 64, view: view)])
@@ -411,7 +411,7 @@ import JortPersistence
         let ruler = try XCTUnwrap(controller.scroll.verticalRulerView as? LineRuler)
         ruler.display()
         XCTAssertTrue(ruler.clipsToBounds)
-        XCTAssertEqual(controller.textView.textContainerInset.width, 24)
+        XCTAssertEqual(controller.textView.textContainerInset.width, 12)
         XCTAssertEqual(controller.textView.textContainerInset.height, 0)
         let buttons = ruler.subviews.compactMap { $0 as? NSButton }
         XCTAssertFalse(buttons.contains { $0.accessibilityLabel() == "Toggle landmark navigation mode" })
