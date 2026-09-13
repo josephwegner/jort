@@ -50,7 +50,10 @@ public actor PackageSettingsStore: SettingsStore {
         manifest.id = definition.id.rawValue; manifest.version = (current?.manifest?.version ?? 0) + 1
         manifest.name = definition.displayName; manifest.command = "/" + SettingsValidation.normalizedCommandName(definition.commandName)
         manifest.description = definition.summary
-        _ = try await registry.save(.init(manifest: manifest, source: definition.source), enabled: definition.isEnabled,
+        manifest.basedOnTemplateID = definition.basedOnTemplateID?.rawValue
+        manifest.schemaVersion = 2; manifest.executor = manifest.executorType
+        let package = manifest.executorType == .model ? ToolPackage(manifest: manifest, instructions: definition.instructions ?? "") : ToolPackage(manifest: manifest, source: definition.source)
+        _ = try await registry.save(package, enabled: definition.isEnabled,
             replacingVersion: current?.manifest?.version, requireAbsent: current == nil)
         if let originalID = legacyIDs[definition.id], let revision = current?.revision {
             _ = try await preferences.delete(id: originalID, expectedRevision: revision)
@@ -78,10 +81,11 @@ public actor PackageSettingsStore: SettingsStore {
             else {
                 let manifest = entry.package.manifest
                 var definition = UserToolDefinition(id: ToolID(entry.id), revision: RecordRevision(Int64(manifest.version)),
-                    basedOnTemplateID: entry.isOverride ? ToolID(entry.id) : nil, displayName: manifest.name,
+                    basedOnTemplateID: manifest.basedOnTemplateID.map(ToolID.init(rawValue:)) ?? (entry.isOverride ? ToolID(entry.id) : nil), displayName: manifest.name,
                     commandName: String(manifest.command.dropFirst()), summary: manifest.description,
                     source: entry.package.source, isEnabled: entry.isEnabled)
                 definition.manifest = manifest
+                definition.instructions = entry.package.manifest.executorType == .model ? entry.package.instructions : nil
                 value.customTools.append(definition)
             }
         }

@@ -126,3 +126,106 @@ import JortPersistence
         XCTAssertEqual(opened, 1); XCTAssertEqual(editor.state, before); window.orderOut(nil)
     }
 }
+
+extension SettingsWorkspaceTests {
+    func testDisconnectedModelAuthoringPickerAndPersistence() async throws {
+        _ = NSApplication.shared
+        let directory = try root(), registry = ToolPackageRegistry(bundledDirectory: directory.appendingPathComponent("empty"), installedDirectory: directory.appendingPathComponent("tools"))
+        let store = PackageSettingsStore(registry: registry, preferences: SQLiteSettingsStore(directory: directory))
+        let pane = ToolsSettingsViewController(store: store, templates: [])
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1000, height: 680), styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentViewController = pane
+        try await waitUntil { pane.snapshot.availability == .ready }
+        pane.newTool()
+        pane.sourceEditor.source = ""; pane.sourceEditor.onChange?("")
+        pane.executorButton.selectItem(withTitle: "model"); pane.changeExecutor()
+        XCTAssertTrue(pane.sourceEditor.isHidden); XCTAssertFalse(pane.instructionsEditor.isHidden)
+        XCTAssertFalse(pane.saveButton.isEnabled)
+        pane.instructionsEditor.source = "Answer clearly."; pane.instructionsEditor.onChange?("Answer clearly.")
+        XCTAssertTrue(pane.saveButton.isEnabled)
+        XCTAssertEqual(pane.instructionsEditor.textView.maximumUTF8Bytes, 32_768)
+        XCTAssertEqual(pane.instructionsEditor.textView.accessibilityLabel(), "Model instructions")
+        pane.saveDraft(); try await waitUntil { pane.snapshot.customTools.count == 1 }
+        XCTAssertEqual(pane.snapshot.customTools.first?.instructions, "Answer clearly.")
+        XCTAssertEqual(pane.snapshot.customTools.first?.manifest?.modelID, ModelCatalog.defaultModelID)
+        let picker = ModelPicker(); _ = picker.view
+        picker.search.stringValue = "Anthropic"; picker.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification))
+        XCTAssertEqual(picker.models.count, 1)
+        var selected: String?; picker.onSelect = { selected = $0 }
+        picker.selectModel(); XCTAssertEqual(selected, "anthropic/claude-sonnet-4.6")
+        window.setContentSize(NSSize(width: 900, height: 600)); pane.view.layoutSubtreeIfNeeded()
+        XCTAssertGreaterThan(pane.instructionsEditor.frame.height, 100)
+        window.orderOut(nil); try await store.close()
+    }
+    func testModelsPaneLocalNavigationAndAccessibleDisconnectedState() async throws {
+        _ = NSApplication.shared
+        let connection = OpenRouterConnection(credentials: MemoryModelCredentialStore())
+        let models = ModelsSettingsViewController(connection: connection)
+        let tools = ToolsSettingsViewController(store: SQLiteSettingsStore(directory: try root()), templates: [])
+        let controller = SettingsWindowController(panes: [
+            .init(id: "tools", title: "Tools", symbolName: "hammer") { tools },
+            .init(id: "models", title: "Models", symbolName: "sparkles") { models }
+        ])
+        controller.selectPane(id: "models"); await models.refresh()
+        XCTAssertEqual(controller.selectedPaneID, "models")
+        XCTAssertEqual(models.statusLabel.stringValue, "Not Connected")
+        XCTAssertEqual(models.connectButton.title, "Connect with OpenRouter")
+        XCTAssertTrue(models.checkButton.isHidden); XCTAssertTrue(models.disconnectButton.isHidden)
+        XCTAssertTrue(models.initialFirstResponder === models.connectButton)
+        XCTAssertEqual(models.view.accessibilityLabel(), "Models settings")
+        controller.window?.orderOut(nil)
+    }
+}
+
+private actor SettingsModelTransport: OpenRouterTransport {
+    private(set) var count = 0
+    var failure: ModelFailure?
+    func fail(_ failure: ModelFailure?) { self.failure = failure }
+    func send(_ request: URLRequest, maximumBytes: Int) throws -> Data {
+        count += 1
+        if let failure { throw failure }
+        return Data(#"{"data":{"label":"test connection"}}"#.utf8)
+    }
+}
+
+extension SettingsWorkspaceTests {
+    func testModelsConnectionStatesAndNoNetworkWhenOpened() async throws {
+        _ = NSApplication.shared
+        let transport = SettingsModelTransport(), credentials = MemoryModelCredentialStore("test-only")
+        let connection = OpenRouterConnection(credentials: credentials, transport: transport)
+        let pane = ModelsSettingsViewController(connection: connection); _ = pane.view
+        await pane.refresh()
+        let unopenedCount = await transport.count; XCTAssertEqual(unopenedCount, 0)
+        try await connection.check(); await pane.refresh()
+        XCTAssertEqual(pane.statusLabel.stringValue, "Connected")
+        XCTAssertEqual(pane.connectButton.title, "Replace Connection")
+        XCTAssertFalse(pane.disconnectButton.isHidden)
+        await transport.fail(.offline)
+        do { try await connection.check() } catch {}
+        await pane.refresh(); XCTAssertEqual(pane.statusLabel.stringValue, "Unable to Verify")
+        await transport.fail(.authentication)
+        do { try await connection.check() } catch {}
+        await pane.refresh(); XCTAssertEqual(pane.statusLabel.stringValue, "Connection Needs Attention")
+        try await connection.disconnect(); await pane.refresh()
+        XCTAssertEqual(pane.statusLabel.stringValue, "Not Connected")
+        let count = await transport.count; XCTAssertEqual(count, 3)
+    }
+    func testExecutorTransitionCancellationPreservesDraftAndLocalUndo() async throws {
+        _ = NSApplication.shared
+        let pane = ToolsSettingsViewController(store: SQLiteSettingsStore(directory: try root()), templates: [])
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1000, height: 680), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentViewController = pane; window.makeKeyAndOrderFront(nil)
+        defer { window.orderOut(nil) }
+        try await waitUntil { pane.snapshot.availability == .ready }
+        pane.newTool(); let original = pane.draft
+        let selection = NSRange(location: 3, length: 4); pane.sourceEditor.textView.setSelectedRange(selection)
+        pane.executorButton.selectItem(withTitle: "model"); pane.changeExecutor()
+        let sheet = try XCTUnwrap(window.attachedSheet)
+        window.endSheet(sheet, returnCode: .alertSecondButtonReturn)
+        try await waitUntil { window.attachedSheet == nil }
+        XCTAssertEqual(pane.draft, original)
+        XCTAssertEqual(pane.sourceEditor.textView.selectedRange(), selection)
+        XCTAssertEqual(pane.executorButton.titleOfSelectedItem, "javascript")
+        XCTAssertFalse(pane.sourceEditor.isHidden)
+    }
+}

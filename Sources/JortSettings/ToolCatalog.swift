@@ -33,14 +33,14 @@ public struct ToolCatalogBuilder: Sendable {
     public func configuredTools(templates: [ToolTemplate], snapshot: SettingsSnapshot) -> [ConfiguredTool] {
         let overridden = Set(snapshot.customTools.map(\.id))
         var tools: [ConfiguredTool] = templates.prefix(SettingsLimits.maximumTemplates).filter { !overridden.contains($0.id) }.map { template in
-            ConfiguredTool(id: template.id, origin: .bundledTemplate, templateVersion: template.version,
+            ConfiguredTool(manifest: template.manifest, instructions: template.instructions, id: template.id, origin: .bundledTemplate, templateVersion: template.version,
                 recordRevision: nil, basedOnTemplateID: nil, displayName: template.displayName,
                 commandName: SettingsValidation.normalizedCommandName(template.commandName), summary: template.summary,
                 source: template.source, isEnabled: snapshot.templateOverrides[template.id] ?? template.defaultEnabled,
                 diagnostics: SettingsValidation.diagnostics(for: template))
         }
         tools += snapshot.customTools.map { definition in
-            ConfiguredTool(id: definition.id, origin: .custom, templateVersion: nil,
+            ConfiguredTool(manifest: definition.manifest, instructions: definition.instructions, id: definition.id, origin: .custom, templateVersion: nil,
                 recordRevision: definition.revision, basedOnTemplateID: definition.basedOnTemplateID,
                 displayName: definition.displayName, commandName: SettingsValidation.normalizedCommandName(definition.commandName),
                 summary: definition.summary, source: definition.source, isEnabled: definition.isEnabled,
@@ -62,7 +62,7 @@ public struct ToolCatalogBuilder: Sendable {
     public func executableTools(templates: [ToolTemplate], snapshot: SettingsSnapshot) -> [ExecutableTool] {
         guard snapshot.availability == .ready else { return [] }
         return configuredTools(templates: templates, snapshot: snapshot).filter(\.isExecutable).map {
-            ExecutableTool(id: $0.id, commandName: $0.commandName, source: $0.source, catalogRevision: snapshot.revision)
+            ExecutableTool(manifest: $0.manifest, instructions: $0.instructions, id: $0.id, commandName: $0.commandName, source: $0.source, catalogRevision: snapshot.revision)
         }
     }
 
@@ -77,6 +77,7 @@ public struct ToolCatalogBuilder: Sendable {
             displayName: template.displayName + " Copy", commandName: availableName(base: base, avoiding: names),
             summary: template.summary, source: template.source, isEnabled: false)
         definition.manifest = template.manifest
+        definition.instructions = template.instructions
         return ToolDraft(definition: definition)
     }
 

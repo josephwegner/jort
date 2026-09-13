@@ -9,6 +9,11 @@ import JortSettings
     public let nameField = NSTextField(), commandField = NSTextField(), summaryField = NSTextField()
     public let inputModeButton = NSPopUpButton(), outputOperationButton = NSPopUpButton()
     public let sourceEditor = JavaScriptSourceEditor()
+    public let instructionsEditor = JavaScriptSourceEditor()
+    public let executorButton = NSPopUpButton()
+    public let modelButton = NSButton(title: "Choose model", target: nil, action: nil)
+    private let implementationLabel = NSTextField(labelWithString: "JavaScript Source")
+    private var modelPopover: NSPopover?
     public let enabledButton = NSButton(checkboxWithTitle: "Enabled", target: nil, action: nil)
     public let newButton = NSButton(title: "New Tool", target: nil, action: nil)
     public let duplicateButton = NSButton(title: "Duplicate to Customize", target: nil, action: nil)
@@ -62,7 +67,7 @@ import JortSettings
     }
 
     private func configureDetail(in detail: NSView) {
-        let title = NSTextField(labelWithString: "Tools"), sourceLabel = NSTextField(labelWithString: "JavaScript Source")
+        let title = NSTextField(labelWithString: "Tools"), sourceLabel = implementationLabel
         title.font = .systemFont(ofSize: 22, weight: .semibold); status.textColor = .secondaryLabelColor
         enabledButton.target = self; enabledButton.action = #selector(toggleEnabled)
         duplicateButton.target = self; duplicateButton.action = #selector(duplicateTool)
@@ -76,6 +81,18 @@ import JortSettings
         nameField.delegate = self; commandField.delegate = self; summaryField.delegate = self
         sourceEditor.onChange = { [weak self] source in self?.updateDraft { $0.source = source } }
         sourceEditor.onOversize = { [weak self] in self?.status.stringValue = "JavaScript source cannot exceed 256 KiB." }
+        instructionsEditor.textView.maximumUTF8Bytes = 32_768
+        instructionsEditor.textView.setAccessibilityLabel("Model instructions")
+        instructionsEditor.textView.setAccessibilityHelp("Instructions sent with the tool input. Saving does not run the model.")
+        instructionsEditor.scrollView.rulersVisible = false
+        instructionsEditor.textView.font = .systemFont(ofSize: 13)
+        instructionsEditor.onChange = { [weak self] text in self?.updateDraft { $0.instructions = text } }
+        instructionsEditor.onOversize = { [weak self] in self?.status.stringValue = "Instructions cannot exceed 32 KiB." }
+        executorButton.addItems(withTitles: ToolExecutor.allCases.map(\.rawValue))
+        executorButton.setAccessibilityLabel("Executor")
+        executorButton.target = self; executorButton.action = #selector(changeExecutor)
+        modelButton.target = self; modelButton.action = #selector(chooseModel)
+        modelButton.setAccessibilityLabel("Selected model")
         let diagnosticScroll = NSScrollView(); diagnosticScroll.hasVerticalScroller = true; diagnosticScroll.documentView = diagnosticsTable
         let diagnosticColumn = NSTableColumn(identifier: .init("diagnostic")); diagnosticsTable.addTableColumn(diagnosticColumn); diagnosticsTable.headerView = nil
         diagnosticsTable.rowHeight = 24; diagnosticsTable.delegate = self; diagnosticsTable.dataSource = self; diagnosticsTable.setAccessibilityLabel("Validation diagnostics")
@@ -89,6 +106,15 @@ import JortSettings
         let buttons = NSStackView(views: [duplicateButton, deleteButton, retryButton, NSView(), discardButton, saveButton]); buttons.orientation = .horizontal; buttons.spacing = 8
         for item in [title, enabledButton, status, nameField, commandField, summaryField, sourceLabel, sourceEditor, diagnosticScroll, buttons] { item.translatesAutoresizingMaskIntoConstraints = false; detail.addSubview(item) }
         contract.translatesAutoresizingMaskIntoConstraints = false; detail.addSubview(contract)
+        let implementationRow = NSStackView(views: [executorButton, modelButton]); implementationRow.orientation = .horizontal
+        implementationRow.translatesAutoresizingMaskIntoConstraints = false; detail.addSubview(implementationRow)
+        instructionsEditor.translatesAutoresizingMaskIntoConstraints = false; detail.addSubview(instructionsEditor)
+        NSLayoutConstraint.activate([
+            implementationRow.leadingAnchor.constraint(equalTo: title.leadingAnchor), implementationRow.topAnchor.constraint(equalTo: contract.bottomAnchor, constant: 8),
+            implementationRow.trailingAnchor.constraint(lessThanOrEqualTo: status.trailingAnchor),
+            instructionsEditor.leadingAnchor.constraint(equalTo: sourceEditor.leadingAnchor), instructionsEditor.trailingAnchor.constraint(equalTo: sourceEditor.trailingAnchor),
+            instructionsEditor.topAnchor.constraint(equalTo: sourceEditor.topAnchor), instructionsEditor.bottomAnchor.constraint(equalTo: sourceEditor.bottomAnchor)
+        ])
         sourceEditor.setAccessibilityIdentifier("settings.sourceEditor"); saveButton.identifier = .init("settings.saveTool")
         NSLayoutConstraint.activate([
             title.leadingAnchor.constraint(equalTo: detail.leadingAnchor, constant: 20), title.topAnchor.constraint(equalTo: detail.topAnchor, constant: 18),
@@ -98,8 +124,8 @@ import JortSettings
             commandField.leadingAnchor.constraint(equalTo: nameField.trailingAnchor, constant: 10), commandField.trailingAnchor.constraint(equalTo: status.trailingAnchor), commandField.centerYAnchor.constraint(equalTo: nameField.centerYAnchor),
             summaryField.leadingAnchor.constraint(equalTo: title.leadingAnchor), summaryField.trailingAnchor.constraint(equalTo: status.trailingAnchor), summaryField.topAnchor.constraint(equalTo: nameField.bottomAnchor, constant: 8),
             contract.leadingAnchor.constraint(equalTo: title.leadingAnchor), contract.topAnchor.constraint(equalTo: summaryField.bottomAnchor, constant: 8),
-            sourceLabel.leadingAnchor.constraint(equalTo: title.leadingAnchor), sourceLabel.topAnchor.constraint(equalTo: contract.bottomAnchor, constant: 12),
-            sourceEditor.leadingAnchor.constraint(equalTo: title.leadingAnchor), sourceEditor.trailingAnchor.constraint(equalTo: status.trailingAnchor), sourceEditor.topAnchor.constraint(equalTo: sourceLabel.bottomAnchor, constant: 6), sourceEditor.heightAnchor.constraint(greaterThanOrEqualToConstant: 190),
+            sourceLabel.leadingAnchor.constraint(equalTo: title.leadingAnchor), sourceLabel.topAnchor.constraint(equalTo: implementationRow.bottomAnchor, constant: 8),
+            sourceEditor.leadingAnchor.constraint(equalTo: title.leadingAnchor), sourceEditor.trailingAnchor.constraint(equalTo: status.trailingAnchor), sourceEditor.topAnchor.constraint(equalTo: sourceLabel.bottomAnchor, constant: 6), sourceEditor.heightAnchor.constraint(greaterThanOrEqualToConstant: 150),
             diagnosticScroll.leadingAnchor.constraint(equalTo: title.leadingAnchor), diagnosticScroll.trailingAnchor.constraint(equalTo: status.trailingAnchor), diagnosticScroll.topAnchor.constraint(equalTo: sourceEditor.bottomAnchor, constant: 8), diagnosticScroll.heightAnchor.constraint(equalToConstant: 72),
             buttons.leadingAnchor.constraint(equalTo: title.leadingAnchor), buttons.trailingAnchor.constraint(equalTo: status.trailingAnchor), buttons.topAnchor.constraint(equalTo: diagnosticScroll.bottomAnchor, constant: 8), buttons.bottomAnchor.constraint(equalTo: detail.bottomAnchor, constant: -14)
         ])
@@ -157,15 +183,62 @@ import JortSettings
         inputModeButton.isEnabled = custom; outputOperationButton.isEnabled = custom
         duplicateButton.isHidden = custom; deleteButton.isHidden = !custom; saveButton.isHidden = !custom; discardButton.isHidden = !custom
         if custom, let definition = snapshot.customTools.first(where: { $0.id == tool.id }) { draft = ToolDraft(definition: definition, baseRevision: definition.revision, original: definition) }
+        let instructions = snapshot.customTools.first(where: { $0.id == tool.id })?.instructions ?? templates.first(where: { $0.id == tool.id })?.instructions
+        showImplementation(manifest: manifest, instructions: instructions, editable: custom)
         diagnosticsTable.reloadData(); updatingFields = false; refreshButtons()
     }
     private func showEmptyState() {
         updatingFields = true; draft = nil; diagnostics = []; nameField.stringValue = ""; commandField.stringValue = ""; summaryField.stringValue = ""; sourceEditor.source = ""; sourceEditor.isSourceEditable = false
+        showImplementation(manifest: nil, instructions: nil, editable: false)
         [enabledButton, duplicateButton, deleteButton, saveButton, discardButton].forEach { $0.isHidden = true }; diagnosticsTable.reloadData(); updatingFields = false
     }
     public func controlTextDidChange(_ obj: Notification) {
         guard !updatingFields else { return }
         updateDraft { $0.displayName = nameField.stringValue; $0.commandName = commandField.stringValue; $0.summary = summaryField.stringValue }
+    }
+    private func showImplementation(manifest: ToolManifest?, instructions: String?, editable: Bool) {
+        let model = manifest?.executorType == .model
+        executorButton.selectItem(withTitle: (manifest?.executorType ?? .javascript).rawValue); executorButton.isEnabled = editable
+        sourceEditor.isHidden = model; instructionsEditor.isHidden = !model
+        instructionsEditor.source = instructions ?? ""; instructionsEditor.isSourceEditable = editable
+        modelButton.isHidden = !model; modelButton.isEnabled = editable
+        modelButton.title = ModelCatalog.bundled.model(id: manifest?.modelID ?? "")?.name ?? "Unavailable — choose model"
+        implementationLabel.stringValue = model ? "Instructions" : "JavaScript Source"
+    }
+    @objc public func chooseModel() {
+        guard draft != nil else { return }
+        let picker = ModelPicker(), popover = NSPopover(); popover.behavior = .transient
+        picker.onSelect = { [weak self, weak popover] id in
+            self?.updateDraft { $0.manifest?.modelID = id }
+            self?.modelButton.title = ModelCatalog.bundled.model(id: id)?.name ?? id; popover?.close()
+        }
+        popover.contentViewController = picker; modelPopover = popover
+        popover.show(relativeTo: modelButton.bounds, of: modelButton, preferredEdge: .maxY)
+        picker.view.window?.makeFirstResponder(picker.search)
+    }
+    @objc public func changeExecutor() {
+        guard let draft, let type = ToolExecutor(rawValue: executorButton.titleOfSelectedItem ?? ""),
+              type != (draft.definition.manifest?.executorType ?? .javascript) else { return }
+        executorButton.selectItem(withTitle: (draft.definition.manifest?.executorType ?? .javascript).rawValue)
+        let apply = { [weak self] in
+            guard let self else { return }
+            self.updateDraft {
+                var manifest = $0.manifest ?? ToolManifest(id: $0.id.rawValue, name: $0.displayName, command: "/" + $0.commandName)
+                manifest.schemaVersion = 2; manifest.executor = type
+                manifest.modelID = type == .model ? ModelCatalog.defaultModelID : nil
+                $0.manifest = manifest; $0.source = ""; $0.instructions = type == .model ? "" : nil
+            }
+            self.sourceEditor.source = ""
+            self.showImplementation(manifest: self.draft?.definition.manifest, instructions: self.draft?.definition.instructions, editable: true)
+        }
+        let hasContent = !draft.definition.source.isEmpty || !(draft.definition.instructions ?? "").isEmpty
+        if hasContent {
+            guard let window = view.window else { return }
+            let alert = NSAlert(); alert.messageText = "Change executor?"
+            alert.informativeText = "This discards the current implementation. Common tool settings are kept."
+            alert.addButton(withTitle: "Change Executor"); alert.addButton(withTitle: "Cancel")
+            alert.beginSheetModal(for: window) { response in if response == .alertFirstButtonReturn { apply() } }
+        } else { apply() }
     }
     @objc private func changeContract(_ sender: NSPopUpButton) {
         updateDraft {
@@ -193,7 +266,7 @@ import JortSettings
             var definition = UserToolDefinition(id: template.id, basedOnTemplateID: template.id,
                 displayName: template.displayName, commandName: template.commandName, summary: template.summary,
                 source: template.source, isEnabled: tools[toolsTable.selectedRow].isEnabled)
-            definition.manifest = manifest
+            definition.manifest = manifest; definition.instructions = template.instructions
             begin(ToolDraft(definition: definition))
         } else { begin(builder.duplicate(template, avoiding: Set(tools.map(\.commandName)))) }
     }
@@ -206,11 +279,13 @@ import JortSettings
         outputOperationButton.selectItem(withTitle: (draft.definition.manifest?.outputOperation ?? .replaceInvocation).rawValue)
         nameField.isEditable = true; commandField.isEditable = true; summaryField.isEditable = true; enabledButton.state = draft.definition.isEnabled ? .on : .off
         duplicateButton.isHidden = true; deleteButton.isHidden = draft.original == nil; saveButton.isHidden = false; discardButton.isHidden = false; updatingFields = false
+        showImplementation(manifest: draft.definition.manifest, instructions: draft.definition.instructions, editable: true)
         validateDraft(); refreshButtons(); view.window?.makeFirstResponder(nameField)
     }
     @objc public func saveDraft() {
         guard var draft, !diagnostics.contains(where: \.isBlocking) else { return }
         draft.definition.displayName = nameField.stringValue; draft.definition.commandName = commandField.stringValue; draft.definition.summary = summaryField.stringValue; draft.definition.source = sourceEditor.source
+        if draft.definition.manifest?.executorType == .model { draft.definition.instructions = instructionsEditor.source }
         let local = draft
         Task { [weak self] in
             guard let self else { return }
@@ -237,10 +312,10 @@ import JortSettings
     }
     @objc public func deleteTool() {
         guard let definition = draft?.original, let window = view.window else { return }
-        let alert = NSAlert(); alert.messageText = "Delete \(definition.displayName)?"; alert.informativeText = "This removes its saved JavaScript source."; alert.addButton(withTitle: "Delete"); alert.addButton(withTitle: "Cancel")
+        let alert = NSAlert(); alert.messageText = "Delete \(definition.displayName)?"; alert.informativeText = "This removes its saved tool definition."; alert.addButton(withTitle: "Delete"); alert.addButton(withTitle: "Cancel")
         if definition.basedOnTemplateID == definition.id {
             alert.messageText = "Restore bundled \(definition.displayName)?"
-            alert.informativeText = "The bundled script and configuration will become active again. The previous package files remain available for recovery."
+            alert.informativeText = "The bundled implementation and configuration will become active again. The previous package files remain available for recovery."
             alert.buttons.first?.title = "Restore"
         }
         alert.beginSheetModal(for: window) { [weak self] response in guard response == .alertFirstButtonReturn, let self else { return }; Task { do { self.snapshot = try await self.store.delete(id: definition.id, expectedRevision: definition.revision); self.rebuild(); self.status.stringValue = "Tool deleted." } catch { self.status.stringValue = "Could not delete: \(error.localizedDescription)" } } }
@@ -248,7 +323,7 @@ import JortSettings
     @objc private func revealDiagnostic() { let row = diagnosticsTable.clickedRow >= 0 ? diagnosticsTable.clickedRow : diagnosticsTable.selectedRow; guard diagnostics.indices.contains(row), let range = diagnostics[row].range else { return }; sourceEditor.reveal(range) }
     public override func resolvePendingChanges(in window: NSWindow, completion: @escaping (Bool) -> Void) {
         guard hasUnsavedChanges else { completion(true); return }
-        let alert = NSAlert(); alert.messageText = "Save changes to this tool?"; alert.informativeText = "Unsaved JavaScript source will be discarded if you leave."; alert.addButton(withTitle: "Save"); alert.addButton(withTitle: "Discard"); alert.addButton(withTitle: "Cancel")
+        let alert = NSAlert(); alert.messageText = "Save changes to this tool?"; alert.informativeText = "Unsaved tool definition will be discarded if you leave."; alert.addButton(withTitle: "Save"); alert.addButton(withTitle: "Discard"); alert.addButton(withTitle: "Cancel")
         alert.beginSheetModal(for: window) { [weak self] response in
             guard let self else { completion(false); return }
             if response == .alertSecondButtonReturn { self.discardDraft(); completion(true) }

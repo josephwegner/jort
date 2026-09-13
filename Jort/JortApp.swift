@@ -42,7 +42,7 @@ enum JortApp {
             var template = ToolTemplate(id: ToolID(package.manifest.id), version: package.manifest.version,
                 displayName: package.manifest.name, commandName: String(package.manifest.command.dropFirst()),
                 summary: package.manifest.description, source: package.source)
-            template.manifest = package.manifest; return template
+            template.manifest = package.manifest; template.instructions = package.manifest.executorType == .model ? package.instructions : nil; return template
         }
         settingsStore = PackageSettingsStore(registry: packageRegistry, preferences: SQLiteSettingsStore(directory: directory))
         let settings = settingsStore!
@@ -52,9 +52,14 @@ enum JortApp {
                 self?.editor.toolPackages = (try? await packageRegistry.inspect().executable) ?? []
             }
         }
+        let credentials = KeychainModelCredentialStore(service: installed ? "dev.jort.editor.openrouter" : "dev.jort.editor.development.openrouter")
+        let connection = OpenRouterConnection(credentials: credentials, settings: settingsStore)
+        editor.toolExecutorDispatcher = ToolExecutorDispatcher(modelAvailable: { await connection.available() },
+            provider: { OpenRouterProvider(credentials: credentials) }, authenticationFailed: { await connection.markAuthenticationFailure() })
         let toolsPane = ToolsSettingsViewController(store: settingsStore, templates: templates)
         settingsWindow = SettingsWindowController(panes: [
-            SettingsPaneDescriptor(id: "tools", title: "Tools", symbolName: "hammer", keywords: "scripts javascript") { toolsPane }
+            SettingsPaneDescriptor(id: "tools", title: "Tools", symbolName: "hammer", keywords: "scripts javascript model") { toolsPane },
+            SettingsPaneDescriptor(id: "models", title: "Models", symbolName: "sparkles", keywords: "openrouter connection") { ModelsSettingsViewController(connection: connection) }
         ])
         editor.openSettings = { [weak self] in self?.showSettings() }
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 680), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)

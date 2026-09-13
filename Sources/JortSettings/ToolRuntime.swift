@@ -30,6 +30,7 @@ private final class ToolCancellation: @unchecked Sendable {
 public enum ToolRuntime {
     public static func validate(_ package: ToolPackage) throws {
         try package.validate()
+        guard package.manifest.executorType == .javascript else { return }
         if let error = jort_js_validate(package.source) {
             jort_js_free(error)
             throw ToolPackageError.invalidSource
@@ -39,6 +40,7 @@ public enum ToolRuntime {
     public static func execute(_ package: ToolPackage, input: ToolExecutionInput,
                                timeout: TimeInterval = 5, validationOnly: Bool = false) async -> ToolExecutionResult {
         do { try package.validate() } catch { return .init(error: "Invalid tool package.") }
+        guard package.manifest.executorType == .javascript else { return .init(error: "Model tools require the model executor.") }
         guard input.content.utf8.count <= package.manifest.maximumInputBytes else { return .init(error: "Input exceeds the tool limit.") }
         guard let token = ToolCancellation(), let data = try? JSONEncoder().encode(input),
               let json = String(data: data, encoding: .utf8) else { return .init(error: "Unable to capture input.") }

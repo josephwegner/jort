@@ -153,4 +153,26 @@ import XCTest
         app.terminate(); app.launch()
         XCTAssertTrue(editor.waitForExistence(timeout: 5)); XCTAssertEqual(editor.value as? String, "I need 6")
     }
+    func testModelsSettingsAndBundledModelDiscovery() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["JORT_DATA_DIRECTORY"] = FileManager.default.temporaryDirectory.appendingPathComponent("ModelUI-\(UUID())").path
+        app.launch(); defer { app.terminate() }
+        let editor = app.textViews["Jort document"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.click(); editor.typeText("/ask")
+        XCTAssertTrue(app.buttons["/ask  Ask"].waitForExistence(timeout: 3))
+        app.typeKey(.escape, modifierFlags: [])
+        app.typeKey(",", modifierFlags: .command)
+        let settings = app.windows["Jort Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 3))
+        app.staticTexts["Models"].firstMatch.click()
+        XCTAssertTrue(app.buttons["Manage OpenRouter Account"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.secureTextFields.firstMatch.exists)
+        let shot = settings.screenshot()
+        let attachment = XCTAttachment(screenshot: shot); attachment.name = "Models Settings"; attachment.lifetime = .keepAlways; add(attachment)
+        try shot.pngRepresentation.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("jort-models-settings.png"))
+        app.staticTexts["Tools"].firstMatch.click()
+        XCTAssertTrue(app.buttons["New Tool"].waitForExistence(timeout: 3))
+        settings.buttons[XCUIIdentifierCloseWindow].click()
+    }
+
 }

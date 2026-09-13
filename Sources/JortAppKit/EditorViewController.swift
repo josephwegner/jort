@@ -142,6 +142,9 @@ import JortSettings
     var toolController: ToolInvocationController!
     var toolPresentation: ToolInvocationPresentation!
     private var toolCatalogLoaded = false
+    public var toolExecutorDispatcher = ToolExecutorDispatcher() {
+        didSet { toolController?.dispatcher = toolExecutorDispatcher }
+    }
     public var toolPackages: [ToolPackage] = [] {
         didSet {
             toolCatalogLoaded = true; toolController?.packages = toolPackages; toolController?.reconcilePackages(); refreshToolPresentation()
@@ -255,7 +258,7 @@ import JortSettings
             retry.centerYAnchor.constraint(equalTo: notice.centerYAnchor)
         ])
         textView.onCompositionCommit = { [weak self] in self?.commitText() }
-        toolController = ToolInvocationController(editor: self); toolController.packages = toolPackages
+        toolController = ToolInvocationController(editor: self); toolController.packages = toolPackages; toolController.dispatcher = toolExecutorDispatcher
         toolPresentation = ToolInvocationPresentation(editor: self)
         textView.onToolKey = { [weak self] in self?.toolPresentation.handle($0) ?? false }
         textView.onToolDraw = { [weak self] in self?.toolPresentation.draw($0) }

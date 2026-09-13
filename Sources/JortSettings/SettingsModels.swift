@@ -45,6 +45,7 @@ public struct ToolDiagnostic: Codable, Equatable, Sendable, Identifiable {
 
 public struct ToolTemplate: Codable, Equatable, Sendable, Identifiable {
     public var manifest: ToolManifest? = nil
+    public var instructions: String? = nil
     public var id: ToolID
     public var version: Int
     public var displayName: String
@@ -61,6 +62,7 @@ public struct ToolTemplate: Codable, Equatable, Sendable, Identifiable {
 
 public struct UserToolDefinition: Codable, Equatable, Sendable, Identifiable {
     public var manifest: ToolManifest? = nil
+    public var instructions: String? = nil
     public var id: ToolID
     public var revision: RecordRevision
     public var basedOnTemplateID: ToolID?
@@ -114,6 +116,8 @@ public struct SettingsSnapshot: Equatable, Sendable {
 public enum ToolOrigin: String, Sendable { case bundledTemplate, custom }
 
 public struct ConfiguredTool: Identifiable, Equatable, Sendable {
+    public var manifest: ToolManifest? = nil
+    public var instructions: String? = nil
     public var id: ToolID
     public var origin: ToolOrigin
     public var templateVersion: Int?
@@ -129,6 +133,8 @@ public struct ConfiguredTool: Identifiable, Equatable, Sendable {
 }
 
 public struct ExecutableTool: Identifiable, Equatable, Sendable {
+    public var manifest: ToolManifest? = nil
+    public var instructions: String? = nil
     public var id: ToolID
     public var commandName: String
     public var source: String
@@ -166,14 +172,29 @@ public enum SettingsValidation {
         if !validCommand { diagnostics.append(.init(severity: .error, field: .commandName, message: "Use 1–64 lowercase letters, numbers, or hyphens, beginning with a letter.")) }
         if occupiedNames.contains(command) { diagnostics.append(.init(severity: .error, field: .commandName, message: "That command name is already in use.")) }
         if definition.summary.utf8.count > SettingsLimits.maximumSummaryBytes { diagnostics.append(.init(severity: .error, field: .summary, message: "Description is too long.")) }
+        if let manifest = definition.manifest, (try? manifest.validate()) == nil {
+            diagnostics.append(.init(severity: .error, field: .catalog, message: "Unsupported or invalid tool contract."))
+        }
+        if definition.manifest?.executorType == .model {
+            if (definition.instructions ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                (definition.instructions?.utf8.count ?? 0) > 32_768 || (definition.instructions?.contains("\0") ?? false) {
+                diagnostics.append(.init(severity: .error, field: .source, message: "Enter instructions within 32 KiB, without NUL characters."))
+            }
+            if ModelCatalog.bundled.model(id: definition.manifest?.modelID ?? "") == nil {
+                diagnostics.append(.init(severity: .error, field: .catalog, message: "Selected model is unavailable. Choose a model in Tools Settings."))
+            }
+            return diagnostics
+        }
         if definition.source.utf8.count > SettingsLimits.maximumSourceBytes { diagnostics.append(.init(severity: .error, field: .source, message: "JavaScript source exceeds 256 KiB.")) }
         if definition.source.unicodeScalars.contains(where: { $0.value == 0 }) { diagnostics.append(.init(severity: .error, field: .source, message: "JavaScript source cannot contain NUL characters.")) }
         return diagnostics
     }
 
     public static func diagnostics(for template: ToolTemplate) -> [ToolDiagnostic] {
-        diagnostics(for: UserToolDefinition(id: template.id, displayName: template.displayName,
+        var definition = UserToolDefinition(id: template.id, displayName: template.displayName,
             commandName: template.commandName, summary: template.summary, source: template.source,
-            isEnabled: template.defaultEnabled))
+            isEnabled: template.defaultEnabled)
+        definition.manifest = template.manifest; definition.instructions = template.instructions
+        return diagnostics(for: definition)
     }
 }

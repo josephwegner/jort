@@ -12,7 +12,7 @@ public enum SettingsStoreError: Error, Equatable, Sendable {
 }
 
 public actor SQLiteSettingsStore: SettingsStore, ToolCatalog {
-    public static let schemaVersion = 1
+    public static let schemaVersion = 2
     public let directory: URL
     public let templates: [ToolTemplate]
     public var databaseURL: URL { directory.appendingPathComponent("Settings/Settings.sqlite") }
@@ -36,7 +36,9 @@ public actor SQLiteSettingsStore: SettingsStore, ToolCatalog {
                 let version = try SettingsConnection.inspectVersion(url: url)
                 guard version <= Self.schemaVersion else { throw SettingsStoreError.unsupportedVersion }
                 if version < Self.schemaVersion {
-                    guard version == 0, try SettingsConnection.isRecognizedLegacyV0(url: url) else { throw SettingsStoreError.invalidData }
+                    if version == 0 {
+                        guard try SettingsConnection.isRecognizedLegacyV0(url: url) else { throw SettingsStoreError.invalidData }
+                    } else if version != 1 { throw SettingsStoreError.invalidData }
                     try preserveForMigration(url)
                     try inject(.migrate)
                 }
@@ -210,22 +212,26 @@ private final class SettingsConnection {
             try execute("INSERT INTO settings_meta(id,catalog_revision) VALUES(1,0)")
             try execute("CREATE TABLE preferences (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
             try execute("CREATE TABLE template_overrides (id TEXT PRIMARY KEY, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)))")
-            try execute("CREATE TABLE custom_tools (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, template_id TEXT, display_name TEXT NOT NULL, command_name TEXT NOT NULL, summary TEXT NOT NULL, source TEXT NOT NULL, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)))")
+            try execute("CREATE TABLE custom_tools (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, template_id TEXT, display_name TEXT NOT NULL, command_name TEXT NOT NULL, summary TEXT NOT NULL, source TEXT NOT NULL, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), manifest TEXT, instructions TEXT)")
             try execute("CREATE UNIQUE INDEX custom_tool_command_name ON custom_tools(command_name COLLATE NOCASE)")
-            try execute("PRAGMA user_version=1"); try execute("COMMIT")
+            try execute("PRAGMA user_version=2"); try execute("COMMIT")
         } catch { try? execute("ROLLBACK"); throw error }
     }
     func migrateIfNeeded() throws {
         let current = try version()
         guard current <= SQLiteSettingsStore.schemaVersion else { throw SettingsStoreError.unsupportedVersion }
         if current == SQLiteSettingsStore.schemaVersion { return }
-        guard current == 0 else { throw SettingsStoreError.unsupportedVersion }
+        guard current == 0 || current == 1 else { throw SettingsStoreError.unsupportedVersion }
         try execute("BEGIN IMMEDIATE")
         do {
-            try execute("CREATE TABLE settings_meta (id INTEGER PRIMARY KEY CHECK(id=1), catalog_revision INTEGER NOT NULL)")
-            try execute("INSERT INTO settings_meta(id,catalog_revision) VALUES(1,0)")
-            try execute("CREATE UNIQUE INDEX custom_tool_command_name ON custom_tools(command_name COLLATE NOCASE)")
-            try execute("PRAGMA user_version=1"); try execute("COMMIT")
+            if current == 0 {
+                try execute("CREATE TABLE settings_meta (id INTEGER PRIMARY KEY CHECK(id=1), catalog_revision INTEGER NOT NULL)")
+                try execute("INSERT INTO settings_meta(id,catalog_revision) VALUES(1,0)")
+                try execute("CREATE UNIQUE INDEX custom_tool_command_name ON custom_tools(command_name COLLATE NOCASE)")
+            }
+            try execute("ALTER TABLE custom_tools ADD COLUMN manifest TEXT")
+            try execute("ALTER TABLE custom_tools ADD COLUMN instructions TEXT")
+            try execute("PRAGMA user_version=2"); try execute("COMMIT")
         } catch { try? execute("ROLLBACK"); throw error }
     }
     func transaction(_ body: () throws -> Void) throws {
@@ -257,12 +263,14 @@ private final class SettingsConnection {
         let current = try recordRevision(id: definition.id)
         guard current == expectedRevision else { throw SettingsStoreError.conflict(current: current) }
         let next = RecordRevision((current?.rawValue ?? 0) + 1)
-        let sql = "INSERT INTO custom_tools(id,revision,template_id,display_name,command_name,summary,source,enabled) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,template_id=excluded.template_id,display_name=excluded.display_name,command_name=excluded.command_name,summary=excluded.summary,source=excluded.source,enabled=excluded.enabled"
+        let sql = "INSERT INTO custom_tools(id,revision,template_id,display_name,command_name,summary,source,enabled,manifest,instructions) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,template_id=excluded.template_id,display_name=excluded.display_name,command_name=excluded.command_name,summary=excluded.summary,source=excluded.source,enabled=excluded.enabled,manifest=excluded.manifest,instructions=excluded.instructions"
         let statement = try prepare(sql); defer { sqlite3_finalize(statement) }
         try bind(definition.id.rawValue, to: statement, at: 1); try check(sqlite3_bind_int64(statement, 2, next.rawValue))
         try bind(definition.basedOnTemplateID?.rawValue, to: statement, at: 3); try bind(definition.displayName, to: statement, at: 4)
         try bind(definition.commandName, to: statement, at: 5); try bind(definition.summary, to: statement, at: 6)
         try bind(definition.source, to: statement, at: 7); try check(sqlite3_bind_int(statement, 8, definition.isEnabled ? 1 : 0))
+        let manifest = try definition.manifest.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
+        try bind(manifest, to: statement, at: 9); try bind(definition.instructions, to: statement, at: 10)
         guard sqlite3_step(statement) == SQLITE_DONE else { throw failure(sqlite3_errcode(db)) }
     }
     func delete(id: ToolID, expectedRevision: RecordRevision) throws {
@@ -293,14 +301,21 @@ private final class SettingsConnection {
         while step == SQLITE_ROW { overrides[ToolID(try text(overrideRows, 0))] = sqlite3_column_int(overrideRows, 1) != 0; step = sqlite3_step(overrideRows) }
         guard step == SQLITE_DONE else { throw failure(step) }
         var tools: [UserToolDefinition] = []
-        let rows = try prepare("SELECT id,revision,template_id,display_name,command_name,summary,source,enabled FROM custom_tools ORDER BY display_name COLLATE NOCASE,id")
+        let rows = try prepare("SELECT id,revision,template_id,display_name,command_name,summary,source,enabled,manifest,instructions FROM custom_tools ORDER BY display_name COLLATE NOCASE,id")
         defer { sqlite3_finalize(rows) }; step = sqlite3_step(rows)
         while step == SQLITE_ROW {
             guard tools.count < SettingsLimits.maximumCustomTools else { throw SettingsStoreError.sizeLimit }
             let template = sqlite3_column_type(rows, 2) == SQLITE_NULL ? nil : ToolID(try text(rows, 2))
-            let definition = UserToolDefinition(id: ToolID(try text(rows, 0)), revision: RecordRevision(sqlite3_column_int64(rows, 1)), basedOnTemplateID: template,
+            var definition = UserToolDefinition(id: ToolID(try text(rows, 0)), revision: RecordRevision(sqlite3_column_int64(rows, 1)), basedOnTemplateID: template,
                 displayName: try text(rows, 3), commandName: try text(rows, 4), summary: try text(rows, 5), source: try text(rows, 6), isEnabled: sqlite3_column_int(rows, 7) != 0)
-            guard SettingsValidation.diagnostics(for: definition).isEmpty else { throw SettingsStoreError.invalidData }
+            if sqlite3_column_type(rows, 8) != SQLITE_NULL {
+                let data = Data(try text(rows, 8).utf8)
+                guard data.count <= 16_384 else { throw SettingsStoreError.sizeLimit }
+                definition.manifest = try JSONDecoder().decode(ToolManifest.self, from: data)
+            }
+            if sqlite3_column_type(rows, 9) != SQLITE_NULL { definition.instructions = try text(rows, 9) }
+            // Keep unavailable catalog selections repairable after an app update.
+            guard !SettingsValidation.diagnostics(for: definition).contains(where: { $0.field != .catalog && $0.isBlocking }) else { throw SettingsStoreError.invalidData }
             tools.append(definition); step = sqlite3_step(rows)
         }
         guard step == SQLITE_DONE else { throw failure(step) }

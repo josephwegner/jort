@@ -35,6 +35,7 @@ public enum ToolInvocationPhase: String, Codable, Sendable { case inputting, sub
 public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
     public var packageID: String
     public var packageVersion: Int
+    public var executor: String? = nil
     public var entryContract: Int
     public var inputMode: String
     public var outputOperation: String
@@ -52,7 +53,7 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
     public init(invocation: ToolInvocation, selection: ToolAnchoredRange? = nil,
                 viewportLineID: UUID? = nil, viewportOffset: Double? = nil) {
         packageID = invocation.packageID; packageVersion = invocation.packageVersion
-        entryContract = invocation.entryContract; inputMode = invocation.inputMode
+        executor = invocation.executor; entryContract = invocation.entryContract; inputMode = invocation.inputMode
         outputOperation = invocation.outputOperation; command = invocation.command
         token = invocation.token; scope = invocation.scope; generation = invocation.generation
         sourceHash = invocation.sourceHash; timestamp = invocation.timestamp; message = invocation.message
@@ -63,7 +64,7 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
         var value = ToolInvocation(packageID: packageID, packageVersion: packageVersion,
             entryContract: entryContract, inputMode: inputMode, outputOperation: outputOperation,
             command: command, token: token, scope: scope, sourceHash: sourceHash)
-        value.id = id; value.generation = generation; value.timestamp = timestamp; value.message = message
+        value.executor = executor; value.id = id; value.generation = generation; value.timestamp = timestamp; value.message = message
         return value
     }
 }
@@ -73,6 +74,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID = UUID()
     public var packageID: String
     public var packageVersion: Int
+    public var executor: String? = nil
     public var entryContract: Int
     public var inputMode: String
     public var outputOperation: String
@@ -101,6 +103,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     public func validated(in snapshot: DocumentSnapshot) -> Bool {
         let text = snapshot.text as NSString
         guard packageID.utf8.count <= 256, packageVersion > 0, entryContract == 1,
+              ["javascript", "model"].contains(executor ?? "javascript"),
               packageID.range(of: #"^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$"#, options: .regularExpression) != nil,
               command.utf8.count <= 65, command.range(of: #"^/[a-z][a-z0-9-]*$"#, options: .regularExpression) != nil,
               timestamp.timeIntervalSinceReferenceDate.isFinite,
@@ -116,6 +119,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
                !inputMode.hasPrefix("ephemeral") || scope == token else { return false }
         if let restoration {
             guard restoration.packageID.utf8.count <= 256, restoration.packageVersion > 0,
+                  ["javascript", "model"].contains(restoration.executor ?? "javascript"),
                   restoration.entryContract == 1, restoration.command.utf8.count <= 65,
                   restoration.timestamp.timeIntervalSinceReferenceDate.isFinite,
                   restoration.message?.utf8.count ?? 0 <= 2048,

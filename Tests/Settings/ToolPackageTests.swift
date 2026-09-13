@@ -36,18 +36,18 @@ final class ToolPackageTests: XCTestCase {
     func testRegistryOverrideUpdateDisableRestoreAndRelaunch() async throws {
         let installed = try root()
         let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: installed)
-        let initial = try await registry.inspect(); XCTAssertEqual(initial.executable.count, 6)
+        let initial = try await registry.inspect(); XCTAssertEqual(initial.executable.count, 8)
         var edited = try XCTUnwrap(initial.executable.first { $0.manifest.command == "/calc" })
         edited.source = "export default async function() { return {output: 'custom'}; }"
         var snapshot = try await registry.save(edited)
         XCTAssertTrue(try XCTUnwrap(snapshot.packages.first { $0.id == edited.manifest.id }).isOverride)
         snapshot = try await registry.setEnabled(id: edited.manifest.id, enabled: false)
-        XCTAssertEqual(snapshot.executable.count, 5)
+        XCTAssertEqual(snapshot.executable.count, 7)
         let reopened = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: installed)
-        snapshot = try await reopened.inspect(); XCTAssertEqual(snapshot.executable.count, 5)
+        snapshot = try await reopened.inspect(); XCTAssertEqual(snapshot.executable.count, 7)
         XCTAssertEqual(snapshot.packages.first { $0.id == edited.manifest.id }?.package.source, edited.source)
         snapshot = try await reopened.restore(id: edited.manifest.id)
-        XCTAssertEqual(snapshot.executable.count, 6)
+        XCTAssertEqual(snapshot.executable.count, 8)
         XCTAssertNotEqual(snapshot.packages.first { $0.id == edited.manifest.id }?.package.source, edited.source)
     }
     func testInvalidInstallDoesNotAffectRegistryAndConflictIsRejected() async throws {
@@ -160,7 +160,7 @@ final class ToolPackageTests: XCTestCase {
         for _ in 0..<12 {
             var start = clock()
             let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: installed)
-            let snapshot = try await registry.inspect(); XCTAssertEqual(snapshot.executable.count, 6)
+            let snapshot = try await registry.inspect(); XCTAssertEqual(snapshot.executable.count, 8)
             discovery.append(clock() - start)
             start = clock(); try ToolRuntime.validate(package); validation.append(clock() - start)
             start = clock(); let result = await ToolRuntime.execute(package, input: .init(content: "3+3")); startup.append(clock() - start)

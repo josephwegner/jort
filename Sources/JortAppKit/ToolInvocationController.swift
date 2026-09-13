@@ -8,6 +8,7 @@ import JortSettings
     var activeID: UUID?
     var prompts: [UUID: String] = [:]
     private(set) var warnings: [UUID: String] = [:]
+    var dispatcher = ToolExecutorDispatcher()
     var executionInputFactory: (String) -> ToolExecutionInput = { ToolExecutionInput(content: $0) }
     private var warningContent: [UUID: String] = [:]
     private var jobs: [UUID: Task<Void, Never>] = [:]
@@ -30,8 +31,10 @@ import JortSettings
         for original in editor.state.invocations {
             guard let current = editor.state.invocations.first(where: { $0.id == original.id }) else { continue }
             guard current.validated(in: editor.state) else { cancel(current.id); continue }
+            if jobs[current.id] != nil, [.submitted, .processing].contains(current.phase) { continue }
             if let package = packages.first(where: { $0.manifest.id == current.packageID }),
                package.manifest.entryContract == current.entryContract,
+               package.manifest.executorType.rawValue == (current.executor ?? "javascript"),
                package.manifest.inputMode.rawValue == current.inputMode,
                package.manifest.outputOperation.rawValue == current.outputOperation,
                package.manifest.version == current.packageVersion || package.manifest.compatibleVersions?.contains(current.packageVersion) == true {
@@ -86,11 +89,12 @@ import JortSettings
                 }
             }
         }
-        let invocation = ToolInvocation(packageID: manifest.id, packageVersion: manifest.version,
+        var invocation = ToolInvocation(packageID: manifest.id, packageVersion: manifest.version,
             entryContract: manifest.entryContract, inputMode: manifest.inputMode.rawValue,
             outputOperation: manifest.outputOperation.rawValue, command: command,
             token: try .init(tokenRange, lines: plain.lines), scope: try .init(scopeRange, lines: plain.lines),
             sourceHash: ToolInvocation.hash((plain.text as NSString).substring(with: scopeRange)))
+        invocation.executor = manifest.executorType.rawValue
         annotations.append(invocation)
         try commit(plain, edit: range, replacementLength: replacement.utf16.count, invocations: annotations)
         editor.textView.setSelectedRange(NSRange(location: range.location + replacement.utf16.count, length: 0))
@@ -127,7 +131,7 @@ import JortSettings
         let sourceHash = invocation.sourceHash
         let captured = executionInputFactory(content)
         jobs[id] = Task { [weak self] in
-            let validation = await ToolRuntime.execute(package, input: captured, validationOnly: true)
+            let validation = await self?.dispatcher.validate(package, input: captured) ?? ToolExecutionResult(error: "Cancelled.")
             guard let self, !Task.isCancelled else { return }
             self.jobs.removeValue(forKey: id)
             guard var current = self.editor?.state.invocations.first(where: { $0.id == id }),
@@ -140,6 +144,8 @@ import JortSettings
     private func start(_ value: ToolInvocation, package: ToolPackage, input: ToolExecutionInput) {
         guard let editor else { return }
         var invocation = value
+        invocation.packageVersion = package.manifest.version
+        invocation.executor = package.manifest.executorType.rawValue
         let id = invocation.id
         let selection = try? ToolAnchoredRange(editor.textView.selectedRange(), lines: editor.state.lines)
         let viewport = editor.linePresentation.viewportAnchor()
@@ -154,12 +160,11 @@ import JortSettings
                 guard !Task.isCancelled, let self, var current = self.current(id, generation), current.phase == .submitted else { return }
                 current.phase = .processing; try? self.update(current)
             }
-            let result = await ToolRuntime.execute(package, input: input)
+            let result = await self?.dispatcher.execute(package, input: input) ?? ToolExecutionResult(error: "Cancelled.")
             indicator.cancel()
             guard let self, !Task.isCancelled, var current = self.current(id, generation),
                   [.submitted, .processing].contains(current.phase) else { return }
             self.jobs.removeValue(forKey: id)
-            if !self.packages.contains(package) { self.cancel(id); return }
             if let error = result.error { current.phase = .error; current.message = error; try? self.update(current) }
             else { try? self.publish(current, output: result.output ?? "") }
         }

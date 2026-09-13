@@ -57,3 +57,11 @@ keeps the first exact line. Neither normalizes whitespace or Unicode.
 Date, time, and UUID append the exact `input.content` after their generated value,
 including spaces and newlines. New tools created in Settings default to enabled;
 saving registers the package for completion in open editors without executing it.
+
+## Model executors (schema 2)
+
+Schema 2 adds `executor: "javascript" | "model"`. Legacy manifests without an executor remain JavaScript. Model packages use `instructions.txt` instead of `tool.js`, and declare a stable `modelID`. Instructions are plain text, nonempty, and limited to 32 KiB. The bundled version-one model catalog contains GPT-5.4 Mini (the default), GPT-5.4, and Claude Sonnet 4.6. Unknown model selections remain inspectable and editable, but do not execute or silently switch models.
+
+`/ask` uses ephemeral multiline input and inserts output at the invocation. `/rewrite` uses contextual input and replaces its captured context on Merge. Both use the ordinary tool registry, settings, source locks, canonical output, persistence, and history. Submitted generations capture their package and continue using that captured configuration after a Settings edit.
+
+Model execution sends only the selected model, instructions, and captured content in one nonstreaming OpenRouter chat completion. It has no document, history, filesystem, JavaScript, or tool-calling capability. Global output-token limits are 8,192, further constrained by the catalog and tool byte limit; existing tool byte and line limits still apply. Transport decoding is bounded to six times the output byte cap plus 64 KiB, with an absolute 8 MiB ceiling, 60-second request and 90-second resource timeouts, and no HTTP redirects.

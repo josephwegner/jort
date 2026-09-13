@@ -29,7 +29,7 @@ public struct ToolRegistrySnapshot: Equatable, Sendable {
     public var packages: [RegisteredToolPackage] = []
     public var candidates: [ToolPackageCandidate] = []
     public var diagnostics: [String] = []
-    public var executable: [ToolPackage] { packages.filter(\.isEnabled).map(\.package) }
+    public var executable: [ToolPackage] { packages.filter { $0.isEnabled && ($0.package.manifest.executorType == .javascript || ModelCatalog.bundled.model(id: $0.package.manifest.modelID ?? "") != nil) }.map(\.package) }
 }
 
 /// Package files are immutable generations. An atomic index swap publishes an edit;
@@ -91,7 +91,7 @@ public actor ToolPackageRegistry {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(package.manifest).write(to: directory.appendingPathComponent("tool.json"), options: .atomic)
-        try Data(package.source.utf8).write(to: directory.appendingPathComponent("tool.js"), options: .atomic)
+        try Data((package.manifest.executorType == .model ? package.instructions : package.source).utf8).write(to: directory.appendingPathComponent(package.manifest.executorType == .model ? "instructions.txt" : "tool.js"), options: .atomic)
         var next = index; next.installed[id] = generation
         if let enabled { if enabled { next.disabled.remove(id) } else { next.disabled.insert(id) } }
         try commit(next)

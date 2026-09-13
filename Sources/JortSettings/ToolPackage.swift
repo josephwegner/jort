@@ -1,5 +1,7 @@
 import Foundation
 
+public enum ToolExecutor: String, Codable, CaseIterable, Sendable { case javascript, model }
+
 public enum ToolInputMode: String, Codable, CaseIterable, Sendable {
     case contained, contextual, ephemeralSingleLine, ephemeralMultiline
     public var isEphemeral: Bool { self == .ephemeralSingleLine || self == .ephemeralMultiline }
@@ -18,6 +20,10 @@ public enum ToolOutputOperation: String, Codable, CaseIterable, Sendable {
 /// `input` has content, a captured UTC clock string, a captured UUID, and cancellation state.
 public struct ToolManifest: Codable, Equatable, Sendable {
     public var schemaVersion: Int = 1
+    public var executor: ToolExecutor? = nil
+    public var modelID: String? = nil
+    public var basedOnTemplateID: String? = nil
+    public var executorType: ToolExecutor { executor ?? .javascript }
     public var id: String
     public var version: Int
     public var name: String
@@ -40,8 +46,10 @@ public struct ToolManifest: Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
-        guard schemaVersion == 1, entryContract == 1 else { throw ToolPackageError.unsupportedContract }
-        guard version > 0, id.utf8.count <= 256,
+        guard (1...2).contains(schemaVersion), entryContract == 1,
+              schemaVersion == 2 || executorType == .javascript,
+              schemaVersion == 1 || executor != nil else { throw ToolPackageError.unsupportedContract }
+        guard version > 0, id.utf8.count <= 256, (basedOnTemplateID?.utf8.count ?? 0) <= 256,
               id.range(of: #"^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$"#, options: .regularExpression) != nil,
               command.range(of: #"^/[a-z][a-z0-9-]{0,63}$"#, options: .regularExpression) != nil,
               !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -63,10 +71,29 @@ public enum ToolPackageError: Error, Equatable, Sendable {
 
 public struct ToolPackage: Equatable, Sendable {
     public var manifest: ToolManifest
-    public var source: String
-    public init(manifest: ToolManifest, source: String) { self.manifest = manifest; self.source = source }
+    public enum Implementation: Equatable, Sendable {
+        case javascript(String)
+        case model(instructions: String)
+    }
+    public var implementation: Implementation
+    public var source: String {
+        get { if case .javascript(let source) = implementation { return source }; return "" }
+        set { implementation = .javascript(newValue) }
+    }
+    public var instructions: String {
+        if case .model(let instructions) = implementation { return instructions }; return ""
+    }
+    public init(manifest: ToolManifest, source: String) { self.manifest = manifest; implementation = .javascript(source) }
+    public init(manifest: ToolManifest, instructions: String) { self.manifest = manifest; implementation = .model(instructions: instructions) }
     public func validate() throws {
         try manifest.validate()
+        if manifest.executorType == .model {
+            guard case .model = implementation, !instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  instructions.utf8.count <= 32_768, !instructions.contains("\0"),
+                  let model = manifest.modelID, !model.isEmpty, model.utf8.count <= 256 else { throw ToolPackageError.invalidManifest }
+            return
+        }
+        guard case .javascript = implementation, manifest.modelID == nil else { throw ToolPackageError.invalidManifest }
         guard !source.isEmpty, source.utf8.count <= SettingsLimits.maximumSourceBytes,
               !source.contains("\0") else { throw ToolPackageError.invalidSource }
     }
@@ -84,10 +111,10 @@ public struct ToolPackage: Equatable, Sendable {
             return data
         }
         let manifest = try JSONDecoder().decode(ToolManifest.self, from: read("tool.json", limit: 16_384))
-        guard let source = String(data: try read("tool.js", limit: SettingsLimits.maximumSourceBytes), encoding: .utf8) else {
+        guard let source = String(data: try read(manifest.executorType == .model ? "instructions.txt" : "tool.js", limit: manifest.executorType == .model ? 32_768 : SettingsLimits.maximumSourceBytes), encoding: .utf8) else {
             throw ToolPackageError.invalidSource
         }
-        let package = Self(manifest: manifest, source: source)
+        let package = manifest.executorType == .model ? Self(manifest: manifest, instructions: source) : Self(manifest: manifest, source: source)
         try package.validate()
         return package
     }

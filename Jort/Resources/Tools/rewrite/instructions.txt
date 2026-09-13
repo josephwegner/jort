@@ -1,0 +1,1 @@
+Rewrite the supplied text for clarity while preserving its meaning and language. Return only the rewritten text, without commentary.
