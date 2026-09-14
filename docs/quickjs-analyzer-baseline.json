@@ -1,0 +1,415 @@
+[
+  {
+    "checker": "core.BitwiseShift",
+    "column": 38,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 12533,
+    "message": "Right shift by '64' overflows the capacity of 'js_limb_t'"
+  },
+  {
+    "checker": "core.BitwiseShift",
+    "column": 42,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 12715,
+    "message": "Left shift by '64' overflows the capacity of 'js_limb_t'"
+  },
+  {
+    "checker": "core.CallAndMessage",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 27533,
+    "message": "2nd function call argument is an uninitialized value"
+  },
+  {
+    "checker": "core.CallAndMessage",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 27585,
+    "message": "2nd function call argument is an uninitialized value"
+  },
+  {
+    "checker": "core.CallAndMessage",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 28086,
+    "message": "2nd function call argument is an uninitialized value"
+  },
+  {
+    "checker": "core.CallAndMessage",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 28122,
+    "message": "2nd function call argument is an uninitialized value"
+  },
+  {
+    "checker": "core.CallAndMessage",
+    "column": 21,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 27268,
+    "message": "2nd function call argument is an uninitialized value"
+  },
+  {
+    "checker": "core.CallAndMessage",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 28104,
+    "message": "2nd function call argument is an uninitialized value"
+  },
+  {
+    "checker": "core.NullDereference",
+    "column": 14,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 10257,
+    "message": "Access to field 'pvalue' results in a dereference of a null pointer (loaded from variable 'var_ref')"
+  },
+  {
+    "checker": "core.NullDereference",
+    "column": 14,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 10259,
+    "message": "Access to field 'pvalue' results in a dereference of a null pointer (loaded from variable 'var_ref')"
+  },
+  {
+    "checker": "core.NullDereference",
+    "column": 18,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 48178,
+    "message": "Array access (from variable 'capture') results in a null pointer dereference"
+  },
+  {
+    "checker": "core.NullDereference",
+    "column": 24,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 35888,
+    "message": "Access to field 'export_entries_count' results in a dereference of a null pointer (loaded from variable 'm')"
+  },
+  {
+    "checker": "core.NullDereference",
+    "column": 42,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 47956,
+    "message": "Array access (from variable 'capture') results in a null pointer dereference"
+  },
+  {
+    "checker": "core.NullDereference",
+    "column": 46,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 47978,
+    "message": "Array access (from variable 'capture') results in a null pointer dereference"
+  },
+  {
+    "checker": "core.UndefinedBinaryOperatorResult",
+    "column": 21,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 28126,
+    "message": "The left operand of '==' is a garbage value"
+  },
+  {
+    "checker": "core.UndefinedBinaryOperatorResult",
+    "column": 23,
+    "file": "Vendor/QuickJS/libregexp.c",
+    "line": 1283,
+    "message": "The left operand of '==' is a garbage value"
+  },
+  {
+    "checker": "core.uninitialized.Assign",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 1616,
+    "message": "Assigned value is uninitialized"
+  },
+  {
+    "checker": "core.uninitialized.Assign",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 1722,
+    "message": "Assigned value is uninitialized"
+  },
+  {
+    "checker": "core.uninitialized.Branch",
+    "column": 12,
+    "file": "Vendor/QuickJS/libunicode.c",
+    "line": 1256,
+    "message": "Branch condition evaluates to a garbage value"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 11533,
+    "message": "Value stored to 'r' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 26775,
+    "message": "Value stored to 'ret' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 54846,
+    "message": "Value stored to 'd1' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 13,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 54851,
+    "message": "Value stored to 'd1' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 14,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 33935,
+    "message": "Value stored to 'force_init' during its initialization is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/libregexp.c",
+    "line": 2359,
+    "message": "Value stored to 'last_atom_start' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/libregexp.c",
+    "line": 2911,
+    "message": "Value stored to 'type' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/libregexp.c",
+    "line": 2917,
+    "message": "Value stored to 'pc' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/libregexp.c",
+    "line": 2918,
+    "message": "Value stored to 'cptr' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 43967,
+    "message": "Value stored to 'index_val' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 43968,
+    "message": "Value stored to 'ret' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 43969,
+    "message": "Value stored to 'item' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44000,
+    "message": "Value stored to 'index_val' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44001,
+    "message": "Value stored to 'ret' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44002,
+    "message": "Value stored to 'item' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44023,
+    "message": "Value stored to 'index_val' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44024,
+    "message": "Value stored to 'ret' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44025,
+    "message": "Value stored to 'item' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44053,
+    "message": "Value stored to 'index_val' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44054,
+    "message": "Value stored to 'ret' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 17,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44055,
+    "message": "Value stored to 'item' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 21,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 19364,
+    "message": "Value stored to 'opcode' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 21,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 29203,
+    "message": "Value stored to 'label_case' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/dtoa.c",
+    "line": 1423,
+    "message": "Value stored to 'expn_offset' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/libunicode.c",
+    "line": 441,
+    "message": "Value stored to 'j' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 15477,
+    "message": "Value stored to 'tag1' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 15478,
+    "message": "Value stored to 'tag2' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 25829,
+    "message": "Value stored to 'depth' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 40266,
+    "message": "Value stored to 'val' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44147,
+    "message": "Value stored to 'result' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 45799,
+    "message": "Value stored to 'repl_str' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 45908,
+    "message": "Value stored to 'S' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 48267,
+    "message": "Value stored to 'matchStr' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 50039,
+    "message": "Value stored to 'ret' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 5,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 55833,
+    "message": "Value stored to 'tv' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 40676,
+    "message": "Value stored to 'key' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 40677,
+    "message": "Value stored to 'value' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44124,
+    "message": "Value stored to 'index_val' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44125,
+    "message": "Value stored to 'ret' is never read"
+  },
+  {
+    "checker": "deadcode.DeadStores",
+    "column": 9,
+    "file": "Vendor/QuickJS/quickjs.c",
+    "line": 44126,
+    "message": "Value stored to 'item' is never read"
+  }
+]

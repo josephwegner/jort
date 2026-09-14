@@ -1,9 +1,12 @@
-.build/
-dist/
+/build/
+/.build/
+/.build-*/
+/dist/
+/Jort/Resources/AppIcon.icns
+*.xcresult/
 .DS_Store
 *.xcuserstate
 xcuserdata/
-.build-*/
 __pycache__/
 .codex
 .opencode

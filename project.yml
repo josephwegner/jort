@@ -1,5 +1,6 @@
 name: Jort
 options:
+  preGenCommand: bash scripts/generate-icon.sh
   deploymentTarget:
     macOS: '14.0'
 settings:
@@ -167,6 +168,16 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.uitests
 schemes:
+  JortEngineering:
+    build:
+      targets:
+        Jort: all
+        JortAppKit: all
+        JortDocument: all
+        JortPersistence: all
+        JortSettings: all
+        JortJavaScript: all
+        StoreLockProbe: all
   JortNativeTests:
     build:
       targets:

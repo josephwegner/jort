@@ -1,5 +1,7 @@
 name: Native checks
 on: [push, pull_request]
+env:
+  DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
 jobs:
   test:
     runs-on: macos-15
@@ -7,14 +9,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install project generator
         run: brew install xcodegen
+      - name: Report toolchain
+        run: xcodebuild -version && xcrun swift --version
+      - name: Check Swift formatting
+        run: python3 scripts/format.py --check
       - name: Check deterministic project
         run: python3 scripts/check-project.py
       - name: Tests (headless foundation and native adapters)
         run: JORT_PERFORMANCE_ENFORCE=1 ./scripts/test.sh
       - name: Accessibility smoke test (ad-hoc signed, isolated data)
         run: ./scripts/test-ui.sh
-      - name: Static analysis
-        run: xcodebuild -project Jort.xcodeproj -scheme JortAdapters -configuration Debug -derivedDataPath .build-analysis analyze
       - name: Thread Sanitizer
         run: |
           xcodebuild -project Jort.xcodeproj -scheme JortFoundation -configuration Debug -derivedDataPath .build-tsan -destination 'platform=macOS' -enableThreadSanitizer YES test
@@ -24,6 +28,36 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          include-hidden-files: true
           name: validation-logs
           path: |
             .build-*/Logs/Test
+
+  first-party-analysis:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: First-party analysis (blocking)
+        run: python3 scripts/analyze.py first-party
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          include-hidden-files: true
+          name: first-party-analysis
+          path: |
+            .build-analysis-first-party/*.log
+            .build-analysis-first-party/*.plist
+            .build-analysis-first-party/*.json
+  quickjs-audit:
+    runs-on: macos-15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: QuickJS dependency audit (informational; review diagnostic changes)
+        run: python3 scripts/analyze.py quickjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          include-hidden-files: true
+          name: quickjs-audit
+          path: .build-analysis-quickjs/*

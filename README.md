@@ -69,3 +69,5 @@ The maximum serialized payload is **64 MiB**. Oversize, busy, permissions, disk,
 - `Jort`: composition, menus, and lifecycle.
 
 See [review implementation status](docs/review-status.md), [normative line identity](docs/line-identity.md), and [performance budgets](docs/performance.md). CI configuration includes clean generation checks, tests, static analysis, sanitizer checks, accessibility smoke testing, and a fresh Release package. This workspace is not yet a Git repository, so remote CI has not been executed here.
+
+See [engineering guardrails](docs/engineering-guardrails.md) for formatting, analyzer ownership, SQLite test teardown, and local/CI check enforcement.
