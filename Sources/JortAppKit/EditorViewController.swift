@@ -134,6 +134,10 @@ import JortSettings
   }
 }
 
+public enum EditorStartupPhase: Equatable {
+  case loading, resolvingLoadedSnapshot, ready, recoveryEditing(StoreError), ownershipConflict
+}
+
 @MainActor public final class EditorViewController: NSViewController, NSTextViewDelegate {
   public let persistence: PersistenceController
   public let scroll = NSScrollView()
@@ -145,7 +149,12 @@ import JortSettings
   private let unloaded = DocumentSnapshot()
   public private(set) var coordinator: DocumentCoordinator!
   public var state: DocumentSnapshot { coordinator?.snapshot ?? unloaded }
-  private var ready = false
+  public private(set) var startupPhase: EditorStartupPhase = .loading {
+    didSet { onStartupPhase?(startupPhase) }
+  }
+  public var onStartupPhase: ((EditorStartupPhase) -> Void)?
+  private var loadedForReconciliation: DocumentSnapshot?
+  private var acceptsEditing: Bool { coordinator != nil && startupPhase != .ownershipConflict }
   private var pendingEdit: (NSRange, Int)?
   private var ruler: LineRuler!
   private(set) var linePresentation: LinePresentationLayout!
@@ -240,7 +249,6 @@ import JortSettings
     textView.delegate = self
     textView.isSelectable = true
     textView.isEditable = true
-    ready = true
     scroll.documentView = textView
     linePresentation = LinePresentationLayout(editor: textView)
     textView.lineAccessibilityChildren = { [weak self] in
@@ -328,53 +336,95 @@ import JortSettings
       guard let self else { return }
       self.present(self.persistence.status)
     }
+    observeTransactions()
     persistence.load { [weak self] result in
       guard let self else { return }
-      if case .success(let snapshot) = result {
-        if self.state == self.unloaded {
-          self.coordinator = try! DocumentCoordinator(snapshot: snapshot, committed: true)
-          self.textView.string = snapshot.text
+      switch result {
+      case .success(let snapshot):
+        self.loadedForReconciliation = snapshot
+        self.startupPhase = .resolvingLoadedSnapshot
+        self.reconcileStartupIfPossible()
+      case .failure(let error):
+        if error == .ownership {
+          self.startupPhase = .ownershipConflict
+          self.textView.isEditable = false
         } else {
-          self.persistence.changed(self.state)
+          self.startupPhase = .recoveryEditing(error)
         }
       }
-      self.coordinator.onTransaction = { [weak self] result in
-        guard let self else { return }
-        if result.transaction.origin != .native && result.transaction.undoPolicy == .register {
-          self.recordUndo(result.before, selection: self.textView.selectedRange())
-        }
-        if self.textView.string != result.after.text {
-          self.display(result, selection: self.textView.selectedRange(), preserveAnchors: true)
-        }
-        self.linePresentation.update(lines: result.after.lines)
-        self.ruler.lines = result.after.lines
-        self.ruler.landmarks = result.after.landmarks
-        self.updateFooter()
-        self.palette?.actions = self.paletteActions()
-        self.palette?.reload()
-        let historyReason: HistoryBoundary?
-        switch result.transaction.origin {
-        case .restore: historyReason = .restore
-        case .automation: historyReason = .bulk
-        default: historyReason = result.before.landmarks != result.after.landmarks ? .landmark : nil
-        }
-        self.persistence.changed(result.after, historyReason: historyReason)
-        self.documentSearch?.documentChanged()
-        self.toolController.documentChanged()
-        self.refreshToolPresentation()
-        if result.before.landmarks != result.after.landmarks, self.persistence.status.failure == nil
-        {
-          self.persistence.flush()
-        }
-      }
-      self.linePresentation.update(lines: self.state.lines)
-      self.ruler.lines = self.state.lines
-      self.ruler.landmarks = self.state.landmarks
-      self.updateFooter()
-      self.textView.history.removeAllActions()
-      if self.toolCatalogLoaded { self.toolController.reconcilePackages() }
-      self.view.window?.makeFirstResponder(self.textView)
     }
+  }
+  private func observeTransactions() {
+    coordinator.onTransaction = { [weak self] result in
+      guard let self else { return }
+      if result.transaction.origin != .native && result.transaction.undoPolicy == .register {
+        self.recordUndo(result.before, selection: self.textView.selectedRange())
+      }
+      if self.textView.string != result.after.text {
+        self.display(
+          result, selection: self.textView.selectedRange(),
+          preserveAnchors: result.transaction.origin != .startupMerge)
+      }
+      self.linePresentation.update(lines: result.after.lines)
+      self.ruler.lines = result.after.lines
+      self.ruler.landmarks = result.after.landmarks
+      self.updateFooter()
+      self.palette?.actions = self.paletteActions()
+      self.palette?.reload()
+      let historyReason: HistoryBoundary?
+      switch result.transaction.origin {
+      case .restore: historyReason = .restore
+      case .automation: historyReason = .bulk
+      default: historyReason = result.before.landmarks != result.after.landmarks ? .landmark : nil
+      }
+      if self.startupPhase == .ready {
+        self.persistence.changed(result.after, historyReason: historyReason)
+      }
+      self.documentSearch?.documentChanged()
+      self.toolController.documentChanged()
+      self.refreshToolPresentation()
+      if result.before.landmarks != result.after.landmarks, self.persistence.status.failure == nil {
+        self.persistence.flush()
+      }
+    }
+  }
+  private func reconcileStartupIfPossible() {
+    guard !textView.hasMarkedText(), let snapshot = loadedForReconciliation else { return }
+    loadedForReconciliation = nil
+    let draft = state.text
+    let selection = textView.selectedRange()
+    let viewport = scroll.contentView.bounds.origin
+    pendingEdit = nil
+    textView.history.removeAllActions()
+    coordinator = try! DocumentCoordinator(snapshot: snapshot, committed: true)
+    observeTransactions()
+    let prefix = StartupMerge.prefix(draft: draft, stored: snapshot.text)
+    if !prefix.isEmpty {
+      textView.history.beginUndoGrouping()
+      _ = try! coordinator.apply(
+        .init(
+          baseRevision: snapshot.revision, origin: .startupMerge,
+          mutation: .edit(
+            text: prefix + snapshot.text,
+            range: NSRange(location: 0, length: 0), replacementLength: prefix.utf16.count)))
+      textView.history.setActionName("Startup Typing")
+      textView.history.endUndoGrouping()
+    } else {
+      textView.string = snapshot.text
+    }
+    let start = min(selection.location, draft.utf16.count)
+    textView.setSelectedRange(
+      NSRange(
+        location: start,
+        length: min(selection.length, draft.utf16.count - start)))
+    scroll.contentView.scroll(to: viewport)
+    linePresentation.update(lines: state.lines)
+    ruler.lines = state.lines
+    ruler.landmarks = state.landmarks
+    updateFooter()
+    startupPhase = .ready
+    if !prefix.isEmpty { persistence.changed(state) }
+    if toolCatalogLoaded { toolController.reconcilePackages() }
   }
   func present(_ status: PersistenceState) {
     let message: String?
@@ -422,7 +472,7 @@ import JortSettings
         self, selector: #selector(windowResigned(_:)), name: NSWindow.didResignKeyNotification,
         object: nil)
     }
-    if ready { view.window?.makeFirstResponder(textView) }
+    if acceptsEditing { view.window?.makeFirstResponder(textView) }
   }
   public override func viewDidDisappear() {
     super.viewDidDisappear()
@@ -463,7 +513,9 @@ import JortSettings
       }
       return false
     }
-    if ready, !textView.hasMarkedText(), textView.string == state.text, let replacementString {
+    if acceptsEditing, !textView.hasMarkedText(), textView.string == state.text,
+      let replacementString
+    {
       pendingEdit = (affectedCharRange, replacementString.utf16.count)
     } else {
       pendingEdit = nil
@@ -485,7 +537,14 @@ import JortSettings
     }
   }
   private func commitText() {
-    guard ready, !textView.hasMarkedText(), textView.string != state.text else { return }
+    // Native input may still be closing an undo group or replacing marked text.
+    // Reconcile only after that complete input operation has returned to AppKit.
+    defer {
+      if loadedForReconciliation != nil {
+        DispatchQueue.main.async { [weak self] in self?.reconcileStartupIfPossible() }
+      }
+    }
+    guard acceptsEditing, !textView.hasMarkedText(), textView.string != state.text else { return }
     let edit = pendingEdit
     pendingEdit = nil
     let transaction = DocumentTransaction(
@@ -559,7 +618,7 @@ import JortSettings
   @discardableResult public func apply(_ transaction: DocumentTransaction) throws
     -> TransactionResult
   {
-    guard ready else { throw DocumentError.invalidState }
+    guard acceptsEditing else { throw DocumentError.invalidState }
     return try coordinator.apply(transaction)
   }
   private func display(
@@ -608,11 +667,11 @@ import JortSettings
     if persistence.status.permitsRetry { persistence.retry() } else { saveRecoveryCopy() }
   }
   var currentLineID: UUID? {
-    guard ready else { return nil }
+    guard acceptsEditing else { return nil }
     return state.lines.last { $0.location <= textView.selectedRange().location }?.id
   }
   private var canPresent: Bool {
-    ready && historyWorkspace == nil && documentSearch == nil && !textView.hasMarkedText()
+    acceptsEditing && historyWorkspace == nil && documentSearch == nil && !textView.hasMarkedText()
       && (view.window?.firstResponder as? NSTextView)?.hasMarkedText() != true && emojiPicker == nil
       && view.window?.attachedSheet == nil
   }
@@ -642,7 +701,7 @@ import JortSettings
     mutateLandmark(.removeLandmark(landmark.id))
   }
   func mutateLandmark(_ mutation: DocumentMutation) {
-    guard ready, historyWorkspace == nil, !textView.hasMarkedText() else { return }
+    guard acceptsEditing, historyWorkspace == nil, !textView.hasMarkedText() else { return }
     textView.history.beginUndoGrouping()
     defer { textView.history.endUndoGrouping() }
     // Flush any committed native edit before deriving a metadata transaction.

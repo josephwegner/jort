@@ -121,7 +121,7 @@ public struct DocumentSnapshot: Equatable, Sendable {
   public var orderedLandmarks: [Landmark] { landmarks }
 }
 public enum MutationOrigin: String, Sendable {
-  case native, undo, redo, metadata, restore, automation
+  case native, undo, redo, metadata, restore, automation, startupMerge
 }
 public enum UndoPolicy: Sendable { case register, replay, none }
 public enum DocumentMutation: Sendable {
@@ -276,5 +276,16 @@ public struct TransactionResult: Sendable {
       insertedLineIDs: new.subtracting(old))
     onTransaction?(result)
     return result
+  }
+}
+
+/// The insertion prefix preserves all user-supplied newline sequences verbatim.
+public enum StartupMerge {
+  public static func prefix(draft: String, stored: String) -> String {
+    let boundaries: Set<UInt16> = [10, 13, 0x85, 0x2028, 0x2029]
+    guard let last = draft.utf16.last, let first = stored.utf16.first,
+      !boundaries.contains(last), !boundaries.contains(first)
+    else { return draft }
+    return draft + "\n"
   }
 }

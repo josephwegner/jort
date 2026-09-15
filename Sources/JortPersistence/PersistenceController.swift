@@ -125,8 +125,8 @@ public enum PersistenceState: Equatable, Sendable {
     }
   }
   public func changed(_ snapshot: DocumentSnapshot, historyReason: HistoryBoundary? = nil) {
-    pending = snapshot
     guard ready else { return }
+    pending = snapshot
     if history == nil, let store = store as? any HistoryStore, let initial = loadedSnapshot {
       history = HistoryCoordinator(store: store, initial: initial)
       history?.onState = { [weak self] _ in self?.onHistoryState?() }

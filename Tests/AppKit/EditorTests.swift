@@ -19,7 +19,7 @@ import JortPersistence
     window.setContentSize(NSSize(width: 600, height: 400))
     window.makeKeyAndOrderFront(nil)
     let loaded = expectation(
-      for: NSPredicate { _, _ in controller.textView.isEditable }, evaluatedWith: nil)
+      for: NSPredicate { _, _ in controller.startupPhase == .ready }, evaluatedWith: nil)
     wait(for: [loaded], timeout: 5)
     XCTAssertTrue(controller.textView.isEditable)
     XCTAssertTrue(controller.textView.isSelectable)

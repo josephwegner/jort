@@ -27,7 +27,7 @@ import JortPersistence
     window.contentViewController = editor
     window.setContentSize(NSSize(width: 920, height: 680))
     window.makeKeyAndOrderFront(nil)
-    try await waitUntil { editor.persistence.status.permitsRetry }
+    try await waitUntil { editor.startupPhase == .ready }
     return (editor, window)
   }
   func testLazyPaletteSearchKeyboardNavigationAndWrappedMatch() async throws {

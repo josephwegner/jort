@@ -24,6 +24,27 @@ import JortDocument
       documentID: plain.documentID, text: plain.text, revision: plain.revision,
       lines: plain.lines, invocations: [invocation])
   }
+  func testStartupPrefixPreservesPendingInvocationAndStoredLineMetadata() throws {
+    let before = try pending()
+    for draft in ["early", "early\r\n", "early\u{85}", "early\u{2028}", "early\u{2029}"] {
+      let owner = try DocumentCoordinator(snapshot: before)
+      let prefix = StartupMerge.prefix(draft: draft, stored: before.text)
+      let after = try owner.apply(
+        .init(
+          baseRevision: before.revision, origin: .startupMerge,
+          mutation: .edit(
+            text: prefix + before.text, range: NSRange(location: 0, length: 0),
+            replacementLength: prefix.utf16.count))
+      ).after
+      XCTAssertEqual(after.documentID, before.documentID)
+      XCTAssertEqual(after.invocations, before.invocations)
+      XCTAssertEqual(after.lines.last?.id, before.lines.last?.id)
+      XCTAssertEqual(after.lines.last?.createdAt, before.lines.last?.createdAt)
+      XCTAssertTrue(after.invocations[0].validated(in: after))
+      XCTAssertEqual(
+        after.invocations[0].token.resolve(in: after.lines)?.location, prefix.utf16.count)
+    }
+  }
   func testPendingRoundTripsWithCanonicalTextAndLocks() throws {
     let snapshot = try pending()
     let decoded = try PersistenceFormat.decode(PersistenceFormat.encode(snapshot)).snapshot

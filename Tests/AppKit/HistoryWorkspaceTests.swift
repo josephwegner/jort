@@ -35,10 +35,10 @@ import SQLite3
     window.setContentSize(NSSize(width: 920, height: 680))
     window.makeKeyAndOrderFront(nil)
     for _ in 0..<500 {
-      if controller.persistence.status.permitsRetry { break }
+      if controller.startupPhase == .ready { break }
       try await Task.sleep(for: .milliseconds(10))
     }
-    XCTAssertTrue(controller.persistence.status.permitsRetry)
+    XCTAssertEqual(controller.startupPhase, .ready)
     controller.textView.history.groupsByEvent = false
     return (controller, window, try await controller.persistence.openHistory())
   }

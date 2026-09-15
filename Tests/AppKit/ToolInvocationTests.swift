@@ -19,9 +19,10 @@ import JortSettings
     window.contentViewController = editor
     window.setContentSize(NSSize(width: 600, height: 400))
     window.makeKeyAndOrderFront(nil)
-    for _ in 0..<500 where editor.coordinator.onTransaction == nil {
+    for _ in 0..<500 where editor.startupPhase != .ready {
       try await Task.sleep(for: .milliseconds(10))
     }
+    XCTAssertEqual(editor.startupPhase, .ready)
     XCTAssertTrue(editor.textView.isEditable)
     return (editor, window)
   }

@@ -109,7 +109,8 @@ struct DocumentState: Equatable {
           && oldEnd >= leadingEnd && oldEnd > prefix
         let insertedBefore =
           oldSource.length > 0 && oldEnd == prefix && prefix == lines[leading].location
-          && newEnd > prefix && [10, 13].contains(Int(source.character(at: newEnd - 1)))
+          && newEnd > prefix
+          && [10, 13, 0x85, 0x2028, 0x2029].contains(Int(source.character(at: newEnd - 1)))
         if insertedBefore {
           inherited = nil
         } else if deletedWholeLeading && newEnd == prefix {
