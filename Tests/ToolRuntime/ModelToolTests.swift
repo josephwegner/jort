@@ -1,3 +1,5 @@
+@testable import JortToolRuntime
+import JortToolContracts
 import XCTest
 import SQLite3
 @testable import JortSettings
@@ -54,10 +56,12 @@ final class ModelToolTests: StoreTestCase {
   func testPackageRoundTripUnknownModelAndConflictingCommands() async throws {
     let directory = try root(),
       registry = ToolPackageRegistry(
+        validator: RuntimePackageValidator(),
         bundledDirectory: directory.appendingPathComponent("empty"), installedDirectory: directory)
     var value = package()
     _ = try await registry.save(value)
     let reloaded = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: directory.appendingPathComponent("empty"), installedDirectory: directory
     ).inspect()
     XCTAssertEqual(reloaded.executable, [value])
@@ -75,6 +79,7 @@ final class ModelToolTests: StoreTestCase {
   func testModelSettingsPersistenceAndAncestry() async throws {
     let directory = try root(),
       registry = ToolPackageRegistry(
+        validator: RuntimePackageValidator(),
         bundledDirectory: directory.appendingPathComponent("empty"),
         installedDirectory: directory.appendingPathComponent("tools"))
     let preferences = ownStore(SQLiteSettingsStore(directory: directory)),

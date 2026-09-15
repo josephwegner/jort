@@ -28,7 +28,7 @@ def package(source, destination):
             raise ValueError('Missing executable')
         if not (staged / 'Contents/Resources' / info['CFBundleIconFile']).is_file():
             raise ValueError('Missing icon')
-        for module in ['JortDocument', 'JortPersistence', 'JortAppKit']:
+        for module in ['JortDocument', 'JortPersistence', 'JortAppKit', 'JortSettings', 'JortToolContracts', 'JortToolRuntime', 'JortJavaScript']:
             if not (staged / f'Contents/Frameworks/{module}.framework/{module}').is_file():
                 raise ValueError(f'Missing {module}')
         if destination.exists():

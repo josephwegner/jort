@@ -5,7 +5,7 @@ Tool configuration, package persistence, JavaScript execution, model-provider be
 ## What Changes
 
 - Add compiler-enforced modules for bounded tool contracts and runtime/provider execution, with no AppKit dependencies.
-- Reduce `JortSettings` to preferences, configuration persistence, package storage, catalog publication, and credential configuration interfaces; it no longer imports or initializes QuickJS.
+- Reduce `JortSettings` to preferences, configuration persistence, package storage, catalog publication, and credential configuration interfaces; it no longer imports or directly initializes QuickJS. Injected runtime validation may initialize QuickJS during asynchronous catalog loading, independently of editor readiness.
 - Move the authoritative invocation lifecycle into a pure, `Sendable` reducer/coordinator outside AppKit.
 - Make AppKit translate native selection, range, focus, and user events into reducer actions and render reducer state without owning lifecycle transitions.
 - Define an acyclic ownership boundary for persisted invocation metadata between `JortDocument` and the new contract module.

@@ -1,11 +1,6 @@
+import JortToolContracts
 import Foundation
 import Security
-
-public protocol ModelCredentialStore: Sendable {
-  func read() async throws -> String?
-  func replace(with credential: String) async throws
-  func remove() async throws
-}
 
 public actor KeychainModelCredentialStore: ModelCredentialStore {
   private let service: String

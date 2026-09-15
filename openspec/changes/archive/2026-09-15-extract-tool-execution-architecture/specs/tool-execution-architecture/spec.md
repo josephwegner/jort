@@ -11,8 +11,9 @@ Jort SHALL define a Foundation-only tool-contract boundary, SHALL keep package a
 
 #### Scenario: Settings is opened without running a tool
 - **WHEN** Jort constructs and displays configuration or package-management UI without submitting an invocation
-- **THEN** Settings can load and publish its snapshots without initializing QuickJS or a model-provider transport
-- **AND** concrete execution services remain lazy until an operation requires them
+- **THEN** Settings loads packages through an injected validator without importing QuickJS or constructing a model-provider transport
+- **AND** QuickJS may initialize for asynchronous catalog validation, but editor readiness and typing do not await catalog loading or validation
+- **AND** provider transports and credential reads remain lazy until an invocation or connection operation requires them
 
 #### Scenario: Application composes execution services
 - **WHEN** the application creates an editor workspace capable of invoking tools

@@ -1,3 +1,4 @@
+import JortToolContracts
 import AppKit
 import JortSettings
 

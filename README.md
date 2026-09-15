@@ -64,9 +64,13 @@ The maximum serialized payload is **64 MiB**. Oversize, busy, permissions, disk,
 
 - `JortDocument`: authoritative main-actor coordinator, immutable Sendable snapshots, typed transactions, line lineage, anchors, and revisions. No AppKit dependency.
 - `JortPersistence`: storage actor, locking, versioned codecs, atomic migration/recovery, typed main-actor scheduling.
-- `JortSettings`: bounded tool-definition models, versioned settings persistence, catalog snapshots, and a non-executing runtime handoff.
+- `JortToolContracts`: Foundation-only package/execution values, typed failures, and the pure invocation reducer.
+- `JortToolRuntime`: injected QuickJS/model execution, lazy provider construction, and headless task coordination.
+- `JortSettings`: versioned settings persistence, immutable package generations, catalog snapshots, and injected asynchronous validation.
 - `JortAppKit`: native text, gutter, coordinator-backed undo, selection/viewport mapping, localized status presentation.
 - `Jort`: composition, menus, and lifecycle.
+
+Tool discovery and syntax validation run asynchronously and never gate editor readiness or immediate typing. QuickJS may initialize during catalog validation. Contracts, runtime, and Settings tests run headlessly; native suites cover text-system integration and presentation. The first-party analysis lane enforces module dependencies with `scripts/audit-tool-dependencies.py`.
 
 See [review implementation status](docs/review-status.md), [normative line identity](docs/line-identity.md), and [performance budgets](docs/performance.md). CI configuration includes clean generation checks, tests, static analysis, sanitizer checks, accessibility smoke testing, and a fresh Release package. This workspace is not yet a Git repository, so remote CI has not been executed here.
 

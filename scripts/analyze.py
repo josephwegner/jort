@@ -38,6 +38,8 @@ versions = {cmd: subprocess.check_output(command, env=env, text=True).strip()
 (out / 'toolchain.json').write_text(json.dumps(versions, indent=2) + '\n')
 tracked = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd=ROOT).decode().split('\0')
 if args.lane == 'first-party':
+    run(['python3', 'scripts/audit-tool-dependencies.py', '--self-test'], 'dependency-self-test.log')
+    run(['python3', 'scripts/audit-tool-dependencies.py'], 'dependencies.log')
     project = json.loads(subprocess.check_output(
         ['plutil', '-convert', 'json', '-o', '-', str(ROOT / 'Jort.xcodeproj/project.pbxproj')]))
     production = {key: value['name'] for key, value in project['objects'].items()

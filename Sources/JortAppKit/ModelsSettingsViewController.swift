@@ -1,8 +1,9 @@
+import JortToolContracts
 import AppKit
 import JortSettings
 
 @MainActor public final class ModelsSettingsViewController: SettingsPaneViewController {
-  public let connection: OpenRouterConnection
+  public let connection: any ModelConnection
   public let statusLabel = NSTextField(wrappingLabelWithString: "Not Connected")
   public let detailLabel = NSTextField(wrappingLabelWithString: "")
   public let connectButton = NSButton(title: "Connect with OpenRouter", target: nil, action: nil)
@@ -15,7 +16,7 @@ import JortSettings
   }
   private var job: Task<Void, Never>?
   private var connecting = false
-  public init(connection: OpenRouterConnection) {
+  public init(connection: any ModelConnection) {
     self.connection = connection
     super.init(nibName: nil, bundle: nil)
   }

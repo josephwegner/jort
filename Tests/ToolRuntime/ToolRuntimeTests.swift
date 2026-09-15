@@ -1,3 +1,5 @@
+@testable import JortToolRuntime
+import JortToolContracts
 import XCTest
 @testable import JortSettings
 
@@ -69,7 +71,8 @@ final class ToolRuntimeTests: XCTestCase {
     let exact = await ToolRuntime.execute(p, input: .init(content: "🌲"))
     XCTAssertEqual(exact, .init(output: "🌲"))
     let oversized = await ToolRuntime.execute(p, input: .init(content: "🌲a"))
-    XCTAssertEqual(oversized, .init(error: "Input exceeds the tool limit."))
+    XCTAssertEqual(
+      oversized, .init(failure: .init(.invalidInput, message: "Input exceeds the tool limit.")))
   }
   func testOutputLineLimitCountsEveryLogicalSeparatorAndCRLFOnce() async {
     for separator in ["\n", "\r", "\r\n", "\u{85}", "\u{2028}", "\u{2029}"] {
@@ -88,7 +91,8 @@ final class ToolRuntimeTests: XCTestCase {
       oversized.source =
         "export default async function() { return {output: 'a' + String.fromCodePoint(\(codePoints)) + 'b' + String.fromCodePoint(\(codePoints)) + 'c'}; }"
       let rejected = await ToolRuntime.execute(oversized, input: .init(content: ""))
-      XCTAssertEqual(rejected, .init(error: "Output exceeds the tool limit."))
+      XCTAssertEqual(
+        rejected, .init(failure: .init(.outputLimit, message: "Output exceeds the tool limit.")))
     }
   }
   func testCancellationInterruptsLoop() async {

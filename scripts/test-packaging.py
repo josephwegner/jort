@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory() as temp:
     (source / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleShortVersionString': '0.3.0', 'CFBundleVersion': '3', 'CFBundleExecutable': 'Jort', 'CFBundleIconFile': 'AppIcon.icns'}))
     binary = source / 'Contents/MacOS/Jort'; binary.write_text('fixture'); binary.chmod(0o755)
     (source / 'Contents/Resources/AppIcon.icns').write_text('fixture')
-    for name in ['JortDocument', 'JortPersistence', 'JortAppKit']:
+    for name in ['JortDocument', 'JortPersistence', 'JortAppKit', 'JortSettings', 'JortToolContracts', 'JortToolRuntime', 'JortJavaScript']:
         folder = source / f'Contents/Frameworks/{name}.framework'; folder.mkdir(); (folder / name).write_text('fixture')
     module.package(source, destination)
     (destination / 'stale-file').write_text('must disappear')

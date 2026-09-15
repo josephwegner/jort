@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 
 public struct HistoryToolAnnotation: Equatable, Sendable {

@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 import CryptoKit
 import Security
@@ -136,43 +137,28 @@ public final class LoopbackOAuthCallback: @unchecked Sendable {
   }
 }
 
-public enum ModelConnectionState: String, Codable, Sendable {
-  case notConnected, connecting, connected, unableToVerify, needsAttention
-}
-public struct ModelConnectionStatus: Codable, Equatable, Sendable {
-  public var state: ModelConnectionState = .notConnected
-  public var lastVerified: Date?
-  public var expiration: Date?
-  public init(
-    state: ModelConnectionState = .notConnected, lastVerified: Date? = nil, expiration: Date? = nil
-  ) {
-    self.state = state
-    self.lastVerified = lastVerified
-    self.expiration = expiration
-  }
-}
-
-public actor OpenRouterConnection {
+public actor OpenRouterConnection: ModelConnection {
   public let credentials: any ModelCredentialStore
-  private let settings: (any SettingsStore)?
-  private let transport: any OpenRouterTransport
+  private let settings: (any ModelConnectionSettings)?
+  private let transportFactory: @Sendable () -> any OpenRouterTransport
+  private var transport: any OpenRouterTransport { transportFactory() }
   private var status = ModelConnectionStatus()
   private var busy = false
   private var loadedStatus = false
   private var usedAttempts: [String: Date] = [:]
   public init(
-    credentials: any ModelCredentialStore, settings: (any SettingsStore)? = nil,
-    transport: any OpenRouterTransport = BoundedOpenRouterTransport()
+    credentials: any ModelCredentialStore, settings: (any ModelConnectionSettings)? = nil,
+    transport: (any OpenRouterTransport)? = nil
   ) {
     self.credentials = credentials
     self.settings = settings
-    self.transport = transport
+    self.transportFactory = { transport ?? BoundedOpenRouterTransport() }
   }
   public func currentStatus() async -> ModelConnectionStatus {
     if !loadedStatus {
       loadedStatus = true
       if let settings,
-        let text = await settings.currentSnapshot().preferences["openrouter.connection"],
+        let text = await settings.readConnectionStatus(),
         !busy, text.utf8.count <= 1024, let data = text.data(using: .utf8),
         let saved = try? JSONDecoder().decode(ModelConnectionStatus.self, from: data),
         saved.state != .connecting
@@ -187,7 +173,7 @@ public actor OpenRouterConnection {
     guard let settings, let data = try? JSONEncoder().encode(status),
       let text = String(data: data, encoding: .utf8)
     else { return }
-    _ = try? await settings.setPreference(key: "openrouter.connection", value: text)
+    await settings.writeConnectionStatus(text)
   }
   public func markAuthenticationFailure() async {
     status.state = .needsAttention

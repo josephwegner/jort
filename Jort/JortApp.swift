@@ -1,3 +1,5 @@
+import JortToolRuntime
+import JortToolContracts
 import AppKit
 import JortDocument
 import JortPersistence
@@ -22,7 +24,8 @@ enum JortApp {
   var persistence: PersistenceController!
   var settingsStore: (any SettingsStore)!
   var toolCatalogTask: Task<Void, Never>?
-  var settingsWindow: SettingsWindowController!
+  var settingsWindow: SettingsWindowController?
+  private var settingsRequested = false
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
@@ -36,25 +39,13 @@ enum JortApp {
     persistence = PersistenceController(directory: directory)
     editor = EditorViewController(persistence: persistence)
     let packageRegistry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: Bundle.main.resourceURL!.appendingPathComponent("Tools"),
       installedDirectory: directory.appendingPathComponent("Tools"))
     Task { [weak self] in
       self?.editor.toolPackages = (try? await packageRegistry.inspect().executable) ?? []
     }
     let toolRoot = Bundle.main.resourceURL!.appendingPathComponent("Tools")
-    let templates: [ToolTemplate] =
-      ((try? FileManager.default.contentsOfDirectory(at: toolRoot, includingPropertiesForKeys: nil))
-      ?? []).compactMap {
-        guard let package = try? ToolPackage.load(from: $0) else { return nil }
-        var template = ToolTemplate(
-          id: ToolID(package.manifest.id), version: package.manifest.version,
-          displayName: package.manifest.name,
-          commandName: String(package.manifest.command.dropFirst()),
-          summary: package.manifest.description, source: package.source)
-        template.manifest = package.manifest
-        template.instructions = package.manifest.executorType == .model ? package.instructions : nil
-        return template
-      }
     settingsStore = PackageSettingsStore(
       registry: packageRegistry, preferences: SQLiteSettingsStore(directory: directory))
     let settings = settingsStore!
@@ -67,19 +58,42 @@ enum JortApp {
     let credentials = KeychainModelCredentialStore(
       service: installed ? "dev.jort.editor.openrouter" : "dev.jort.editor.development.openrouter")
     let connection = OpenRouterConnection(credentials: credentials, settings: settingsStore)
-    editor.toolExecutorDispatcher = ToolExecutorDispatcher(
-      modelAvailable: { await connection.available() },
-      provider: { OpenRouterProvider(credentials: credentials) },
-      authenticationFailed: { await connection.markAuthenticationFailure() })
-    let toolsPane = ToolsSettingsViewController(store: settingsStore, templates: templates)
-    settingsWindow = SettingsWindowController(panes: [
-      SettingsPaneDescriptor(
-        id: "tools", title: "Tools", symbolName: "hammer", keywords: "scripts javascript model"
-      ) { toolsPane },
-      SettingsPaneDescriptor(
-        id: "models", title: "Models", symbolName: "sparkles", keywords: "openrouter connection"
-      ) { ModelsSettingsViewController(connection: connection) },
-    ])
+    editor.toolInvocationCoordinator = ToolInvocationCoordinator(
+      executor: ToolExecutorDispatcher(
+        modelAvailable: { await connection.available() },
+        provider: { OpenRouterProvider(credentials: credentials) },
+        authenticationFailed: { await connection.markAuthenticationFailure() }))
+    Task { [weak self] in
+      let templates = await Task.detached {
+        let templates: [ToolTemplate] =
+          ((try? FileManager.default.contentsOfDirectory(
+            at: toolRoot, includingPropertiesForKeys: nil))
+          ?? []).compactMap {
+            guard let package = try? ToolPackage.load(from: $0) else { return nil }
+            var template = ToolTemplate(
+              id: ToolID(package.manifest.id), version: package.manifest.version,
+              displayName: package.manifest.name,
+              commandName: String(package.manifest.command.dropFirst()),
+              summary: package.manifest.description, source: package.source)
+            template.manifest = package.manifest
+            template.instructions =
+              package.manifest.executorType == .model ? package.instructions : nil
+            return template
+          }
+        return templates
+      }.value
+      guard let self else { return }
+      let toolsPane = ToolsSettingsViewController(store: settings, templates: templates)
+      self.settingsWindow = SettingsWindowController(panes: [
+        SettingsPaneDescriptor(
+          id: "tools", title: "Tools", symbolName: "hammer", keywords: "scripts javascript model"
+        ) { toolsPane },
+        SettingsPaneDescriptor(
+          id: "models", title: "Models", symbolName: "sparkles", keywords: "openrouter connection"
+        ) { ModelsSettingsViewController(connection: connection) },
+      ])
+      if self.settingsRequested { self.settingsWindow?.present() }
+    }
     editor.openSettings = { [weak self] in self?.showSettings() }
     window = NSWindow(
       contentRect: NSRect(x: 0, y: 0, width: 920, height: 680),
@@ -147,6 +161,10 @@ enum JortApp {
   }
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     if duplicate { return .terminateNow }
+    guard let settingsWindow else {
+      finishTermination(sender)
+      return .terminateLater
+    }
     settingsWindow.prepareForTermination { [weak self] allowed in
       guard let self else {
         sender.reply(toApplicationShouldTerminate: false)
@@ -190,7 +208,10 @@ enum JortApp {
   }
   @objc func flush() { persistence.flushLifecycle(reason: .deactivation) }
   @objc func showWindow() { window.makeKeyAndOrderFront(nil) }
-  @objc func showSettings() { settingsWindow.present() }
+  @objc func showSettings() {
+    settingsRequested = true
+    settingsWindow?.present()
+  }
   @objc func find() {
     editor.showDocumentSearch()
   }

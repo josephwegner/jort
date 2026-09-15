@@ -14,6 +14,47 @@ settings:
     CURRENT_PROJECT_VERSION: 3
     ARCHS: '$(ARCHS_STANDARD)'
 targets:
+  JortToolContracts:
+    type: framework
+    platform: macOS
+    sources: [Sources/JortToolContracts]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolcontracts
+  JortToolContractsTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [Tests/ToolContracts]
+    dependencies:
+      - target: JortToolContracts
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolcontractstests
+  JortToolRuntime:
+    type: framework
+    platform: macOS
+    sources: [Sources/JortToolRuntime]
+    dependencies:
+      - target: JortToolContracts
+      - target: JortJavaScript
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolruntime
+  JortToolRuntimeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/ToolRuntime
+      - path: Tests/Support
+    dependencies:
+      - target: JortToolRuntime
+      - target: JortToolContracts
+      - target: JortSettings
+      - target: JortDocument
+      - target: JortPersistence
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolruntimetests
   JortJavaScript:
     type: framework
     platform: macOS
@@ -34,7 +75,7 @@ targets:
     platform: macOS
     sources: [Sources/JortSettings]
     dependencies:
-      - target: JortJavaScript
+      - target: JortToolContracts
       - sdk: libsqlite3.tbd
     settings:
       base:
@@ -43,6 +84,8 @@ targets:
     type: framework
     platform: macOS
     sources: [Sources/JortDocument]
+    dependencies:
+      - target: JortToolContracts
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.document
@@ -64,6 +107,7 @@ targets:
       - target: JortDocument
       - target: JortPersistence
       - target: JortSettings
+      - target: JortToolContracts
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.appkit
@@ -112,7 +156,11 @@ targets:
         embed: true
       - target: JortSettings
         embed: true
+      - target: JortToolContracts
+        embed: true
       - target: JortJavaScript
+        embed: true
+      - target: JortToolRuntime
         embed: true
   StoreLockProbe:
     type: tool
@@ -137,6 +185,7 @@ targets:
       - target: JortDocument
       - target: JortPersistence
       - target: JortSettings
+      - target: JortToolContracts
       - target: StoreLockProbe
         link: false
     settings:
@@ -154,7 +203,9 @@ targets:
       - target: JortDocument
       - target: JortPersistence
       - target: JortAppKit
+      - target: JortToolRuntime
       - target: JortSettings
+      - target: JortToolContracts
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editortests
@@ -168,6 +219,12 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.uitests
 schemes:
+  JortToolContracts:
+    build:
+      targets:
+        JortToolContracts: all
+    test:
+      targets: [JortToolContractsTests]
   JortEngineering:
     build:
       targets:
@@ -177,6 +234,8 @@ schemes:
         JortPersistence: all
         JortSettings: all
         JortJavaScript: all
+        JortToolRuntime: all
+        JortToolContracts: all
         StoreLockProbe: all
   JortNativeTests:
     build:
@@ -200,7 +259,7 @@ schemes:
     test:
       environmentVariables:
         JORT_PERFORMANCE_ENFORCE: $(JORT_PERFORMANCE_ENFORCE)
-      targets: [JortFoundationTests]
+      targets: [JortFoundationTests, JortToolContractsTests, JortToolRuntimeTests]
   Jort:
     build:
       targets:
@@ -208,4 +267,4 @@ schemes:
     test:
       environmentVariables:
         JORT_PERFORMANCE_ENFORCE: $(JORT_PERFORMANCE_ENFORCE)
-      targets: [JortFoundationTests, JortCoreTests, JortUITests]
+      targets: [JortToolContractsTests, JortToolRuntimeTests, JortFoundationTests, JortCoreTests, JortUITests]

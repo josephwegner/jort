@@ -83,7 +83,7 @@ The application composition root constructs Settings/package storage, the creden
 
 Provider catalogs and request descriptors use Contracts values. Provider-specific HTTP/OAuth behavior and response decoding move to Runtime; UI-facing connection actions are exposed as injected services. Keychain storage can remain implemented in Settings for this change, but Runtime accesses it only through a bounded credential-provider interface. This preserves the later release-identity migration without making Runtime depend on the settings database.
 
-Eager singleton initialization was rejected because launching Settings or the editor should not initialize QuickJS or a network provider. A general service locator was rejected because it would hide dependency direction and make tests depend on global state.
+Eager singleton initialization was rejected. QuickJS may initialize through the injected validator during asynchronous package discovery so syntax-invalid overrides retain their existing bundled fallback. Catalog loading and executor validation must run independently of editor loading: the editor becomes editable without awaiting either, and native validation runs off the main actor. Provider transports and credential reads remain lazy until a model run or connection action. A general service locator was rejected because it would hide dependency direction and make tests depend on global state.
 
 ### Preserve authoring validation through layered validators
 
@@ -115,7 +115,7 @@ Add a dependency audit that fails when Contracts imports a forbidden framework, 
 4. Add `JortToolRuntime`, move QuickJS execution, dispatcher/model request/provider/transport behavior behind Contracts protocols, and add headless fake-executor/provider tests.
 5. Implement the pure reducer and headless coordinator; move lifecycle, reconciliation, race, failure, and exact-input tests out of the AppKit suite.
 6. Replace AppKit lifecycle decisions and job ownership with a narrow adapter that translates native events and applies reducer effects through existing document transactions.
-7. Move concrete construction to the application root, prove runtime/provider initialization is lazy, and add module dependency/import audits.
+7. Move concrete construction to the application root, prove catalog validation does not block editor readiness and provider initialization is lazy, and add module dependency/import audits.
 8. Run golden persistence/package tests, settings authoring tests, headless lifecycle/runtime tests, native text-system tests, and UI smoke tests before deleting compatibility shims.
 
 The work should land in compilation-preserving stages. If rollback is required before compatibility shims are removed, the old implementation remains behind the same contract interfaces. Once files have moved, rollback is a source rollback only; no user-data reversal is required because persisted schemas do not change.

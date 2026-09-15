@@ -1,26 +1,7 @@
 import Foundation
 import JortJavaScript
 
-public struct ToolExecutionInput: Codable, Sendable {
-  public let content: String
-  public let clock: String
-  public let uuid: String
-  public let cancelled = false
-  public init(content: String, date: Date = Date(), uuid: UUID = UUID()) {
-    self.content = content
-    self.clock = ISO8601DateFormatter().string(from: date)
-    self.uuid = uuid.uuidString.lowercased()
-  }
-}
-
-public struct ToolExecutionResult: Codable, Equatable, Sendable {
-  public var output: String?
-  public var error: String?
-  public init(output: String? = nil, error: String? = nil) {
-    self.output = output
-    self.error = error
-  }
-}
+import JortToolContracts
 
 private final class ToolCancellation: @unchecked Sendable {
   // The C token uses atomics; ownership extends through the detached execution.
@@ -47,12 +28,14 @@ public enum ToolRuntime {
     _ package: ToolPackage, input: ToolExecutionInput,
     timeout: TimeInterval = 5, validationOnly: Bool = false
   ) async -> ToolExecutionResult {
-    do { try package.validate() } catch { return .init(error: "Invalid tool package.") }
+    do { try package.validate() } catch {
+      return .init(failure: .init(.invalidPackage, message: "Invalid tool package."))
+    }
     guard package.manifest.executorType == .javascript else {
       return .init(error: "Model tools require the model executor.")
     }
     guard input.content.utf8.count <= package.manifest.maximumInputBytes else {
-      return .init(error: "Input exceeds the tool limit.")
+      return .init(failure: .init(.invalidInput, message: "Input exceeds the tool limit."))
     }
     guard let token = ToolCancellation(), let data = try? JSONEncoder().encode(input),
       let json = String(data: data, encoding: .utf8)
@@ -67,8 +50,8 @@ public enum ToolRuntime {
             token.pointer, &status)
         else { return ToolExecutionResult(error: "Runtime allocation failed.") }
         defer { jort_js_free(bytes) }
-        if status == 2 { return .init(error: "Cancelled.") }
-        if status == 3 { return .init(error: "Tool timed out.") }
+        if status == 2 { return .init(failure: .init(.cancelled, message: "Cancelled.")) }
+        if status == 3 { return .init(failure: .init(.timeout, message: "Tool timed out.")) }
         guard status == 0,
           let result = try? JSONDecoder().decode(
             ToolExecutionResult.self,
@@ -88,12 +71,19 @@ public enum ToolRuntime {
         guard output.utf8.count <= package.manifest.maximumOutputBytes,
           lines <= package.manifest.maximumOutputLines
         else {
-          return .init(error: "Output exceeds the tool limit.")
+          return .init(failure: .init(.outputLimit, message: "Output exceeds the tool limit."))
         }
         return result
       }.value
     } onCancel: {
       token.cancel()
     }
+  }
+}
+
+public struct RuntimePackageValidator: ToolPackageValidator {
+  public init() {}
+  public func validatePackage(_ package: ToolPackage) async throws {
+    try await Task.detached { try ToolRuntime.validate(package) }.value
   }
 }

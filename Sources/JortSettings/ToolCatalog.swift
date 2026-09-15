@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 
 public protocol ToolDefinitionValidator: Sendable {
@@ -11,7 +12,7 @@ public struct StructuralToolValidator: ToolDefinitionValidator {
   }
 }
 
-public protocol SettingsStore: Sendable {
+public protocol SettingsStore: ModelConnectionSettings {
   func load() async throws -> SettingsSnapshot
   func currentSnapshot() async -> SettingsSnapshot
   func updates() async -> AsyncStream<SettingsSnapshot>

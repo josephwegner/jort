@@ -1,3 +1,4 @@
+import JortToolContracts
 import XCTest
 import SQLite3
 import JortDocument

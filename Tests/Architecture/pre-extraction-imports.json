@@ -1,0 +1,32 @@
+{
+  "JortAppKit": [
+    "AppKit",
+    "CoreText",
+    "Foundation",
+    "JortDocument",
+    "JortPersistence",
+    "JortSettings",
+    "UniformTypeIdentifiers"
+  ],
+  "JortJavaScript": [],
+  "JortSettings": [
+    "CryptoKit",
+    "Darwin",
+    "Foundation",
+    "JortJavaScript",
+    "SQLite3",
+    "Security"
+  ],
+  "JortDocument": [
+    "CryptoKit",
+    "Foundation"
+  ],
+  "JortPersistence": [
+    "Compression",
+    "CryptoKit",
+    "Darwin",
+    "Foundation",
+    "JortDocument",
+    "SQLite3"
+  ]
+}

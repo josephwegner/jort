@@ -1,3 +1,5 @@
+@testable import JortToolRuntime
+import JortToolContracts
 import XCTest
 @testable import JortSettings
 
@@ -49,7 +51,9 @@ final class ToolPackageTests: StoreTestCase {
   }
   func testRegistryOverrideUpdateDisableRestoreAndRelaunch() async throws {
     let installed = try root()
-    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: installed)
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: installed
+    )
     let initial = try await registry.inspect()
     XCTAssertEqual(initial.executable.count, 8)
     var edited = try XCTUnwrap(initial.executable.first { $0.manifest.command == "/calc" })
@@ -58,7 +62,9 @@ final class ToolPackageTests: StoreTestCase {
     XCTAssertTrue(try XCTUnwrap(snapshot.packages.first { $0.id == edited.manifest.id }).isOverride)
     snapshot = try await registry.setEnabled(id: edited.manifest.id, enabled: false)
     XCTAssertEqual(snapshot.executable.count, 7)
-    let reopened = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: installed)
+    let reopened = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: installed
+    )
     snapshot = try await reopened.inspect()
     XCTAssertEqual(snapshot.executable.count, 7)
     XCTAssertEqual(
@@ -69,7 +75,9 @@ final class ToolPackageTests: StoreTestCase {
       snapshot.packages.first { $0.id == edited.manifest.id }?.package.source, edited.source)
   }
   func testInvalidInstallDoesNotAffectRegistryAndConflictIsRejected() async throws {
-    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: try root())
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled,
+      installedDirectory: try root())
     let original = try await registry.inspect()
     let bad = ToolPackage(
       manifest: .init(id: "org.user.test", name: "Test", command: "/calc"),
@@ -94,7 +102,9 @@ final class ToolPackageTests: StoreTestCase {
     try FileManager.default.createDirectory(at: bad, withIntermediateDirectories: true)
     try FileManager.default.copyItem(
       at: bundled.appendingPathComponent("calc"), to: directory.appendingPathComponent("calc"))
-    let registry = ToolPackageRegistry(bundledDirectory: directory, installedDirectory: try root())
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: directory,
+      installedDirectory: try root())
     let snapshot = try await registry.inspect()
     XCTAssertEqual(snapshot.executable.count, 1)
     XCTAssertEqual(snapshot.diagnostics.count, 1)
@@ -147,6 +157,7 @@ final class ToolPackageTests: StoreTestCase {
   func testSettingsUsesRegistryForEditableOverridesAndConflicts() async throws {
     let directory = try root()
     let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: bundled, installedDirectory: directory.appendingPathComponent("Tools"))
     let store = ownStore(
       PackageSettingsStore(
@@ -191,6 +202,7 @@ final class ToolPackageTests: StoreTestCase {
       source: "return input;", isEnabled: true)
     _ = try await preferences.save(legacy, expectedRevision: nil)
     let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: bundled, installedDirectory: directory.appendingPathComponent("Tools"))
     let store = ownStore(PackageSettingsStore(registry: registry, preferences: preferences))
     let snapshot = try await store.load()
@@ -215,7 +227,9 @@ final class ToolPackageTests: StoreTestCase {
     func clock() -> Double { ProcessInfo.processInfo.systemUptime }
     for _ in 0..<12 {
       var start = clock()
-      let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: installed)
+      let registry = ToolPackageRegistry(
+        validator: RuntimePackageValidator(), bundledDirectory: bundled,
+        installedDirectory: installed)
       let snapshot = try await registry.inspect()
       XCTAssertEqual(snapshot.executable.count, 8)
       discovery.append(clock() - start)
@@ -239,7 +253,9 @@ final class ToolPackageTests: StoreTestCase {
     let shipped = try root(), installed = try root()
     let calc = shipped.appendingPathComponent("calc")
     try FileManager.default.copyItem(at: bundled.appendingPathComponent("calc"), to: calc)
-    let registry = ToolPackageRegistry(bundledDirectory: shipped, installedDirectory: installed)
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: shipped, installedDirectory: installed
+    )
     let initial = try await registry.inspect()
     var user = try XCTUnwrap(initial.executable.first)
     user.source = "export default async function() { return {output:'custom'}; }"
@@ -284,6 +300,7 @@ final class ToolPackageTests: StoreTestCase {
     try Data("not json".utf8).write(to: unknown.appendingPathComponent("tool.json"))
     try Data("source".utf8).write(to: unknown.appendingPathComponent("tool.js"))
     let snapshot = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: shipped, installedDirectory: installed
     ).inspect()
     XCTAssertTrue(snapshot.packages.isEmpty)
@@ -303,6 +320,7 @@ final class ToolPackageTests: StoreTestCase {
     _ = try write(package, named: "first", to: shipped)
     _ = try write(package, named: "second", to: shipped)
     let snapshot = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: shipped, installedDirectory: installed
     ).inspect()
     XCTAssertTrue(snapshot.packages.isEmpty)
@@ -330,6 +348,7 @@ final class ToolPackageTests: StoreTestCase {
     _ = try write(unrelated, named: "unrelated", to: shipped)
     try writeIndex(installed: installed, entries: [:], disabled: [second.manifest.id])
     let snapshot = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: shipped, installedDirectory: installed
     ).inspect()
     XCTAssertEqual(snapshot.packages.map(\.id), [unrelated.manifest.id])
@@ -360,7 +379,9 @@ extension ToolPackageTests {
   }
   func testRetainsNewestFiveAndDeletesOnlyAfterCatalogRemoval() async throws {
     let directory = try root()
-    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
     var published: [String] = []
     for version in 1...9 {
       let state = try await registry.save(custom(version))
@@ -375,6 +396,7 @@ extension ToolPackageTests {
     _ = try await registry.remove(id: custom().manifest.id)
     XCTAssertTrue(try generationNames(directory).isEmpty)
     let reopened = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: bundled, installedDirectory: directory
     ).inspect()
     XCTAssertFalse(reopened.executable.contains { $0.manifest.id == custom().manifest.id })
@@ -383,10 +405,15 @@ extension ToolPackageTests {
     enum Injected: Error { case failure }
     for stage in ToolPublicationStage.allCases where stage != .cleanup {
       let directory = try root()
-      let initial = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+      let initial = ToolPackageRegistry(
+        validator: RuntimePackageValidator(), bundledDirectory: bundled,
+        installedDirectory: directory)
       _ = try await initial.save(custom())
       let oldIndex = try Data(contentsOf: directory.appendingPathComponent("index.json"))
-      let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+      let registry = ToolPackageRegistry(
+        validator: RuntimePackageValidator(), bundledDirectory: bundled,
+        installedDirectory: directory
+      ) {
         if $0 == stage { throw Injected.failure }
       }
       _ = try await registry.inspect()
@@ -404,6 +431,7 @@ extension ToolPackageTests {
           try Data(contentsOf: directory.appendingPathComponent("index.json")), oldIndex)
       }
       let reopened = try await ToolPackageRegistry(
+        validator: RuntimePackageValidator(),
         bundledDirectory: bundled, installedDirectory: directory
       ).inspect()
       XCTAssertEqual(
@@ -431,8 +459,10 @@ extension ToolPackageTests {
     _ = try write(custom(2), named: orphan, to: directory)
     try writeIndex(installed: directory, entries: [custom().manifest.id: current])
     let before = try Data(contentsOf: directory.appendingPathComponent("index.json"))
-    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
-      .inspect()
+    _ = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
+    .inspect()
     XCTAssertEqual(
       try Data(contentsOf: directory.appendingPathComponent("index.pre-v2.json")), before)
     let object = try indexObject(directory)
@@ -441,8 +471,10 @@ extension ToolPackageTests {
       (object["installed"] as? [String: [String: Any]])?[custom().manifest.id])
     XCTAssertEqual(entry["previous"] as? [String], [])
     XCTAssertEqual(try generationNames(directory), [current])
-    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
-      .inspect()
+    _ = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
+    .inspect()
     XCTAssertFalse(
       FileManager.default.fileExists(
         atPath: directory.appendingPathComponent("index.pre-v2.json").path))
@@ -477,8 +509,11 @@ extension ToolPackageTests {
       _ = try write(custom(), named: stage, to: directory)
       try fixture.write(to: directory.appendingPathComponent("index.json"))
       do {
-        _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
-          .inspect()
+        _ = try await ToolPackageRegistry(
+          validator: RuntimePackageValidator(), bundledDirectory: bundled,
+          installedDirectory: directory
+        )
+        .inspect()
         XCTFail("Expected invalid index")
       } catch {}
       XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("index.json")), fixture)
@@ -507,7 +542,9 @@ extension ToolPackageTests {
     _ = try write(custom(), named: orphan, to: directory)
     _ = try write(custom(), named: "unexpected", to: directory)
     _ = try write(custom(), named: ".staging-" + UUID().uuidString.lowercased(), to: directory)
-    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
     let state = try await registry.inspect()
     XCTAssertFalse(state.executable.contains { $0.manifest.id == custom().manifest.id })
     XCTAssertTrue(
@@ -525,23 +562,31 @@ extension ToolPackageTests {
   func testCleanupFailureIsNonfatalAndRetryReclaimsOrphans() async throws {
     enum Injected: Error { case failure }
     let directory = try root()
-    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    ) {
       if $0 == .cleanup { throw Injected.failure }
     }
     var state = ToolRegistrySnapshot()
     for version in 1...8 { state = try await registry.save(custom(version)) }
     XCTAssertEqual(try generationNames(directory).count, 8)
     XCTAssertTrue(state.diagnostics.contains { $0.contains("Cleanup") })
-    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
-      .inspect()
+    _ = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
+    .inspect()
     XCTAssertEqual(try generationNames(directory).count, 6)
   }
   func testFailedRemovalKeepsEveryGeneration() async throws {
     enum Injected: Error { case failure }
     let directory = try root()
-    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
     for version in 1...3 { _ = try await registry.save(custom(version)) }
-    let failing = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+    let failing = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    ) {
       if $0 == .indexRename { throw Injected.failure }
     }
     do {
@@ -558,9 +603,13 @@ extension ToolPackageTests {
   func testRecoveryHoldPreservesUnreferencedSourcesAcrossReloadAndLaterSave() async throws {
     enum Injected: Error { case failure }
     let directory = try root()
-    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
-      .save(custom())
-    let failing = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+    _ = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
+    .save(custom())
+    let failing = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    ) {
       if $0 == .indexDirectorySync { throw Injected.failure }
     }
     do {
@@ -569,7 +618,9 @@ extension ToolPackageTests {
     } catch {}
     let orphan = UUID().uuidString
     _ = try write(custom(99), named: orphan, to: directory)
-    let reopened = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    let reopened = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    )
     _ = try await reopened.inspect()
     _ = try await reopened.save(custom(3))
     XCTAssertTrue(
@@ -588,7 +639,9 @@ extension ToolPackageTests {
     _ = try write(custom(9), named: orphan, to: directory)
     try writeIndex(installed: directory, entries: [custom().manifest.id: current])
     let old = try Data(contentsOf: directory.appendingPathComponent("index.json"))
-    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+    let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(), bundledDirectory: bundled, installedDirectory: directory
+    ) {
       if $0 == .indexRename { throw Injected.failure }
     }
     do {
@@ -612,6 +665,7 @@ extension ToolPackageTests {
     try JSONSerialization.data(withJSONObject: value).write(
       to: directory.appendingPathComponent("index.json"))
     let state = try await ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: bundled, installedDirectory: directory
     ).inspect()
     XCTAssertEqual(state.executable.first { $0.manifest.id == custom().manifest.id }, custom(2))

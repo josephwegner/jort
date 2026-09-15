@@ -43,6 +43,13 @@ facilities. No engine standard-library or operating-system bindings are linked.
 Each run creates a fresh runtime. The engine source and MIT license are pinned
 under `Vendor/QuickJS`; its two small local extensions are documented there.
 
+QuickJS remains in the application process until the Wave 3 sandbox change.
+Settings reaches syntax validation through an injected runtime interface during
+asynchronous catalog loading; invalid installed overrides still fall back to valid
+bundled tools. Catalog validation runs off the main actor and never delays the
+editor becoming editable. Provider transports and credentials remain lazy until
+a model invocation or connection workflow requires them.
+
 `compatibleVersions` may list up to 32 older positive package versions that map
 unchanged to the current entry, input, and output contracts. Completed output is
 never rerun during migration. Without a compatible mapping, inputting source

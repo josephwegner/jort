@@ -1,3 +1,5 @@
+import JortSettings
+import JortToolContracts
 import AppKit
 import XCTest
 import JortDocument
@@ -44,6 +46,38 @@ import JortPersistence
         mutation: .edit(text: text, range: nil, replacementLength: nil)))
     return owner.snapshot
   }
+  func testSuspendedToolValidationDoesNotDelayReadinessOrTyping() async throws {
+    let store = StartupLoadStore()
+    let (editor, window) = shell(store)
+    defer { window.orderOut(nil) }
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    removeAfterStoresClose(root)
+    let bundled = root.appendingPathComponent("bundled")
+    let folder = bundled.appendingPathComponent("test")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let manifest = ToolManifest(id: "dev.test.slow", name: "Slow", command: "/slow")
+    try JSONEncoder().encode(manifest).write(to: folder.appendingPathComponent("tool.json"))
+    try Data("export default () => ({output: ''});".utf8).write(
+      to: folder.appendingPathComponent("tool.js"))
+    let validator = SuspendedPackageValidator()
+    let registry = ToolPackageRegistry(
+      validator: validator, bundledDirectory: bundled,
+      installedDirectory: root.appendingPathComponent("installed"))
+    let loading = Task { editor.toolPackages = try await registry.inspect().executable }
+    await validator.waitUntilRequested()
+    insert("early", into: editor)
+    await resolve(.success(try baseline("stored")), store: store, editor: editor, phase: .ready)
+    XCTAssertTrue(editor.textView.isEditable)
+    XCTAssertTrue(editor.toolPackages.isEmpty)
+    editor.textView.setSelectedRange(NSRange(location: 0, length: 0))
+    insert("ready ", into: editor)
+    XCTAssertEqual(editor.state.text, "ready early\nstored")
+    await validator.release()
+    try await loading.value
+    XCTAssertEqual(editor.toolPackages.map(\.manifest.id), ["dev.test.slow"])
+    XCTAssertEqual(editor.state.text, "ready early\nstored")
+  }
+
   func testDelayedMergeSelectionUndoContinuedTypingAndRelaunch() async throws {
     let store = StartupLoadStore()
     let (editor, window) = shell(store)

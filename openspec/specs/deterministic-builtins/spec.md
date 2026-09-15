@@ -6,6 +6,25 @@ Define Jort's shared declarative JavaScript tool-package runtime, deterministic 
 
 ## Requirements
 
+### Requirement: Tool packages use an injected execution boundary
+Jort SHALL discover, persist, and resolve declarative tool packages without importing a concrete JavaScript runtime and SHALL validate and execute resolved immutable packages through bounded tool-contract interfaces.
+
+#### Scenario: Registry loads packages
+- **WHEN** Settings or the package registry discovers bundled and installed candidates
+- **THEN** it performs path, size, manifest, precedence, index, and structural validation and awaits injected executor-specific validation on the asynchronous catalog-loading path
+- **AND** exposes only valid enabled immutable package values to execution consumers, preserving bundled fallback for syntax-invalid overrides
+- **AND** QuickJS validation does not run on the main actor or delay the editor becoming editable
+
+#### Scenario: JavaScript package is submitted
+- **WHEN** a resolved JavaScript package passes executor-specific validation and is explicitly submitted
+- **THEN** the shared dispatcher invokes the injected JavaScript executor with its immutable captured package and bounded input
+- **AND** Settings and AppKit do not call the QuickJS host directly
+
+#### Scenario: Runtime implementation is replaced
+- **WHEN** the JavaScript executor changes from an in-process implementation to another conforming implementation
+- **THEN** package discovery, authoring persistence, invocation reduction, and canonical publication continue through the same bounded contracts
+- **AND** the package format and user-visible command behavior do not change solely because of the runtime replacement
+
 ### Requirement: Every tool uses one declarative JavaScript package format
 Jort SHALL define each tool as a package containing a schema-valid `tool.json` manifest and exactly one declared executor: JavaScript using `tool.js`, or model using bounded `instructions.txt` and a bundled model identifier. Jort SHALL use the same registry and invocation lifecycle for both executors, and SHALL decode legacy definitions without an executor as JavaScript.
 

@@ -1,3 +1,4 @@
+import JortToolContracts
 import AppKit
 import JortDocument
 import JortSettings
@@ -686,7 +687,7 @@ import JortSettings
         prompts[invocation.id] = prompt
         prompt.isHidden = false
         prompt.appearance = NSAppearance(named: .darkAqua)
-        if isNew { prompt.input.string = editor.toolController.prompts[invocation.id] ?? "" }
+        if isNew { prompt.input.string = editor.toolController.prompt(for: invocation.id) ?? "" }
         prompt.multiline = invocation.inputMode == "ephemeralMultiline"
         let viewport = editor.textView.visibleRect
         let width = min(320, max(120, viewport.width - 16))
@@ -706,7 +707,8 @@ import JortSettings
               .systemTeal
             ))
         }
-        prompt.changed = { [weak editor] in editor?.toolController.prompts[invocation.id] = $0 }
+        prompt.changed = { [weak editor] in editor?.toolController.setPrompt($0, for: invocation.id)
+        }
         prompt.submit = { [weak editor] in editor?.toolController.submit(invocation.id) }
         prompt.dismiss = { [weak editor] in editor?.toolController.cancel(invocation.id) }
         // A persistent prompt must not share the glyph/control stacking

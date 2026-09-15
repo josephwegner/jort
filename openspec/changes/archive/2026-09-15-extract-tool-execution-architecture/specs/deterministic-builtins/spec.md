@@ -5,8 +5,9 @@ Jort SHALL discover, persist, and resolve declarative tool packages without impo
 
 #### Scenario: Registry loads packages
 - **WHEN** Settings or the package registry discovers bundled and installed candidates
-- **THEN** it performs path, size, manifest, precedence, index, and structural validation without initializing QuickJS
-- **AND** exposes only valid enabled immutable package values to execution consumers
+- **THEN** it performs path, size, manifest, precedence, index, and structural validation and awaits injected executor-specific validation on the asynchronous catalog-loading path
+- **AND** exposes only valid enabled immutable package values to execution consumers, preserving bundled fallback for syntax-invalid overrides
+- **AND** QuickJS validation does not run on the main actor or delay the editor becoming editable
 
 #### Scenario: JavaScript package is submitted
 - **WHEN** a resolved JavaScript package passes executor-specific validation and is explicitly submitted

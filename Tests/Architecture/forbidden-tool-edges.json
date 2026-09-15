@@ -1,0 +1,70 @@
+[
+  {
+    "module": "JortToolContracts",
+    "source": "import AppKit"
+  },
+  {
+    "module": "JortToolContracts",
+    "source": "import SQLite3"
+  },
+  {
+    "module": "JortToolContracts",
+    "source": "import Security"
+  },
+  {
+    "module": "JortToolContracts",
+    "source": "import JortSettings"
+  },
+  {
+    "module": "JortToolContracts",
+    "source": "import JortToolRuntime"
+  },
+  {
+    "module": "JortToolContracts",
+    "source": "import JortJavaScript"
+  },
+  {
+    "module": "JortToolContracts",
+    "source": "import FoundationNetworking"
+  },
+  {
+    "module": "JortSettings",
+    "source": "import JortToolRuntime"
+  },
+  {
+    "module": "JortSettings",
+    "source": "import JortJavaScript"
+  },
+  {
+    "module": "JortToolRuntime",
+    "source": "import AppKit"
+  },
+  {
+    "module": "JortToolRuntime",
+    "source": "import JortSettings"
+  },
+  {
+    "module": "JortToolRuntime",
+    "source": "import JortDocument"
+  },
+  {
+    "module": "JortAppKit",
+    "source": "import JortJavaScript"
+  },
+  {
+    "module": "JortAppKit",
+    "source": "let provider = OpenRouterProvider()"
+  },
+  {
+    "module": "JortSettings",
+    "source": "static var shared = Services()"
+  },
+  {
+    "module": "JortToolContracts",
+    "source": "let session = URLSession.shared"
+  },
+  {
+    "module": "JortSettings",
+    "source": "static var executor: any ToolExecuting = implementation"
+  }
+]

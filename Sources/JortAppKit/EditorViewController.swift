@@ -1,3 +1,4 @@
+import JortToolContracts
 import AppKit
 import UniformTypeIdentifiers
 import JortDocument
@@ -170,8 +171,10 @@ public enum EditorStartupPhase: Equatable {
   var toolController: ToolInvocationController!
   var toolPresentation: ToolInvocationPresentation!
   private var toolCatalogLoaded = false
-  public var toolExecutorDispatcher = ToolExecutorDispatcher() {
-    didSet { toolController?.dispatcher = toolExecutorDispatcher }
+  public var toolInvocationCoordinator: any ToolInvocationCoordinating =
+    UnavailableInvocationCoordinator()
+  {
+    didSet { toolController?.coordinator = toolInvocationCoordinator }
   }
   public var toolPackages: [ToolPackage] = [] {
     didSet {
@@ -308,7 +311,7 @@ public enum EditorStartupPhase: Equatable {
     textView.onCompositionCommit = { [weak self] in self?.commitText() }
     toolController = ToolInvocationController(editor: self)
     toolController.packages = toolPackages
-    toolController.dispatcher = toolExecutorDispatcher
+    toolController.coordinator = toolInvocationCoordinator
     toolPresentation = ToolInvocationPresentation(editor: self)
     textView.onToolKey = { [weak self] in self?.toolPresentation.handle($0) ?? false }
     textView.onToolDraw = { [weak self] in self?.toolPresentation.draw($0) }

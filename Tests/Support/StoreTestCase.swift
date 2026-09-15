@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 import XCTest
 import JortPersistence

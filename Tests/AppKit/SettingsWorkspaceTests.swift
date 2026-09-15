@@ -1,3 +1,5 @@
+@testable import JortToolRuntime
+import JortToolContracts
 import XCTest
 import AppKit
 import JortSettings
@@ -113,6 +115,7 @@ import JortPersistence
     _ = NSApplication.shared
     let directory = try root()
     let registry = ToolPackageRegistry(
+      validator: RuntimePackageValidator(),
       bundledDirectory: directory.appendingPathComponent("Bundled"),
       installedDirectory: directory.appendingPathComponent("Tools"))
     let store = ownStore(
@@ -203,6 +206,7 @@ extension SettingsWorkspaceTests {
     _ = NSApplication.shared
     let directory = try root(),
       registry = ToolPackageRegistry(
+        validator: RuntimePackageValidator(),
         bundledDirectory: directory.appendingPathComponent("empty"),
         installedDirectory: directory.appendingPathComponent("tools"))
     let store = ownStore(

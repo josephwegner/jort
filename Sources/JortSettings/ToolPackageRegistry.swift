@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 import Darwin
 
@@ -7,10 +8,6 @@ public struct RegisteredToolPackage: Identifiable, Equatable, Sendable {
   public let isOverride: Bool
   public let isBundled: Bool
   public let isEnabled: Bool
-}
-
-public enum ToolPackageOrigin: String, Equatable, Sendable {
-  case bundled, installed
 }
 
 public enum ToolPackageValidation: String, Equatable, Sendable {
@@ -64,6 +61,7 @@ public actor ToolPackageRegistry {
   public let installedDirectory: URL
   private var index = Index()
   private var loaded = false
+  private let validator: any ToolPackageValidator
   private let inject: @Sendable (ToolPublicationStage) throws -> Void
   private var storage: ToolPackageStorage { ToolPackageStorage(root: installedDirectory) }
   private var recoveryHeld = false
@@ -71,20 +69,64 @@ public actor ToolPackageRegistry {
   private var snapshot = ToolRegistrySnapshot()
 
   public init(
+    validator: any ToolPackageValidator = UnavailableToolValidator(),
     bundledDirectory: URL, installedDirectory: URL,
     inject: @escaping @Sendable (ToolPublicationStage) throws -> Void = { _ in }
   ) {
+    self.validator = validator
     self.inject = inject
     self.bundledDirectory = bundledDirectory
     self.installedDirectory = installedDirectory
   }
 
-  public func inspect() throws -> ToolRegistrySnapshot {
-    if !loaded { try reload() }
+  private var operationActive = false
+  private var waiting: [CheckedContinuation<Void, Never>] = []
+  private func acquire() async {
+    if !operationActive {
+      operationActive = true
+      return
+    }
+    await withCheckedContinuation { waiting.append($0) }
+  }
+  private func release() {
+    if waiting.isEmpty { operationActive = false } else { waiting.removeFirst().resume() }
+  }
+  public func inspect() async throws -> ToolRegistrySnapshot {
+    await acquire()
+    defer { release() }
+    return try await inspectLocked()
+  }
+  public func reload() async throws {
+    await acquire()
+    defer { release() }
+    try await reloadLocked()
+  }
+  public func save(
+    _ package: ToolPackage, enabled: Bool? = nil,
+    replacingVersion: Int? = nil, requireAbsent: Bool = false
+  ) async throws -> ToolRegistrySnapshot {
+    await acquire()
+    defer { release() }
+    return try await saveLocked(
+      package, enabled: enabled, replacingVersion: replacingVersion, requireAbsent: requireAbsent)
+  }
+  public func setEnabled(id: String, enabled: Bool) async throws -> ToolRegistrySnapshot {
+    await acquire()
+    defer { release() }
+    return try await setEnabledLocked(id: id, enabled: enabled)
+  }
+  public func remove(id: String) async throws -> ToolRegistrySnapshot {
+    await acquire()
+    defer { release() }
+    return try await removeLocked(id: id)
+  }
+
+  private func inspectLocked() async throws -> ToolRegistrySnapshot {
+    if !loaded { try await reloadLocked() }
     return snapshot
   }
 
-  public func reload() throws {
+  private func reloadLocked() async throws {
     loaded = false
     trusted = false
     let parent = try storage.directory()
@@ -93,7 +135,7 @@ public actor ToolPackageRegistry {
     recoveryHeld = names.contains { $0.hasPrefix("Recovery-") }
     guard names.contains("index.json") else {
       index = Index()
-      snapshot = resolve(index)
+      snapshot = await resolve(index)
       loaded = true
       if recoveryHeld { addRecoveryDiagnostic() }
       return
@@ -113,7 +155,8 @@ public actor ToolPackageRegistry {
         let package = try ToolPackage.load(
           from: installedDirectory.appendingPathComponent(generations.current))
         guard package.manifest.id == id else { throw ToolPackageError.invalidManifest }
-        try ToolRuntime.validate(package)
+        try package.validate()
+        try await validator.validatePackage(package)
       }
       // Kept until a later successful v2 reopen, never during migration itself.
       if names.contains("index.pre-v2.json") {
@@ -124,13 +167,13 @@ public actor ToolPackageRegistry {
         try storage.write(data, name: "index.pre-v2.json", parent: parent)
         try storage.sync(parent)
       }
-      try commit(candidate)
+      try await commit(candidate)
     } else {
       guard version == 2 else { throw ToolPackageError.unsupportedContract }
       candidate = try JSONDecoder().decode(Index.self, from: data)
       try validate(candidate)
       index = candidate
-      snapshot = resolve(candidate)
+      snapshot = await resolve(candidate)
       trusted = true
       if !recoveryHeld,
         !snapshot.candidates.contains(where: { $0.origin == .installed && $0.validation != .valid }
@@ -163,16 +206,17 @@ public actor ToolPackageRegistry {
     }
   }
 
-  public func install(from directory: URL) throws -> ToolRegistrySnapshot {
-    try save(ToolPackage.load(from: directory))
+  public func install(from directory: URL) async throws -> ToolRegistrySnapshot {
+    try await save(ToolPackage.load(from: directory))
   }
 
-  public func save(
+  private func saveLocked(
     _ package: ToolPackage, enabled: Bool? = nil, replacingVersion: Int? = nil,
     requireAbsent: Bool = false
-  ) throws -> ToolRegistrySnapshot {
-    if !loaded { try reload() }
-    try ToolRuntime.validate(package)
+  ) async throws -> ToolRegistrySnapshot {
+    try package.validate()
+    try await validator.validatePackage(package)
+    if !loaded { try await reloadLocked() }
     let id = package.manifest.id
     if requireAbsent, index.installed[id] != nil { throw ToolPackageError.conflict }
     if let replacingVersion,
@@ -218,7 +262,7 @@ public actor ToolPackageRegistry {
     try storage.sync(folder)
     try inject(.verification)
     let verified = try ToolPackage.load(from: installedDirectory.appendingPathComponent(staging))
-    try ToolRuntime.validate(verified)
+    try verified.validate()
     guard verified == package else { throw ToolPackageError.invalidManifest }
     try inject(.generationRename)
     try storage.rename(staging, to: generation, parent: parent)
@@ -232,34 +276,34 @@ public actor ToolPackageRegistry {
     next.installed[id] = InstalledGenerations(
       current: generation, previous: Array(history.prefix(5)))
     if let enabled { if enabled { next.disabled.remove(id) } else { next.disabled.insert(id) } }
-    try commit(next)
+    try await commit(next)
     return snapshot
   }
 
-  public func setEnabled(id: String, enabled: Bool) throws -> ToolRegistrySnapshot {
-    if !loaded { try reload() }
+  private func setEnabledLocked(id: String, enabled: Bool) async throws -> ToolRegistrySnapshot {
+    if !loaded { try await reloadLocked() }
     guard snapshot.packages.contains(where: { $0.id == id }) else {
       throw ToolPackageError.unavailable
     }
     var next = index
     if enabled { next.disabled.remove(id) } else { next.disabled.insert(id) }
-    try commit(next)
+    try await commit(next)
     return snapshot
   }
 
-  public func remove(id: String) throws -> ToolRegistrySnapshot {
-    if !loaded { try reload() }
+  private func removeLocked(id: String) async throws -> ToolRegistrySnapshot {
+    if !loaded { try await reloadLocked() }
     guard index.installed[id] != nil else { throw ToolPackageError.unavailable }
     var next = index
     next.installed.removeValue(forKey: id)
     next.disabled.remove(id)
-    try commit(next)
+    try await commit(next)
     return snapshot
   }
 
-  public func restore(id: String) throws -> ToolRegistrySnapshot { try remove(id: id) }
+  public func restore(id: String) async throws -> ToolRegistrySnapshot { try await remove(id: id) }
 
-  private func commit(_ next: Index) throws {
+  private func commit(_ next: Index) async throws {
     try validate(next)
     let parent = try storage.directory()
     defer { close(parent) }
@@ -292,7 +336,7 @@ public actor ToolPackageRegistry {
       try storage.sync(parent)
       try inject(.memoryPublication)
       index = next
-      snapshot = resolve(next)
+      snapshot = await resolve(next)
       trusted = true
     } catch {
       if replaced {
@@ -303,7 +347,7 @@ public actor ToolPackageRegistry {
           (try? validate(visible)) != nil
         {
           index = visible
-          snapshot = resolve(visible)
+          snapshot = await resolve(visible)
         }
         addRecoveryDiagnostic()
         loaded = true
@@ -370,7 +414,7 @@ public actor ToolPackageRegistry {
     snapshot.diagnostics = Array(snapshot.diagnostics.prefix(100))
   }
 
-  private func resolve(_ index: Index) -> ToolRegistrySnapshot {
+  private func resolve(_ index: Index) async -> ToolRegistrySnapshot {
     var result = ToolRegistrySnapshot()
     var candidates: [ResolutionCandidate] = []
     var bundles: [String: [Int]] = [:]
@@ -401,7 +445,8 @@ public actor ToolPackageRegistry {
     for url in urls.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }).prefix(1000) {
       do {
         let package = try ToolPackage.load(from: url)
-        try ToolRuntime.validate(package)
+        try package.validate()
+        try await validator.validatePackage(package)
         let candidate = ResolutionCandidate(
           inspection: .init(
             packageID: package.manifest.id, origin: .bundled,
@@ -449,7 +494,8 @@ public actor ToolPackageRegistry {
         let package = try ToolPackage.load(
           from: installedDirectory.appendingPathComponent(generation))
         guard package.manifest.id == id else { throw ToolPackageError.invalidManifest }
-        try ToolRuntime.validate(package)
+        try package.validate()
+        try await validator.validatePackage(package)
         let candidate = ResolutionCandidate(
           inspection: .init(
             packageID: id, origin: .installed,

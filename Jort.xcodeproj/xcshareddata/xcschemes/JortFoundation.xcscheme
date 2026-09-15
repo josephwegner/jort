@@ -92,6 +92,28 @@
                ReferencedContainer = "container:Jort.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DA498A2F774A2F97F713D864"
+               BuildableName = "JortToolContractsTests.xctest"
+               BlueprintName = "JortToolContractsTests"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F9D6C7E3E754E4D1741A4577"
+               BuildableName = "JortToolRuntimeTests.xctest"
+               BlueprintName = "JortToolRuntimeTests"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

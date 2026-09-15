@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 import CryptoKit
 
@@ -38,10 +39,6 @@ public struct ToolAnchoredRange: Codable, Equatable, Sendable {
     }
     return NSRange(location: a, length: b - a)
   }
-}
-
-public enum ToolInvocationPhase: String, Codable, Sendable {
-  case inputting, submitted, processing, error, pending
 }
 
 public struct ToolInvocationRestoration: Codable, Equatable, Sendable {

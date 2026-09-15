@@ -1,3 +1,4 @@
+import JortToolContracts
 import AppKit
 import JortDocument
 import JortSettings
@@ -5,26 +6,22 @@ import JortSettings
 @MainActor final class ToolInvocationController {
   weak var editor: EditorViewController?
   var packages: [ToolPackage] = []
-  var activeID: UUID?
-  var prompts: [UUID: String] = [:]
-  private(set) var warnings: [UUID: String] = [:]
-  var dispatcher = ToolExecutorDispatcher()
+  var coordinator: any ToolInvocationCoordinating = UnavailableInvocationCoordinator()
   var executionInputFactory: (String) -> ToolExecutionInput = { ToolExecutionInput(content: $0) }
-  private var warningContent: [UUID: String] = [:]
-  private var jobs: [UUID: Task<Void, Never>] = [:]
+  private var knownIDs = Set<UUID>()
   init(editor: EditorViewController) { self.editor = editor }
   func documentChanged() {
     guard let editor else { return }
     let ids = Set(editor.state.invocations.map(\.id))
-    for id in Array(jobs.keys) where !ids.contains(id) { jobs.removeValue(forKey: id)?.cancel() }
-    for id in Array(prompts.keys) where !ids.contains(id) { prompts.removeValue(forKey: id) }
-    for id in Array(warnings.keys) {
-      guard let invocation = editor.state.invocations.first(where: { $0.id == id }),
-        invocation.phase == .inputting, content(invocation) == warningContent[id]
-      else {
-        clearWarning(id)
-        continue
-      }
+    for id in knownIDs where !ids.contains(id) {
+      coordinator.remove(id)
+      coordinator.transient.remove(id)
+    }
+    knownIDs = ids
+    for invocation in editor.state.invocations {
+      coordinator.transient.reconcile(
+        invocation.id, inputting: invocation.phase == .inputting,
+        content: content(invocation))
     }
   }
 
@@ -38,36 +35,17 @@ import JortSettings
         cancel(current.id)
         continue
       }
-      if jobs[current.id] != nil, [.submitted, .processing].contains(current.phase) { continue }
-      if let package = packages.first(where: { $0.manifest.id == current.packageID }),
-        package.manifest.entryContract == current.entryContract,
-        package.manifest.executorType.rawValue == (current.executor ?? "javascript"),
-        package.manifest.inputMode.rawValue == current.inputMode,
-        package.manifest.outputOperation.rawValue == current.outputOperation,
-        package.manifest.version == current.packageVersion
-          || package.manifest.compatibleVersions?.contains(current.packageVersion) == true
+      let candidate = packages.first(where: { $0.manifest.id == current.packageID })?.manifest
+      try? perform(
+        .reconcile(
+          current.packageReference, candidate: candidate,
+          hasLiveJob: coordinator.hasJob(current.id)), id: current.id)
+      if current.inputMode.hasPrefix("ephemeral"), current.phase == .inputting,
+        prompt(for: current.id) == nil
       {
-        var mapped = current
-        mapped.packageVersion = package.manifest.version
-        if [.submitted, .processing].contains(mapped.phase), jobs[mapped.id] == nil {
-          mapped.phase = .error
-          mapped.message = "Execution was interrupted."
-        }
-        if mapped.inputMode.hasPrefix("ephemeral"), mapped.phase == .inputting,
-          prompts[mapped.id] == nil
-        {
-          prompts[mapped.id] = ""
-        }
-        if mapped != current { try? update(mapped) }
-      } else if current.phase == .pending {
-        // Preserve completed output and contextual source, independently of the old merge policy.
-        var completed = current
-        completed.outputOperation = "replace-invocation"
-        try? update(completed)
-        try? merge(completed.id)
-      } else {
-        cancel(current.id)
+        setPrompt("", for: current.id)
       }
+
     }
   }
 
@@ -82,207 +60,124 @@ import JortSettings
   }
 
   func accept(_ package: ToolPackage, token range: NSRange, space: Bool) throws {
-    guard let editor else { return }
-    let before = editor.state
-    guard packages.contains(package), before.invocations.count < 1000 else { return }
-    guard
-      !before.invocations.contains(where: {
-        guard let scope = $0.scope.resolve(in: before.lines) else { return true }
-        return NSIntersectionRange(scope, range).length > 0
-      })
-    else { return }
-    let manifest = package.manifest
-    let command = manifest.command
-    let replacement = command + (space ? " " : "")
-    let plain = try replacing(before, range: range, with: replacement)
-    var annotations = ToolRangeEditing.remap(
-      before.invocations, from: before, to: plain, edit: range,
-      replacementLength: replacement.utf16.count)
-    let tokenRange = NSRange(location: range.location, length: command.utf16.count)
-    var scopeRange = NSRange(
-      location: range.location,
-      length: manifest.inputMode.isEphemeral ? command.utf16.count : replacement.utf16.count)
-    if manifest.inputMode == .contextual {
-      scopeRange = (plain.text as NSString).lineRange(for: tokenRange)
-      while scopeRange.length > 0
-        && [10, 13].contains((plain.text as NSString).character(at: NSMaxRange(scopeRange) - 1))
-      { scopeRange.length -= 1 }
-      for other in annotations {
-        guard let scope = occupied(other, in: plain) else { continue }
-        if NSMaxRange(scope) <= tokenRange.location && NSMaxRange(scope) > scopeRange.location {
-          scopeRange.length -= NSMaxRange(scope) - scopeRange.location
-          scopeRange.location = NSMaxRange(scope)
-        } else if scope.location >= NSMaxRange(tokenRange)
-          && scope.location < NSMaxRange(scopeRange)
-        {
-          scopeRange.length = scope.location - scopeRange.location
-        }
+    guard let editor, packages.contains(package) else { return }
+    let identity = InvocationGeneration(invocationID: UUID(), generation: UUID())
+    var lifecycle = InvocationLifecycleState(identity: identity, phase: .inputting)
+    for case .document(let effect) in lifecycle.reduce(.accept) {
+      guard
+        let plan = try ToolDocumentEffects.accept(
+          effect, package: package,
+          token: range, space: space, in: editor.state)
+      else { return }
+      do {
+        try apply(plan)
+        _ = lifecycle.reduce(.acknowledge(effect, accepted: true))
+      } catch {
+        _ = lifecycle.reduce(.acknowledge(effect, accepted: false))
+        throw error
       }
     }
-    var invocation = ToolInvocation(
-      packageID: manifest.id, packageVersion: manifest.version,
-      entryContract: manifest.entryContract, inputMode: manifest.inputMode.rawValue,
-      outputOperation: manifest.outputOperation.rawValue, command: command,
-      token: try .init(tokenRange, lines: plain.lines),
-      scope: try .init(scopeRange, lines: plain.lines),
-      sourceHash: ToolInvocation.hash((plain.text as NSString).substring(with: scopeRange)))
-    invocation.executor = manifest.executorType.rawValue
-    annotations.append(invocation)
-    try commit(
-      plain, edit: range, replacementLength: replacement.utf16.count, invocations: annotations)
     editor.textView.setSelectedRange(
-      NSRange(location: range.location + replacement.utf16.count, length: 0))
-    activeID = invocation.id
-    if manifest.inputMode.isEphemeral { prompts[invocation.id] = "" }
+      NSRange(
+        location: range.location + package.manifest.command.utf16.count + (space ? 1 : 0), length: 0
+      ))
+    if package.manifest.inputMode.isEphemeral { setPrompt("", for: identity.invocationID) }
     editor.refreshToolPresentation()
   }
 
   func content(_ invocation: ToolInvocation) -> String? {
-    guard let editor, let scope = invocation.scope.resolve(in: editor.state.lines),
-      let token = invocation.token.resolve(in: editor.state.lines)
-    else { return nil }
-    func submitted(_ content: String) -> String {
-      content.unicodeScalars.first?.value == 0x20
-        ? String(content.unicodeScalars.dropFirst()) : content
-    }
-    if invocation.inputMode.hasPrefix("ephemeral") { return prompts[invocation.id].map(submitted) }
-    let text = editor.state.text as NSString
-    if invocation.inputMode == "contextual" {
-      return submitted(
-        (text.substring(with: scope) as NSString).replacingCharacters(
-          in: NSRange(location: token.location - scope.location, length: token.length), with: ""))
-    }
-    return submitted(
-      text.substring(
-        with: NSRange(location: NSMaxRange(token), length: NSMaxRange(scope) - NSMaxRange(token))))
+    guard let editor else { return nil }
+    return invocation.capturedContent(in: editor.state, prompt: prompt(for: invocation.id))
   }
 
   func submit(_ id: UUID) {
-    guard let editor, var invocation = editor.state.invocations.first(where: { $0.id == id }),
+    guard let editor, let invocation = editor.state.invocations.first(where: { $0.id == id }),
       invocation.phase == .inputting,
       let package = packages.first(where: { $0.manifest.id == invocation.packageID }),
       let content = content(invocation)
     else { return }
     clearWarning(id)
-    guard content.utf8.count <= package.manifest.maximumInputBytes,
-      invocation.inputMode != "contextual" || !content.isEmpty
-    else {
-      setWarning("Enter content within the tool’s input limit.", content: content, for: id)
+    let identity = InvocationGeneration(invocationID: id, generation: UUID())
+    coordinator.submit(
+      identity: identity, package: package, input: executionInputFactory(content),
+      apply: { [weak self] effect in
+        guard let self, let editor = self.editor,
+          var current = editor.state.invocations.first(where: { $0.id == id })
+        else { return false }
+        do {
+          switch effect.operation {
+          case .submit:
+            guard current.phase == .inputting, current.generation == invocation.generation,
+              current.sourceHash == invocation.sourceHash,
+              self.content(current) == content
+            else { return false }
+            current.packageVersion = package.manifest.version
+            current.executor = package.manifest.executorType.rawValue
+            let selection = try? ToolAnchoredRange(
+              editor.textView.selectedRange(), lines: editor.state.lines)
+            let viewport = editor.linePresentation.viewportAnchor()
+            current.restoration = ToolInvocationRestoration(
+              invocation: current, selection: selection, viewportLineID: viewport?.0,
+              viewportOffset: viewport.map { Double($0.1) })
+            let plan = try ToolDocumentEffects.prepare(
+              effect, in: editor.state,
+              expected: editor.state.invocations.first(where: { $0.id == id })!, submission: current
+            )
+            try self.apply(plan)
+          default:
+            let plan = try ToolDocumentEffects.prepare(effect, in: editor.state, expected: current)
+            try self.apply(plan)
+          }
+          return true
+        } catch { return false }
+      },
+      warning: { [weak self] warning in
+        guard let self, let current = self.editor?.state.invocations.first(where: { $0.id == id }),
+          current.phase == .inputting, current.generation == invocation.generation,
+          current.sourceHash == invocation.sourceHash,
+          self.content(current) == content
+        else { return }
+        self.setWarning(warning, content: content, for: id)
+      })
+  }
+
+  private func apply(_ plan: ToolDocumentPlan) throws {
+    guard let editor else { throw DocumentError.invalidState }
+    try editor.apply(plan.transaction)
+    if let undo = plan.undoSnapshot {
+      editor.registerToolUndo(undo, restoration: plan.restoration)
+    } else if let restoration = plan.restoration {
+      editor.restoreToolPresentation(restoration)
+    }
+    editor.refreshToolPresentation()
+  }
+
+  private func perform(_ action: InvocationLifecycleState.Action, id: UUID) throws {
+    guard let editor, let invocation = editor.state.invocations.first(where: { $0.id == id }) else {
       return
     }
-    guard jobs[id] == nil else { return }
-    let sourceHash = invocation.sourceHash
-    let captured = executionInputFactory(content)
-    jobs[id] = Task { [weak self] in
-      let validation =
-        await self?.dispatcher.validate(package, input: captured)
-        ?? ToolExecutionResult(error: "Cancelled.")
-      guard let self, !Task.isCancelled else { return }
-      self.jobs.removeValue(forKey: id)
-      guard var current = self.editor?.state.invocations.first(where: { $0.id == id }),
-        current.phase == .inputting, current.sourceHash == sourceHash,
-        self.content(current) == content
-      else { return }
-      if let error = validation.error {
-        self.setWarning(error, content: content, for: id)
-      } else {
-        self.start(current, package: package, input: captured)
+    var lifecycle = invocation.lifecycle
+    for effect in lifecycle.reduce(action) {
+      switch effect {
+      case .document(let effect):
+        do {
+          try apply(ToolDocumentEffects.prepare(effect, in: editor.state, expected: invocation))
+          _ = lifecycle.reduce(.acknowledge(effect, accepted: true))
+        } catch {
+          _ = lifecycle.reduce(.acknowledge(effect, accepted: false))
+          throw error
+        }
+      case .cancel: coordinator.remove(id)
+      default: break
       }
     }
-  }
-
-  private func start(_ value: ToolInvocation, package: ToolPackage, input: ToolExecutionInput) {
-    guard let editor else { return }
-    var invocation = value
-    invocation.packageVersion = package.manifest.version
-    invocation.executor = package.manifest.executorType.rawValue
-    let id = invocation.id
-    let selection = try? ToolAnchoredRange(
-      editor.textView.selectedRange(), lines: editor.state.lines)
-    let viewport = editor.linePresentation.viewportAnchor()
-    invocation.restoration = ToolInvocationRestoration(
-      invocation: invocation, selection: selection,
-      viewportLineID: viewport?.0, viewportOffset: viewport.map { Double($0.1) })
-    invocation.phase = .submitted
-    invocation.generation = UUID()
-    invocation.message = nil
-    let generation = invocation.generation
-    do { try update(invocation) } catch { return }
-    jobs[id] = Task { [weak self] in
-      let indicator = Task { @MainActor [weak self] in
-        try? await Task.sleep(for: .seconds(1))
-        guard !Task.isCancelled, let self, var current = self.current(id, generation),
-          current.phase == .submitted
-        else { return }
-        current.phase = .processing
-        try? self.update(current)
-      }
-      let result =
-        await self?.dispatcher.execute(package, input: input)
-        ?? ToolExecutionResult(error: "Cancelled.")
-      indicator.cancel()
-      guard let self, !Task.isCancelled, var current = self.current(id, generation),
-        [.submitted, .processing].contains(current.phase)
-      else { return }
-      self.jobs.removeValue(forKey: id)
-      if let error = result.error {
-        current.phase = .error
-        current.message = error
-        try? self.update(current)
-      } else {
-        try? self.publish(current, output: result.output ?? "")
-      }
-    }
-  }
-
-  private func current(_ id: UUID, _ generation: UUID) -> ToolInvocation? {
-    editor?.state.invocations.first { $0.id == id && $0.generation == generation }
-  }
-
-  private func publish(_ invocation: ToolInvocation, output: String) throws {
-    guard let editor, invocation.validated(in: editor.state),
-      let token = invocation.token.resolve(in: editor.state.lines),
-      let scope = invocation.scope.resolve(in: editor.state.lines)
-    else { throw DocumentError.invalidState }
-    let before = editor.state
-    let offset = invocation.inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token)
-    let edit = NSRange(location: offset, length: 0)
-    let plain = try replacing(before, range: edit, with: output)
-    var annotations = ToolRangeEditing.remap(
-      before.invocations.filter { $0.id != invocation.id }, from: before, to: plain, edit: edit,
-      replacementLength: output.utf16.count)
-    var pending = invocation
-    pending.phase = .pending
-    pending.token = try .init(token, lines: plain.lines)
-    pending.scope = try .init(
-      NSRange(
-        location: scope.location,
-        length: scope.length + (invocation.inputMode == "contextual" ? output.utf16.count : 0)),
-      lines: plain.lines)
-    pending.output = try .init(
-      NSRange(location: offset, length: output.utf16.count), lines: plain.lines)
-    pending.outputHash = ToolInvocation.hash(output)
-    annotations.append(pending)
-    // Publication's inverse is the editable pre-submit invocation, not a dead job.
-    var inputting = restored(invocation)
-    let undo = DocumentSnapshot(
-      documentID: before.documentID, text: before.text, revision: before.revision,
-      lines: before.lines, landmarks: before.landmarks,
-      invocations: before.invocations.map { $0.id == invocation.id ? inputting : $0 })
-    try commit(
-      plain, edit: edit, replacementLength: output.utf16.count, invocations: annotations,
-      undo: .none)
-    editor.registerToolUndo(undo, restoration: invocation.restoration)
   }
 
   func cancel(_ id: UUID) {
-    jobs.removeValue(forKey: id)?.cancel()
-    prompts.removeValue(forKey: id)
+    coordinator.remove(id)
+    setPrompt(nil, for: id)
     clearWarning(id)
-    guard let editor else { return }
-    try? commit(
-      editor.state, edit: nil, replacementLength: nil,
-      invocations: editor.state.invocations.filter { $0.id != id })
+    try? perform(.detach, id: id)
   }
 
   /// Deletes only the requested characters and drops the whole affected pending
@@ -302,63 +197,13 @@ import JortSettings
   }
 
   func dismiss(_ id: UUID) throws {
-    guard let editor, var invocation = editor.state.invocations.first(where: { $0.id == id }) else {
-      return
-    }
-    if invocation.phase == .inputting {
-      cancel(id)
-      return
-    }
-    let restoration = invocation.restoration
-    let before = editor.state
-    if let output = invocation.output?.resolve(in: before.lines) {
-      let plain = try replacing(before, range: output, with: "")
-      guard let token = invocation.token.resolve(in: before.lines),
-        let scope = invocation.scope.resolve(in: before.lines)
-      else { return }
-      invocation.token = try .init(token, lines: plain.lines)
-      invocation.scope = try .init(
-        NSRange(
-          location: scope.location,
-          length: scope.length - (invocation.inputMode == "contextual" ? output.length : 0)),
-        lines: plain.lines)
-      invocation = restored(invocation, token: invocation.token, scope: invocation.scope)
-      var values = ToolRangeEditing.remap(
-        before.invocations.filter { $0.id != id }, from: before, to: plain, edit: output,
-        replacementLength: 0)
-      values.append(invocation)
-      try commit(plain, edit: output, replacementLength: 0, invocations: values)
-    } else {
-      invocation = restored(invocation)
-      try update(invocation)
-    }
+    try perform(.dismiss, id: id)
     clearWarning(id)
-    editor.restoreToolPresentation(restoration)
   }
 
   func merge(_ id: UUID) throws {
-    guard let editor, let invocation = editor.state.invocations.first(where: { $0.id == id }),
-      invocation.phase == .pending,
-      let output = invocation.output?.resolve(in: editor.state.lines),
-      let token = invocation.token.resolve(in: editor.state.lines),
-      let scope = invocation.scope.resolve(in: editor.state.lines)
-    else { return }
-    let before = editor.state
-    let range: NSRange, replacement: String
-    if invocation.outputOperation == "replace-context" {
-      range = scope
-      replacement = (before.text as NSString).substring(with: output)
-    } else {
-      range = invocation.inputMode == "contained" ? scope : token
-      replacement = ""
-    }
-    let plain = try replacing(before, range: range, with: replacement)
-    let annotations = ToolRangeEditing.remap(
-      before.invocations.filter { $0.id != id }, from: before, to: plain, edit: range,
-      replacementLength: replacement.utf16.count)
-    try commit(
-      plain, edit: range, replacementLength: replacement.utf16.count, invocations: annotations)
-    prompts.removeValue(forKey: id)
+    try perform(.merge, id: id)
+    setPrompt(nil, for: id)
   }
 
   func moveBoundary(_ id: UUID, start: Bool, to requested: Int) throws {
@@ -401,32 +246,15 @@ import JortSettings
       invocations: editor.state.invocations.map { $0.id == invocation.id ? invocation : $0 },
       undo: .none)
   }
-  func warning(for id: UUID) -> String? { warnings[id] }
+  func prompt(for id: UUID) -> String? { coordinator.transient.prompt(for: id) }
+  func setPrompt(_ text: String?, for id: UUID) { coordinator.transient.setPrompt(text, for: id) }
+  func warning(for id: UUID) -> String? { coordinator.transient.warning(for: id) }
   private func setWarning(_ warning: String, content: String, for id: UUID) {
-    warnings[id] = warning
-    warningContent[id] = content
+    coordinator.transient.setWarning(warning, content: content, for: id)
     editor?.refreshToolPresentation()
   }
   private func clearWarning(_ id: UUID) {
-    warnings.removeValue(forKey: id)
-    warningContent.removeValue(forKey: id)
-  }
-  private func restored(
-    _ invocation: ToolInvocation, token: ToolAnchoredRange? = nil,
-    scope: ToolAnchoredRange? = nil
-  ) -> ToolInvocation {
-    guard let restoration = invocation.restoration else {
-      var value = invocation
-      value.phase = .inputting
-      value.message = nil
-      value.output = nil
-      value.outputHash = nil
-      return value
-    }
-    var value = restoration.invocation(id: invocation.id)
-    value.token = token ?? restoration.token
-    value.scope = scope ?? restoration.scope
-    return value
+    coordinator.transient.setWarning(nil, content: nil, for: id)
   }
   private func replacing(_ snapshot: DocumentSnapshot, range: NSRange, with text: String) throws
     -> DocumentSnapshot

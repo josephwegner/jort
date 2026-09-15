@@ -7,33 +7,41 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		007987721E9DC348256E3E06 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		00DF8CF4B9867B9164CCE99C /* quickjs-atom.h in Headers */ = {isa = PBXBuildFile; fileRef = FDFBEC650856CCBC9A17EB4B /* quickjs-atom.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		01BF871E54FD37F0704A5882 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
+		03463D18696D9274609B3306 /* ModelCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC8335D3047ECDA83D5400D6 /* ModelCredentials.swift */; };
 		037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF8341534A77B39BFA2904E /* PerformanceTests.swift */; };
 		04DFE6B5D74DD7D82466B457 /* HistoryWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */; };
+		070D3989A0D3CBC220564869 /* ToolExecution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C856D6CE50FFC9A1F3F8FB /* ToolExecution.swift */; };
 		0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACEB5981A7D1291606F22F4 /* EditorTests.swift */; };
+		0C314F158147AB6B69DDAC5D /* ToolModelIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79EFEA337F5FD223D6F30419 /* ToolModelIntegrationTests.swift */; };
+		0DF5333382446AA5347C77A0 /* FakeModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */; };
+		0ED27379C59E37FD345796D7 /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
 		105252729BE95E5A1F10E17D /* Transactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B872610ED836A61E96ED8DA /* Transactions.swift */; };
 		10958F2E0818D271D9BA9229 /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		10C248870C4B604A068C3CD6 /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD024A9EEA12F030339D9451 /* SettingsModels.swift */; };
 		12545FCDDE669EA9FAB9629A /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */; };
 		12581E91DCF1F45FDDE8C168 /* JortJavaScript.c in Sources */ = {isa = PBXBuildFile; fileRef = 3BCF6DF374DEC19C364B724A /* JortJavaScript.c */; };
-		162B7D8D703461B40093BA4B /* ToolPackageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEDCFFC4585E3B5EDB08396 /* ToolPackageTests.swift */; };
+		15A3DCE18F9D356AA1B222FF /* ToolInvocationTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBBF842F60CECB9FD3E61D9 /* ToolInvocationTestCase.swift */; };
+		1A736DE2BCB6C8C5DD70E169 /* FakeModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */; };
 		1D1A9E90F304A9C8687B5B34 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
 		240CD90C57FF86496999F525 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		2831200E41E8F68BDC00FBB8 /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		29DA7EEA031FFA85EC502AB4 /* quickjs.h in Headers */ = {isa = PBXBuildFile; fileRef = 7FC3251F01489CDDAC49D2B1 /* quickjs.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		2C5D3C73A13EF7224D8DC5BD /* ToolRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E615EC1B22CB60B16A51FC /* ToolRuntime.swift */; };
-		2D9F42630024CEC5750FDD54 /* ToolRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78C0652A0B04A681CEF114E4 /* ToolRuntimeTests.swift */; };
+		2C112D69F9DB3923BDD9E1CA /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2E3E2A12FB7E0DAE13A04A9A /* SQLiteHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0D62A6EE87AF55951103E0 /* SQLiteHistory.swift */; };
+		2E47DEDE2F0980061D4F8FAD /* OpenRouterConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6105F42B72B3516B63AD9B9E /* OpenRouterConnection.swift */; };
 		2EBB12C3C60CC1901765106C /* HistoryRevision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6853014BEFCE356E061ADFE6 /* HistoryRevision.swift */; };
+		2F522E1FB8C86CB9DDF88CB4 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2FF7F79150A10933EDFDA5A0 /* v2.json in Resources */ = {isa = PBXBuildFile; fileRef = 160370B1CD4C448EA0BEF96F /* v2.json */; };
 		31A782CBBFEAE5E00915ADCF /* DocumentSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B02EBC133D052919F85BFB1A /* DocumentSearchModel.swift */; };
 		326DA487B403FA6E4B990AFA /* RecoveryCheckpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */; };
+		34D1807CFEBEC7FAAFF36CB1 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		3719E1FCB30A684B366E033B /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3A41109B6288C7BF2491D257 /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		3C8A2BE233BAAAAF4653F961 /* ToolInvocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 618D73AC50B5D97409ED08E3 /* ToolInvocationTests.swift */; };
+		3A90E17B187ABBF6F07E4A55 /* InvocationLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3E7A77FA34F99BB64C8D81 /* InvocationLifecycle.swift */; };
 		3F1D8773EB88BF5E84AE1EC0 /* HistoryRetention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EA408834ABD32E691793CF /* HistoryRetention.swift */; };
-		3F2DBE45C848ED97F138F393 /* ModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAE644632A85A82F11F2C76 /* ModelProvider.swift */; };
 		401338A92E9A783E573AF6FC /* ToolPackageStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */; };
 		4168D9833F7B605F92C1F9D9 /* ToolInvocationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D83AEEDFD45147CFE6AE4AD2 /* ToolInvocationController.swift */; };
 		41A7004AF59FCD863A26B003 /* SettingsWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D344138FB05A5EA019B7C8B7 /* SettingsWorkspaceTests.swift */; };
@@ -41,33 +49,50 @@
 		43F5B75595385C4D02CC4CF8 /* ToolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3C635626F2EA72B23EDA46 /* ToolCatalog.swift */; };
 		44A382E1159D0FD45E33BA6E /* CommandPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */; };
 		4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECC95805D3B99275307225B /* EditorViewController.swift */; };
+		4691B3AA6E12FA7E4E6A3DE6 /* ToolExecutorDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 237A9DA54FC18BE76B8D119F /* ToolExecutorDispatcher.swift */; };
+		479B4F593604AFEDAE57E528 /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
+		48911BE844E93D8F17BD98FA /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		493C119A6FE22D0E2EEA75CE /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
+		496247B7A8D3632656BE8C43 /* ModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2819C2AD2B9853EA43F79B3 /* ModelProvider.swift */; };
 		49DF326928DE0CAC23C1597D /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
 		4A302A132D3AE8D024C2A23E /* ToolTemplates.json in Resources */ = {isa = PBXBuildFile; fileRef = 1E13D309AB98C025B767AFD0 /* ToolTemplates.json */; };
 		4B8B663D3C060E790F4FE4A7 /* EmojiPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49680FE93D310BAFEC1043AE /* EmojiPicker.swift */; };
-		4D7C8038808BF93FC2AF5C2C /* ModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688047053CE01A3E5DD915E0 /* ModelCatalog.swift */; };
+		4C309059AE341BA97E7C4807 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
+		4ED4BD8F15370F11E2B1A0FD /* ToolPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C53C2C4801693C876B0305A /* ToolPackage.swift */; };
 		51DC3EFCC8EF3DCE28AED453 /* StartupLoadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */; };
 		54AAB0DA891C19A2851C2773 /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
 		568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */; };
+		582DEF48013D0CAE12A81B5D /* ToolInvocationInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A12D3369FE17046B45C5B0 /* ToolInvocationInput.swift */; };
+		590F42E5FF20AF24622B1141 /* ToolRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A5D3D13F745C39022D7F443 /* ToolRuntime.swift */; };
 		593A3CA36C8F99C7B958A13D /* DocumentSearchWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEAD877F9100ECB9E95895A /* DocumentSearchWorkspaceTests.swift */; };
 		5A19D68DEBB0E7B34ABDE688 /* ToolPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D1D80CC0A9BC989917816B /* ToolPackage.swift */; };
 		5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D58BDC7B59E9928134887E3 /* StoreLock.swift */; };
+		5E3DFA1D635EF60B2101A9F9 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5E7D11CF8C1CC0BDA47DF41B /* HistoryBrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9CBCC80A19ACDDBA76BDD0 /* HistoryBrowserModel.swift */; };
+		5F8B550C89C09C1EB9FAD149 /* StartupLoadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */; };
 		600C6F8A46EB2273FEBBE5C4 /* ToolInvocationPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB5415DF73F241C4E9ACF6F /* ToolInvocationPresentation.swift */; };
-		614CE753F800118921A5A3BC /* OpenRouterTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C14EB55316C3BDE971FC462D /* OpenRouterTransport.swift */; };
+		60F8DEC8B89DE852B7BF7040 /* ToolDocumentEffectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042AA99745D4CB41FEC2531D /* ToolDocumentEffectTests.swift */; };
 		61512E5B507194325AF3374C /* dtoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 9CAC6653C4C60493EC41193C /* dtoa.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		618D1863F81534FFAC3D7F41 /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		650D164E9E271701141E1740 /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
+		65347537D8DEA2A549C84F4F /* ToolInputNormalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = C92B0A8E0CD47781F5D63DB5 /* ToolInputNormalization.swift */; };
 		6B61C12EF1097CD68EA35E5E /* jort-white.svg in Resources */ = {isa = PBXBuildFile; fileRef = 07D77C5D4902A6B038E693AC /* jort-white.svg */; };
 		6BE23B46B8F346EF7C58868D /* DocumentSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D87A80477F84AD407D8C4E18 /* DocumentSearchController.swift */; };
+		6E6F7D4E49C6527B543C455F /* ModelConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 884842D60EAFA66DAFF38C22 /* ModelConnection.swift */; };
 		6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		6F42CFC6EC6300DC49528707 /* quickjs.c in Sources */ = {isa = PBXBuildFile; fileRef = 164CE786366A1FEF95DB8755 /* quickjs.c */; };
 		70ED579722395600CB09E683 /* quickjs-opcode.h in Headers */ = {isa = PBXBuildFile; fileRef = C5CD91B362E719B8498965D1 /* quickjs-opcode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		720BBF309E537664299F17BD /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
+		72B7EF35C41BF2CF8696D605 /* SuspendedPackageValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */; };
 		738EFFEA93B139D4C2EB00BD /* RunPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FBF44A835C49844B6902A16 /* RunPerformanceTests.swift */; };
+		75B055F69312102767399FD4 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7630238FB57057423175113F /* v1.json in Resources */ = {isa = PBXBuildFile; fileRef = 857FDC8BC95B6835BA5D1921 /* v1.json */; };
 		77046616EF102B2392944226 /* JortJavaScript.h in Headers */ = {isa = PBXBuildFile; fileRef = 5E6574876DDE4AA7D758D186 /* JortJavaScript.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		77DF2F99A367159528FAF8FE /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		79B717601414FF7180172417 /* EditorShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3468DC421F7F54BE19537C /* EditorShell.swift */; };
+		7A10F7FF937F94C7450D06FC /* ToolInvocationIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0DD430C698A8277F6F8831A /* ToolInvocationIntegrationTests.swift */; };
 		7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD9032EA20B653B9CE85D00 /* JortApp.swift */; };
+		7C3BE10E55FCABBCBEBCA596 /* InvocationLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDA4E0988A64BCA45C6ADB6 /* InvocationLifecycleTests.swift */; };
 		7DD2F3C8570956D480E4EF97 /* libunicode.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D7EEB582CB228242A99A3 /* libunicode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7E9EC478181E19848A20CBBA /* emoji.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E4A736D729EC93F968914D1 /* emoji.json */; };
 		80329B39F2612A04DE273338 /* libunicode.c in Sources */ = {isa = PBXBuildFile; fileRef = C680C97D91E66688DAD477B2 /* libunicode.c */; };
@@ -76,79 +101,120 @@
 		818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9136C288B97547D76167A45 /* DocumentState.swift */; };
 		819E6BD9E4AFFEB2591D5934 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		81AD1C4092CEA2C6CC14DA10 /* ToolPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AE5B524A0A913C5257E842 /* ToolPersistenceTests.swift */; };
+		82FAAE0066A1867C7D6831CD /* StoreTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */; };
 		8316CC5DCDA7F882F313D229 /* ToolPackageRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382B6626673D4E9ECF7208D3 /* ToolPackageRegistry.swift */; };
 		8347474761FD76586ADA88DC /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E614086D89E52EFCC7DCED6 /* StorageTests.swift */; };
+		839AC7409371180BD7B595D8 /* ModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5F5090623D89007397B2267 /* ModelCatalog.swift */; };
+		84522182CD30EB1A9B34C484 /* SuspendedPackageValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */; };
 		858E73367BB4DF9FA2DE6B18 /* LockProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD742A9E09AD22E1174BECA /* LockProbe.swift */; };
+		85B3F88DA1B8AC6EBC24203F /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8669BB27B9A8D2366D67BDCF /* InjectedValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD7B1742A804E238FDF1641 /* InjectedValidatorTests.swift */; };
 		8C24806BE06A07370A75143A /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8D05C49A54E62BC172167A02 /* ToolsSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 158C8BBB3F18BEE1BF1400F0 /* ToolsSettingsViewController.swift */; };
 		8DA06960B038D886D27EA322 /* libregexp-opcode.h in Headers */ = {isa = PBXBuildFile; fileRef = B55D1016B0D99A8BC5313F63 /* libregexp-opcode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8DD3107BE20B4BF9D668006B /* SettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1937DA4FC494E2310FFBCD /* SettingsTests.swift */; };
-		8E9B25BFC1C4DF91913824DD /* OpenRouterConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AED8A6E5B7F2A9357D7AFE7F /* OpenRouterConnection.swift */; };
+		8DF7F64CEDE9869F7C59F7AE /* OpenRouterTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33127349987FC988BB882FD /* OpenRouterTransport.swift */; };
 		8F36CF2DD3DBB3F6CBF38AC3 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
-		8FF7BA762016CCC278A9BD47 /* ModelToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A65851399F52B743776466 /* ModelToolTests.swift */; };
 		907957EB590C7CEB4C166584 /* JavaScriptSourceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53AB05C7BD3940CEEC2EFF77 /* JavaScriptSourceEditor.swift */; };
 		90D2280F98544D2284B975DC /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
 		9433177CAA4E2B4B287BE93C /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 810CA298F20730E03D0223BD /* LICENSE */; };
 		94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7CAE479DACAAE1E87A1B412E /* AppIcon.icns */; };
 		94E49DD4CF0CE654613B2CB4 /* ModelCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037F170C9E7560F06B7DEE46 /* ModelCredentials.swift */; };
+		94F0BC3DA14064D9EC35D10D /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		95F48DB804596457D97BBEE5 /* JortJavaScript.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */; };
 		963EF4108F717821D8675420 /* DocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 890A3B619F758EFE88D70C05 /* DocumentTests.swift */; };
 		96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		972678B42FF182B84D43E6EB /* StartupEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDB01661C1ACC0EB29F1C177 /* StartupEditorTests.swift */; };
+		99C0E0B15DD6B97AC6EEC34D /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9BCDB5D2342D9139AB82E3EA /* JortJavaScript.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9D6F7A0C0EF1D8B350CE65CD /* ModelToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA59492C31450C9F988EA91 /* ModelToolTests.swift */; };
+		9DA384B6D7DE55EA2CF69E3B /* ToolRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F8BE73707D77A84B75F48B /* ToolRuntimeTests.swift */; };
 		9DA9A391B4C08CA58AAC9191 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8CF4DBF8442B91591C85C2 /* SettingsWindowController.swift */; };
 		9E38800E0A10A074F4B01726 /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
 		A020A276F50DFAC0CA7ACC27 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		A1F8D7ABEAC627BDB9EB4F29 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		A267BC6563E7029ECB191BCB /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
 		A29A3F99577135F6B2465AAC /* cutils.c in Sources */ = {isa = PBXBuildFile; fileRef = B570FEDC0F8FB06F0B196121 /* cutils.c */; };
 		A2EB2059DDC544FA7E124507 /* libregexp.h in Headers */ = {isa = PBXBuildFile; fileRef = 80ADA75890D91DBEC769FE5A /* libregexp.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		A86E69A0E7D85AA789CDBC93 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		ABB6E56F50FC5458516F5CC2 /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AC7063A1F953D56D1002F25C /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		ACDD4BF4E884A860D6DFA097 /* SuspendedPackageValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */; };
+		AD95D9F09C2E53FC289D544F /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
+		AE1C004D7833884FE17E495D /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
+		B02791609B7E9B5EF61C0C51 /* ToolDocumentEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D93F18718BF6E63A9D6C405 /* ToolDocumentEffects.swift */; };
+		B10D7DBC3666E9972E1F75A9 /* CoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8997BE6442E1F78BFCBA363D /* CoordinatorTests.swift */; };
 		B33473589644221C9014EDD8 /* ModelsSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C05CEC0BC29B3CD86F60A27 /* ModelsSettingsViewController.swift */; };
+		B48B832DFE25265465459231 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B695B5BD3B553B1747430083 /* LandmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72C38DD691618F20FA27AD87 /* LandmarkTests.swift */; };
 		B8F124A8831203C5633B1E2E /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BADD1BD1890D8951172F6F65 /* v2.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = 4EBD819547F38AB24B0FD19F /* v2.sqlite */; };
+		BEC567EB8881718ECEDCECB6 /* tool-manifest-pre-extraction.json in Resources */ = {isa = PBXBuildFile; fileRef = 4751705F98D5DB511669A430 /* tool-manifest-pre-extraction.json */; };
 		BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C11DE1F0CD37F3A010129E69 /* StoreTeardownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F815CC485603BE306454BA /* StoreTeardownTests.swift */; };
 		C1EC2CF63ACED57AB060F91F /* PackageSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732029BF590EEC65BB931250 /* PackageSettingsStore.swift */; };
+		C1ECE1FC7156A5BFD014F7F9 /* ToolPackageOrigin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E89D2823CD5C05C21437F6EA /* ToolPackageOrigin.swift */; };
+		C3D8F523F9245CFC2A620AF8 /* JortJavaScript.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */; };
+		C450D0050E55BC7ACE2D6B04 /* ToolInvocationPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D209ECDBC9F716C933AC4166 /* ToolInvocationPresentationTests.swift */; };
 		C5FFBE1989792F015E80BE60 /* libunicode-table.h in Headers */ = {isa = PBXBuildFile; fileRef = FF28C35AD3183F51813E36AC /* libunicode-table.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CAD9559F32357FABB46510EF /* dtoa.c in Sources */ = {isa = PBXBuildFile; fileRef = 0FE68EC19961835A5F9F8E86 /* dtoa.c */; };
 		CB5FE13005BECD82BDEC2FB2 /* ModelPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EAD02C8B2CADD434BED5753 /* ModelPicker.swift */; };
+		CB9392CE9AC09100BF688759 /* tool-invocations-pre-extraction.json in Resources */ = {isa = PBXBuildFile; fileRef = 5EAEA9AD8AA44366C9B3D2C2 /* tool-invocations-pre-extraction.json */; };
 		CDD19338990DA4F6F840FA4B /* DocumentSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */; };
 		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
+		D20F42C78D68A8616DDF6FD7 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		D2327DD1469F0D7EF3DE3CDA /* libregexp.c in Sources */ = {isa = PBXBuildFile; fileRef = E08C38A6AD7E93755E054182 /* libregexp.c */; };
 		D32F25240A7053CD4C2C4D9E /* LinePresentationLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */; };
+		D34F779E8D8B35F0BA7F7597 /* InvocationPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63F209F6E81624ABFBE0CA1 /* InvocationPackage.swift */; };
 		D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		D44FA92A7CD9BBD646779A84 /* Tools in Resources */ = {isa = PBXBuildFile; fileRef = 925521D5605C40F2F00E8BB6 /* Tools */; };
 		D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
 		D706A34255A3D2176DB9F625 /* HistoryDiffCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9069F39A81E388BB6AB7A24B /* HistoryDiffCell.swift */; };
 		D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */; };
+		DA43E152FBA890BA7EFC9945 /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
 		DA78A33F7BEF6FB088516FDC /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		DAC2132EED3BD883F21B901E /* ToolInvocationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 044BB572F6EB659E0AEB9B45 /* ToolInvocationCoordinator.swift */; };
+		DAE66CB4A84D440CB376DC32 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		DB820B5B336EB87EC56F457A /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		DB8A4FCD9426994D22AA3BA3 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		DBA64D8DB274477FF9CCC03C /* cutils.h in Headers */ = {isa = PBXBuildFile; fileRef = 523D6F370304803C2FB2770F /* cutils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		DBD86C5DD1B157FDF9CF4CBD /* ToolExecutionRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE03B6092BC2533385D7F026 /* ToolExecutionRequest.swift */; };
+		DC7C687E7A7F30B581B8660F /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		DD7AE91B690C6AEF939C5E42 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		DE856EC350DB8B448762F3FE /* StartupPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58322D9A4AC03F5968882D89 /* StartupPersistenceTests.swift */; };
 		DE88C97D395ECF2B3F3B7D55 /* StoreTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */; };
 		E1B2AF06ED7F95AE96C63138 /* HistoryComparisonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072791E6103E642613A62D3E /* HistoryComparisonTests.swift */; };
+		E219FBD771623EDF86274C86 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
+		E38D06D9C2D04AFC31E3FF76 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		E3D1075EEEDD685A920E967F /* ToolInvocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED20588982DBF09C32C820C4 /* ToolInvocation.swift */; };
 		E52AEB2D233A54A47B408564 /* HistoryStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B711F6E42B2DE037E8A58651 /* HistoryStorageTests.swift */; };
+		EA87B07265FD7FFA525FB16C /* ToolPackageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D181702092209A56A895DBF0 /* ToolPackageTests.swift */; };
 		EAF611328974918CB820FC05 /* HistoryComparison.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56950F58BF8920CC14ABD7E4 /* HistoryComparison.swift */; };
-		ED788021FD08CC2EE77CFF5A /* JortJavaScript.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */; };
+		EC1702FA2D080F0E9A3E706B /* InvocationTransientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF07D49D04C1C5072287C267 /* InvocationTransientState.swift */; };
 		EF5628B16F824A83A9A00909 /* v1.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = AD6759F2DA71568CAF61B1BA /* v1.sqlite */; };
+		EFBDADA56A7450FAACA2FE20 /* ToolGoldenCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335385258FC5FA67C76B92A6 /* ToolGoldenCompatibilityTests.swift */; };
 		F063CAE1A119DDA229FAC6AD /* PersistenceFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */; };
+		F2BFB87F0B0EA804CD4B4D00 /* FakeModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */; };
 		F34B6D9D67A884FF7D957809 /* SQLiteSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113BE412FBAD974882331970 /* SQLiteSettingsStore.swift */; };
 		F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F66085B030452677C1BF9B8 /* ProcessTests.swift */; };
 		F67A84D29E8023BD49F137B5 /* HistoryWorkspaceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B8EF4F5FC1F5A8A7D6AE13F /* HistoryWorkspaceController.swift */; };
 		FA13C11805153B8A11FFB907 /* HistoryCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21039D88B48BA0259A6EF860 /* HistoryCoordinator.swift */; };
 		FC0DDB280C162ED0849A3821 /* StartupLoadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */; };
+		FC77F3B2800F620DE4881398 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		FE6F5D3D8C8696B2F368B618 /* list.h in Headers */ = {isa = PBXBuildFile; fileRef = 3987A26318419A8BEEC55422 /* list.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FE8279535EA11ADAE468D3F0 /* DocumentSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 817DD0BD61508DA25EEC854D /* DocumentSearchTests.swift */; };
 		FF37B0DE9AA742722B31827F /* SchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		04907754554BF7F7F55866F7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
+			remoteInfo = JortDocument;
+		};
 		058BEACC4D251AF683C7DEDC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
@@ -156,12 +222,54 @@
 			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
 			remoteInfo = JortPersistence;
 		};
+		071ECEB5852AA1731956563A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
+		};
+		1C9ACF9D4A11A4139BA7CF82 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A16B52213E188C51D5FF571;
+			remoteInfo = JortToolRuntime;
+		};
+		210131BE8F9184FD2D58D991 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
+		};
+		2D72F4C8F2A04794E6C4FCCC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C95C707E2A3214B5F7E60416;
+			remoteInfo = JortSettings;
+		};
+		3AC35F4ED6E29BDF39ABEB83 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9B6298D78A634AC3CF42FC03;
+			remoteInfo = JortJavaScript;
+		};
 		3C18BBE99A8370F3285440E7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C95C707E2A3214B5F7E60416;
 			remoteInfo = JortSettings;
+		};
+		3D7BD61036DB557E928CD99B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A16B52213E188C51D5FF571;
+			remoteInfo = JortToolRuntime;
 		};
 		4C182629A17D23B0B96C22A6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -177,12 +285,33 @@
 			remoteGlobalIDString = D7119C245676A4F069D25D44;
 			remoteInfo = StoreLockProbe;
 		};
+		56B37841A361C545171BC8F9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
+		};
 		5C741588383E9D2B22129ED9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 594DC212921BACAC61D70ED9;
 			remoteInfo = Jort;
+		};
+		62D38AF9A08CB3C128D5615A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
+		};
+		683D15B9F84CBC0C873F3746 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A16B52213E188C51D5FF571;
+			remoteInfo = JortToolRuntime;
 		};
 		7F9A306DBFE76ED9448FE617 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -204,6 +333,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
 			remoteInfo = JortDocument;
+		};
+		8D37397654F238AD79A053EC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
 		};
 		901447BFBBD04FC8ADD7FF02 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -233,12 +369,33 @@
 			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
 			remoteInfo = JortPersistence;
 		};
+		9DC63E657B3D642A6C6D9797 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
+		};
 		A4381FE62B8B8C19572233F8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = B386A86BE2EBA3E88CBB0142;
 			remoteInfo = JortAppKit;
+		};
+		A638D3038CB7B10FE629EF27 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
+		};
+		B2027E6780112E41D74E29B6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
 		};
 		B44D59BD06E0B5BA6F01C1D5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -247,19 +404,26 @@
 			remoteGlobalIDString = 9B6298D78A634AC3CF42FC03;
 			remoteInfo = JortJavaScript;
 		};
+		C6040687D115CFB718E0B010 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C32E76A665123E52BD3970CF;
+			remoteInfo = JortToolContracts;
+		};
+		CB65039B1CD8AB365C4A63A4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
+			remoteInfo = JortPersistence;
+		};
 		E0C5807E9C55E31BC0BF8DBB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
 			remoteInfo = JortDocument;
-		};
-		E4424A7D3BB7574649638C42 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 9B6298D78A634AC3CF42FC03;
-			remoteInfo = JortJavaScript;
 		};
 		F855D8F45E8EC5F89C0AA1B9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -299,6 +463,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		3DCF60ACEAAE23624E1E42DA /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5E3DFA1D635EF60B2101A9F9 /* JortToolContracts.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7C38278F71C9E4457CAA1977 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -309,7 +484,24 @@
 				A86E69A0E7D85AA789CDBC93 /* JortPersistence.framework in Embed Frameworks */,
 				10958F2E0818D271D9BA9229 /* JortAppKit.framework in Embed Frameworks */,
 				ABB6E56F50FC5458516F5CC2 /* JortSettings.framework in Embed Frameworks */,
+				75B055F69312102767399FD4 /* JortToolContracts.framework in Embed Frameworks */,
 				9BCDB5D2342D9139AB82E3EA /* JortJavaScript.framework in Embed Frameworks */,
+				2C112D69F9DB3923BDD9E1CA /* JortToolRuntime.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		947901CE55973F308CAFFE42 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				48911BE844E93D8F17BD98FA /* JortToolRuntime.framework in Embed Frameworks */,
+				DAE66CB4A84D440CB376DC32 /* JortToolContracts.framework in Embed Frameworks */,
+				85B3F88DA1B8AC6EBC24203F /* JortSettings.framework in Embed Frameworks */,
+				99C0E0B15DD6B97AC6EEC34D /* JortDocument.framework in Embed Frameworks */,
+				2F522E1FB8C86CB9DDF88CB4 /* JortPersistence.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -323,6 +515,7 @@
 				DA78A33F7BEF6FB088516FDC /* JortDocument.framework in Embed Frameworks */,
 				BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */,
 				3A41109B6288C7BF2491D257 /* JortSettings.framework in Embed Frameworks */,
+				B48B832DFE25265465459231 /* JortToolContracts.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -336,7 +529,9 @@
 				8C24806BE06A07370A75143A /* JortDocument.framework in Embed Frameworks */,
 				B8F124A8831203C5633B1E2E /* JortPersistence.framework in Embed Frameworks */,
 				3719E1FCB30A684B366E033B /* JortAppKit.framework in Embed Frameworks */,
+				DC7C687E7A7F30B581B8660F /* JortToolRuntime.framework in Embed Frameworks */,
 				618D1863F81534FFAC3D7F41 /* JortSettings.framework in Embed Frameworks */,
+				94F0BC3DA14064D9EC35D10D /* JortToolContracts.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -347,10 +542,14 @@
 		02A0A8926B0C7313854C181A /* JortPersistence.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortPersistence.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceFormat.swift; sourceTree = "<group>"; };
 		037F170C9E7560F06B7DEE46 /* ModelCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCredentials.swift; sourceTree = "<group>"; };
+		042AA99745D4CB41FEC2531D /* ToolDocumentEffectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDocumentEffectTests.swift; sourceTree = "<group>"; };
+		044BB572F6EB659E0AEB9B45 /* ToolInvocationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationCoordinator.swift; sourceTree = "<group>"; };
+		05EF2C69C738581C5CFA5743 /* JortToolRuntimeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortToolRuntimeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		072791E6103E642613A62D3E /* HistoryComparisonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryComparisonTests.swift; sourceTree = "<group>"; };
 		07D77C5D4902A6B038E693AC /* jort-white.svg */ = {isa = PBXFileReference; path = "jort-white.svg"; sourceTree = "<group>"; };
 		0B872610ED836A61E96ED8DA /* Transactions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transactions.swift; sourceTree = "<group>"; };
 		0C05CEC0BC29B3CD86F60A27 /* ModelsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsViewController.swift; sourceTree = "<group>"; };
+		0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeModelProvider.swift; sourceTree = "<group>"; };
 		0F66085B030452677C1BF9B8 /* ProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTests.swift; sourceTree = "<group>"; };
 		0FE68EC19961835A5F9F8E86 /* dtoa.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dtoa.c; sourceTree = "<group>"; };
 		113BE412FBAD974882331970 /* SQLiteSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteSettingsStore.swift; sourceTree = "<group>"; };
@@ -359,42 +558,53 @@
 		164CE786366A1FEF95DB8755 /* quickjs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = quickjs.c; sourceTree = "<group>"; };
 		1978353FEB464E98985FE522 /* Jort.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jort.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0D62A6EE87AF55951103E0 /* SQLiteHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteHistory.swift; sourceTree = "<group>"; };
+		1A5D3D13F745C39022D7F443 /* ToolRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRuntime.swift; sourceTree = "<group>"; };
 		1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCheckpoints.swift; sourceTree = "<group>"; };
 		1E13D309AB98C025B767AFD0 /* ToolTemplates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ToolTemplates.json; sourceTree = "<group>"; };
 		1ECC95805D3B99275307225B /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
 		21039D88B48BA0259A6EF860 /* HistoryCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCoordinator.swift; sourceTree = "<group>"; };
 		21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
-		2CAE644632A85A82F11F2C76 /* ModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelProvider.swift; sourceTree = "<group>"; };
+		237A9DA54FC18BE76B8D119F /* ToolExecutorDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolExecutorDispatcher.swift; sourceTree = "<group>"; };
+		2D93F18718BF6E63A9D6C405 /* ToolDocumentEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDocumentEffects.swift; sourceTree = "<group>"; };
 		30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupLoadStore.swift; sourceTree = "<group>"; };
-		36A65851399F52B743776466 /* ModelToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelToolTests.swift; sourceTree = "<group>"; };
+		335385258FC5FA67C76B92A6 /* ToolGoldenCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolGoldenCompatibilityTests.swift; sourceTree = "<group>"; };
 		382B6626673D4E9ECF7208D3 /* ToolPackageRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageRegistry.swift; sourceTree = "<group>"; };
 		3987A26318419A8BEEC55422 /* list.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = list.h; sourceTree = "<group>"; };
+		3AF52A5D136B7BFCB3769647 /* JortToolContractsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortToolContractsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3BCF6DF374DEC19C364B724A /* JortJavaScript.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = JortJavaScript.c; sourceTree = "<group>"; };
+		3C53C2C4801693C876B0305A /* ToolPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackage.swift; sourceTree = "<group>"; };
 		3D58BDC7B59E9928134887E3 /* StoreLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreLock.swift; sourceTree = "<group>"; };
+		4751705F98D5DB511669A430 /* tool-manifest-pre-extraction.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tool-manifest-pre-extraction.json"; sourceTree = "<group>"; };
 		49680FE93D310BAFEC1043AE /* EmojiPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiPicker.swift; sourceTree = "<group>"; };
 		4EBD819547F38AB24B0FD19F /* v2.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v2.sqlite; sourceTree = "<group>"; };
+		51C856D6CE50FFC9A1F3F8FB /* ToolExecution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolExecution.swift; sourceTree = "<group>"; };
 		523D6F370304803C2FB2770F /* cutils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cutils.h; sourceTree = "<group>"; };
 		53AB05C7BD3940CEEC2EFF77 /* JavaScriptSourceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptSourceEditor.swift; sourceTree = "<group>"; };
 		54BD024322D7CE95970E48D0 /* JortJavaScript.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortJavaScript.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		56950F58BF8920CC14ABD7E4 /* HistoryComparison.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryComparison.swift; sourceTree = "<group>"; };
 		57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearch.swift; sourceTree = "<group>"; };
+		5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortToolRuntime.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		58322D9A4AC03F5968882D89 /* StartupPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupPersistenceTests.swift; sourceTree = "<group>"; };
+		5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuspendedPackageValidator.swift; sourceTree = "<group>"; };
 		59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		5E3C635626F2EA72B23EDA46 /* ToolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCatalog.swift; sourceTree = "<group>"; };
 		5E6574876DDE4AA7D758D186 /* JortJavaScript.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JortJavaScript.h; sourceTree = "<group>"; };
+		5EAEA9AD8AA44366C9B3D2C2 /* tool-invocations-pre-extraction.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tool-invocations-pre-extraction.json"; sourceTree = "<group>"; };
 		5EBF7CA0931124DB116AE610 /* JortUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5FF8341534A77B39BFA2904E /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
-		618D73AC50B5D97409ED08E3 /* ToolInvocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationTests.swift; sourceTree = "<group>"; };
+		6105F42B72B3516B63AD9B9E /* OpenRouterConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterConnection.swift; sourceTree = "<group>"; };
 		65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerTests.swift; sourceTree = "<group>"; };
+		6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortToolContracts.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6853014BEFCE356E061ADFE6 /* HistoryRevision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryRevision.swift; sourceTree = "<group>"; };
-		688047053CE01A3E5DD915E0 /* ModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCatalog.swift; sourceTree = "<group>"; };
 		6B8EF4F5FC1F5A8A7D6AE13F /* HistoryWorkspaceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWorkspaceController.swift; sourceTree = "<group>"; };
 		6BD742A9E09AD22E1174BECA /* LockProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockProbe.swift; sourceTree = "<group>"; };
+		6C3E7A77FA34F99BB64C8D81 /* InvocationLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationLifecycle.swift; sourceTree = "<group>"; };
 		6DD9032EA20B653B9CE85D00 /* JortApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortApp.swift; sourceTree = "<group>"; };
+		6FDA4E0988A64BCA45C6ADB6 /* InvocationLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationLifecycleTests.swift; sourceTree = "<group>"; };
 		72C38DD691618F20FA27AD87 /* LandmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandmarkTests.swift; sourceTree = "<group>"; };
 		732029BF590EEC65BB931250 /* PackageSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackageSettingsStore.swift; sourceTree = "<group>"; };
 		73EA408834ABD32E691793CF /* HistoryRetention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryRetention.swift; sourceTree = "<group>"; };
-		78C0652A0B04A681CEF114E4 /* ToolRuntimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRuntimeTests.swift; sourceTree = "<group>"; };
+		79EFEA337F5FD223D6F30419 /* ToolModelIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModelIntegrationTests.swift; sourceTree = "<group>"; };
 		7B13A1E275C9292115821584 /* StoreLockProbe */ = {isa = PBXFileReference; includeInIndex = 0; path = StoreLockProbe; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B8CF4DBF8442B91591C85C2 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		7CAE479DACAAE1E87A1B412E /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
@@ -408,7 +618,9 @@
 		817DD0BD61508DA25EEC854D /* DocumentSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchTests.swift; sourceTree = "<group>"; };
 		836D2480566399F33F4D0E4B /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		857FDC8BC95B6835BA5D1921 /* v1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v1.json; sourceTree = "<group>"; };
+		884842D60EAFA66DAFF38C22 /* ModelConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelConnection.swift; sourceTree = "<group>"; };
 		890A3B619F758EFE88D70C05 /* DocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTests.swift; sourceTree = "<group>"; };
+		8997BE6442E1F78BFCBA363D /* CoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatorTests.swift; sourceTree = "<group>"; };
 		8B90F41BD2015B26B477581A /* JortAppKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortAppKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E614086D89E52EFCC7DCED6 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
 		8EAD02C8B2CADD434BED5753 /* ModelPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPicker.swift; sourceTree = "<group>"; };
@@ -420,43 +632,56 @@
 		9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortFoundationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortSettings.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9CAC6653C4C60493EC41193C /* dtoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dtoa.h; sourceTree = "<group>"; };
-		9EEDCFFC4585E3B5EDB08396 /* ToolPackageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageTests.swift; sourceTree = "<group>"; };
 		9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWorkspaceTests.swift; sourceTree = "<group>"; };
 		9F4448EA2A682199B4390618 /* JortDocument.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortDocument.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0DD430C698A8277F6F8831A /* ToolInvocationIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationIntegrationTests.swift; sourceTree = "<group>"; };
 		A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrawlLargeDocument.swift; sourceTree = "<group>"; };
 		AD6759F2DA71568CAF61B1BA /* v1.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v1.sqlite; sourceTree = "<group>"; };
-		AED8A6E5B7F2A9357D7AFE7F /* OpenRouterConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterConnection.swift; sourceTree = "<group>"; };
 		B02EBC133D052919F85BFB1A /* DocumentSearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchModel.swift; sourceTree = "<group>"; };
-		B4E615EC1B22CB60B16A51FC /* ToolRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRuntime.swift; sourceTree = "<group>"; };
 		B55D1016B0D99A8BC5313F63 /* libregexp-opcode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "libregexp-opcode.h"; sourceTree = "<group>"; };
 		B570FEDC0F8FB06F0B196121 /* cutils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = cutils.c; sourceTree = "<group>"; };
 		B711F6E42B2DE037E8A58651 /* HistoryStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStorageTests.swift; sourceTree = "<group>"; };
 		B73F5C254EE12140FB60EB69 /* JortUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortUITests.swift; sourceTree = "<group>"; };
+		B9F8BE73707D77A84B75F48B /* ToolRuntimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRuntimeTests.swift; sourceTree = "<group>"; };
 		BA1937DA4FC494E2310FFBCD /* SettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTests.swift; sourceTree = "<group>"; };
 		BACEB5981A7D1291606F22F4 /* EditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTests.swift; sourceTree = "<group>"; };
 		BD024A9EEA12F030339D9451 /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
 		BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTestCase.swift; sourceTree = "<group>"; };
-		C14EB55316C3BDE971FC462D /* OpenRouterTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterTransport.swift; sourceTree = "<group>"; };
+		C33127349987FC988BB882FD /* OpenRouterTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterTransport.swift; sourceTree = "<group>"; };
 		C5CD91B362E719B8498965D1 /* quickjs-opcode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "quickjs-opcode.h"; sourceTree = "<group>"; };
+		C5F5090623D89007397B2267 /* ModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCatalog.swift; sourceTree = "<group>"; };
+		C63F209F6E81624ABFBE0CA1 /* InvocationPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationPackage.swift; sourceTree = "<group>"; };
 		C680C97D91E66688DAD477B2 /* libunicode.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = libunicode.c; sourceTree = "<group>"; };
 		C9136C288B97547D76167A45 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
+		C92B0A8E0CD47781F5D63DB5 /* ToolInputNormalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInputNormalization.swift; sourceTree = "<group>"; };
 		C9D1D80CC0A9BC989917816B /* ToolPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackage.swift; sourceTree = "<group>"; };
 		CBB5415DF73F241C4E9ACF6F /* ToolInvocationPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationPresentation.swift; sourceTree = "<group>"; };
 		CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPalette.swift; sourceTree = "<group>"; };
+		D181702092209A56A895DBF0 /* ToolPackageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageTests.swift; sourceTree = "<group>"; };
+		D209ECDBC9F716C933AC4166 /* ToolInvocationPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationPresentationTests.swift; sourceTree = "<group>"; };
+		D2819C2AD2B9853EA43F79B3 /* ModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelProvider.swift; sourceTree = "<group>"; };
 		D344138FB05A5EA019B7C8B7 /* SettingsWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWorkspaceTests.swift; sourceTree = "<group>"; };
+		D5A12D3369FE17046B45C5B0 /* ToolInvocationInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationInput.swift; sourceTree = "<group>"; };
 		D6F815CC485603BE306454BA /* StoreTeardownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTeardownTests.swift; sourceTree = "<group>"; };
 		D7391540700D5CC6E567E4A5 /* canvas-10000.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "canvas-10000.txt"; sourceTree = "<group>"; };
 		D83AEEDFD45147CFE6AE4AD2 /* ToolInvocationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationController.swift; sourceTree = "<group>"; };
 		D87A80477F84AD407D8C4E18 /* DocumentSearchController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchController.swift; sourceTree = "<group>"; };
+		DCD7B1742A804E238FDF1641 /* InjectedValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectedValidatorTests.swift; sourceTree = "<group>"; };
 		DE3468DC421F7F54BE19537C /* EditorShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorShell.swift; sourceTree = "<group>"; };
 		E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinePresentationLayout.swift; sourceTree = "<group>"; };
 		E08C38A6AD7E93755E054182 /* libregexp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = libregexp.c; sourceTree = "<group>"; };
+		E89D2823CD5C05C21437F6EA /* ToolPackageOrigin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageOrigin.swift; sourceTree = "<group>"; };
+		EC8335D3047ECDA83D5400D6 /* ModelCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCredentials.swift; sourceTree = "<group>"; };
 		ED20588982DBF09C32C820C4 /* ToolInvocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocation.swift; sourceTree = "<group>"; };
+		EE03B6092BC2533385D7F026 /* ToolExecutionRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolExecutionRequest.swift; sourceTree = "<group>"; };
+		EF07D49D04C1C5072287C267 /* InvocationTransientState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationTransientState.swift; sourceTree = "<group>"; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FDB01661C1ACC0EB29F1C177 /* StartupEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupEditorTests.swift; sourceTree = "<group>"; };
 		FDFBEC650856CCBC9A17EB4B /* quickjs-atom.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "quickjs-atom.h"; sourceTree = "<group>"; };
+		FEA59492C31450C9F988EA91 /* ModelToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelToolTests.swift; sourceTree = "<group>"; };
 		FF28C35AD3183F51813E36AC /* libunicode-table.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "libunicode-table.h"; sourceTree = "<group>"; };
+		FFBBF842F60CECB9FD3E61D9 /* ToolInvocationTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationTestCase.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -467,7 +692,29 @@
 				D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */,
 				81441D90E3E254368424329B /* JortPersistence.framework in Frameworks */,
 				9E38800E0A10A074F4B01726 /* JortAppKit.framework in Frameworks */,
+				479B4F593604AFEDAE57E528 /* JortToolRuntime.framework in Frameworks */,
 				650D164E9E271701141E1740 /* JortSettings.framework in Frameworks */,
+				007987721E9DC348256E3E06 /* JortToolContracts.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		65C421AA0B6F177A4814987A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A267BC6563E7029ECB191BCB /* JortToolRuntime.framework in Frameworks */,
+				E38D06D9C2D04AFC31E3FF76 /* JortToolContracts.framework in Frameworks */,
+				DA43E152FBA890BA7EFC9945 /* JortSettings.framework in Frameworks */,
+				DB820B5B336EB87EC56F457A /* JortDocument.framework in Frameworks */,
+				FC77F3B2800F620DE4881398 /* JortPersistence.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		96CDFB4E1AA8932F599599E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				493C119A6FE22D0E2EEA75CE /* JortToolContracts.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -478,6 +725,7 @@
 				AC7063A1F953D56D1002F25C /* JortDocument.framework in Frameworks */,
 				96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */,
 				54AAB0DA891C19A2851C2773 /* JortSettings.framework in Frameworks */,
+				E219FBD771623EDF86274C86 /* JortToolContracts.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -490,11 +738,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B713A97CCA79C888E1A0A2C1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D20F42C78D68A8616DDF6FD7 /* JortToolContracts.framework in Frameworks */,
+				C3D8F523F9245CFC2A620AF8 /* JortJavaScript.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CA44ED0601193DA400C000E1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ED788021FD08CC2EE77CFF5A /* JortJavaScript.framework in Frameworks */,
+				AE1C004D7833884FE17E495D /* JortToolContracts.framework in Frameworks */,
 				90D2280F98544D2284B975DC /* libsqlite3.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -507,7 +764,9 @@
 				819E6BD9E4AFFEB2591D5934 /* JortPersistence.framework in Frameworks */,
 				D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */,
 				49DF326928DE0CAC23C1597D /* JortSettings.framework in Frameworks */,
+				77DF2F99A367159528FAF8FE /* JortToolContracts.framework in Frameworks */,
 				95F48DB804596457D97BBEE5 /* JortJavaScript.framework in Frameworks */,
+				0ED27379C59E37FD345796D7 /* JortToolRuntime.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -520,6 +779,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		ED613B24920AF97106C5B22B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD95D9F09C2E53FC289D544F /* JortToolContracts.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F9A6860B3C6A293AF8469912 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -527,6 +794,7 @@
 				A1F8D7ABEAC627BDB9EB4F29 /* JortDocument.framework in Frameworks */,
 				DB8A4FCD9426994D22AA3BA3 /* JortPersistence.framework in Frameworks */,
 				720BBF309E537664299F17BD /* JortSettings.framework in Frameworks */,
+				4C309059AE341BA97E7C4807 /* JortToolContracts.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -542,6 +810,15 @@
 			path = Tools/StoreLockProbe;
 			sourceTree = "<group>";
 		};
+		077CC5D41C73177AB191E9E0 /* ToolContracts */ = {
+			isa = PBXGroup;
+			children = (
+				6FDA4E0988A64BCA45C6ADB6 /* InvocationLifecycleTests.swift */,
+			);
+			name = ToolContracts;
+			path = Tests/ToolContracts;
+			sourceTree = "<group>";
+		};
 		2855EA06D4096653BA9FB7A2 /* AppKit */ = {
 			isa = PBXGroup;
 			children = (
@@ -550,7 +827,10 @@
 				9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */,
 				D344138FB05A5EA019B7C8B7 /* SettingsWorkspaceTests.swift */,
 				FDB01661C1ACC0EB29F1C177 /* StartupEditorTests.swift */,
-				618D73AC50B5D97409ED08E3 /* ToolInvocationTests.swift */,
+				A0DD430C698A8277F6F8831A /* ToolInvocationIntegrationTests.swift */,
+				D209ECDBC9F716C933AC4166 /* ToolInvocationPresentationTests.swift */,
+				FFBBF842F60CECB9FD3E61D9 /* ToolInvocationTestCase.swift */,
+				79EFEA337F5FD223D6F30419 /* ToolModelIntegrationTests.swift */,
 			);
 			name = AppKit;
 			path = Tests/AppKit;
@@ -559,24 +839,69 @@
 		29DBF5AAC3D8825269C35C4F /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				36A65851399F52B743776466 /* ModelToolTests.swift */,
+				DCD7B1742A804E238FDF1641 /* InjectedValidatorTests.swift */,
 				BA1937DA4FC494E2310FFBCD /* SettingsTests.swift */,
-				9EEDCFFC4585E3B5EDB08396 /* ToolPackageTests.swift */,
-				78C0652A0B04A681CEF114E4 /* ToolRuntimeTests.swift */,
 			);
 			name = Settings;
 			path = Tests/Settings;
+			sourceTree = "<group>";
+		};
+		32C8490C2808E41EE19D625A /* ToolRuntime */ = {
+			isa = PBXGroup;
+			children = (
+				8997BE6442E1F78BFCBA363D /* CoordinatorTests.swift */,
+				FEA59492C31450C9F988EA91 /* ModelToolTests.swift */,
+				D181702092209A56A895DBF0 /* ToolPackageTests.swift */,
+				B9F8BE73707D77A84B75F48B /* ToolRuntimeTests.swift */,
+			);
+			name = ToolRuntime;
+			path = Tests/ToolRuntime;
+			sourceTree = "<group>";
+		};
+		3FD294B8730BAA78938AA17C /* JortToolRuntime */ = {
+			isa = PBXGroup;
+			children = (
+				6105F42B72B3516B63AD9B9E /* OpenRouterConnection.swift */,
+				C33127349987FC988BB882FD /* OpenRouterTransport.swift */,
+				237A9DA54FC18BE76B8D119F /* ToolExecutorDispatcher.swift */,
+				044BB572F6EB659E0AEB9B45 /* ToolInvocationCoordinator.swift */,
+				1A5D3D13F745C39022D7F443 /* ToolRuntime.swift */,
+			);
+			name = JortToolRuntime;
+			path = Sources/JortToolRuntime;
 			sourceTree = "<group>";
 		};
 		46BD048FEACAE591BBF3CB93 /* Support */ = {
 			isa = PBXGroup;
 			children = (
 				A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */,
+				0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */,
 				30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */,
 				BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */,
+				5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */,
 			);
 			name = Support;
 			path = Tests/Support;
+			sourceTree = "<group>";
+		};
+		514E0A82ECDCB66198EB6175 /* JortToolContracts */ = {
+			isa = PBXGroup;
+			children = (
+				6C3E7A77FA34F99BB64C8D81 /* InvocationLifecycle.swift */,
+				C63F209F6E81624ABFBE0CA1 /* InvocationPackage.swift */,
+				EF07D49D04C1C5072287C267 /* InvocationTransientState.swift */,
+				C5F5090623D89007397B2267 /* ModelCatalog.swift */,
+				884842D60EAFA66DAFF38C22 /* ModelConnection.swift */,
+				EC8335D3047ECDA83D5400D6 /* ModelCredentials.swift */,
+				D2819C2AD2B9853EA43F79B3 /* ModelProvider.swift */,
+				51C856D6CE50FFC9A1F3F8FB /* ToolExecution.swift */,
+				EE03B6092BC2533385D7F026 /* ToolExecutionRequest.swift */,
+				C92B0A8E0CD47781F5D63DB5 /* ToolInputNormalization.swift */,
+				3C53C2C4801693C876B0305A /* ToolPackage.swift */,
+				E89D2823CD5C05C21437F6EA /* ToolPackageOrigin.swift */,
+			);
+			name = JortToolContracts;
+			path = Sources/JortToolContracts;
 			sourceTree = "<group>";
 		};
 		552DF7F9ADC8FC1AEF127A86 /* Frameworks */ = {
@@ -615,6 +940,8 @@
 				58322D9A4AC03F5968882D89 /* StartupPersistenceTests.swift */,
 				8E614086D89E52EFCC7DCED6 /* StorageTests.swift */,
 				D6F815CC485603BE306454BA /* StoreTeardownTests.swift */,
+				042AA99745D4CB41FEC2531D /* ToolDocumentEffectTests.swift */,
+				335385258FC5FA67C76B92A6 /* ToolGoldenCompatibilityTests.swift */,
 				92AE5B524A0A913C5257E842 /* ToolPersistenceTests.swift */,
 			);
 			name = Foundation;
@@ -632,6 +959,10 @@
 				54BD024322D7CE95970E48D0 /* JortJavaScript.framework */,
 				02A0A8926B0C7313854C181A /* JortPersistence.framework */,
 				9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */,
+				6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */,
+				3AF52A5D136B7BFCB3769647 /* JortToolContractsTests.xctest */,
+				5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */,
+				05EF2C69C738581C5CFA5743 /* JortToolRuntimeTests.xctest */,
 				5EBF7CA0931124DB116AE610 /* JortUITests.xctest */,
 				7B13A1E275C9292115821584 /* StoreLockProbe */,
 			);
@@ -642,6 +973,8 @@
 			isa = PBXGroup;
 			children = (
 				D7391540700D5CC6E567E4A5 /* canvas-10000.txt */,
+				5EAEA9AD8AA44366C9B3D2C2 /* tool-invocations-pre-extraction.json */,
+				4751705F98D5DB511669A430 /* tool-manifest-pre-extraction.json */,
 				857FDC8BC95B6835BA5D1921 /* v1.json */,
 				AD6759F2DA71568CAF61B1BA /* v1.sqlite */,
 				160370B1CD4C448EA0BEF96F /* v2.json */,
@@ -664,11 +997,15 @@
 				E3A17EE5491A39C2A44EA5ED /* JortJavaScript */,
 				A7038EEFC224A9473B106BF9 /* JortPersistence */,
 				9F7406EDAEF7DE1090322A21 /* JortSettings */,
+				514E0A82ECDCB66198EB6175 /* JortToolContracts */,
+				3FD294B8730BAA78938AA17C /* JortToolRuntime */,
 				DCF3D25B22748C1A5F08F5BD /* QuickJS */,
 				5D35C8E11D14DF2114B2D1CA /* Resources */,
 				29DBF5AAC3D8825269C35C4F /* Settings */,
 				044B86C9C8E05C227A7F9727 /* StoreLockProbe */,
 				46BD048FEACAE591BBF3CB93 /* Support */,
+				077CC5D41C73177AB191E9E0 /* ToolContracts */,
+				32C8490C2808E41EE19D625A /* ToolRuntime */,
 				FF94AAA1F97DED705A0BACBE /* UI */,
 				552DF7F9ADC8FC1AEF127A86 /* Frameworks */,
 				80A8D39A7920A2352F4766D7 /* Products */,
@@ -678,11 +1015,7 @@
 		9F7406EDAEF7DE1090322A21 /* JortSettings */ = {
 			isa = PBXGroup;
 			children = (
-				688047053CE01A3E5DD915E0 /* ModelCatalog.swift */,
 				037F170C9E7560F06B7DEE46 /* ModelCredentials.swift */,
-				2CAE644632A85A82F11F2C76 /* ModelProvider.swift */,
-				AED8A6E5B7F2A9357D7AFE7F /* OpenRouterConnection.swift */,
-				C14EB55316C3BDE971FC462D /* OpenRouterTransport.swift */,
 				732029BF590EEC65BB931250 /* PackageSettingsStore.swift */,
 				BD024A9EEA12F030339D9451 /* SettingsModels.swift */,
 				113BE412FBAD974882331970 /* SQLiteSettingsStore.swift */,
@@ -690,7 +1023,6 @@
 				C9D1D80CC0A9BC989917816B /* ToolPackage.swift */,
 				382B6626673D4E9ECF7208D3 /* ToolPackageRegistry.swift */,
 				99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */,
-				B4E615EC1B22CB60B16A51FC /* ToolRuntime.swift */,
 			);
 			name = JortSettings;
 			path = Sources/JortSettings;
@@ -719,7 +1051,9 @@
 				57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */,
 				C9136C288B97547D76167A45 /* DocumentState.swift */,
 				56950F58BF8920CC14ABD7E4 /* HistoryComparison.swift */,
+				2D93F18718BF6E63A9D6C405 /* ToolDocumentEffects.swift */,
 				ED20588982DBF09C32C820C4 /* ToolInvocation.swift */,
+				D5A12D3369FE17046B45C5B0 /* ToolInvocationInput.swift */,
 				0B872610ED836A61E96ED8DA /* Transactions.swift */,
 			);
 			name = JortDocument;
@@ -839,10 +1173,12 @@
 			buildConfigurationList = 50679A2E1BF66CF96387C8DC /* Build configuration list for PBXNativeTarget "JortDocument" */;
 			buildPhases = (
 				8B48B694DEEAAAC702B23D40 /* Sources */,
+				ED613B24920AF97106C5B22B /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				2C72D2877B5E387A7CF202CB /* PBXTargetDependency */,
 			);
 			name = JortDocument;
 			packageProductDependencies = (
@@ -866,6 +1202,7 @@
 				16DFDB53FB80B86920225A46 /* PBXTargetDependency */,
 				178B15D7E6C44E714C2584A9 /* PBXTargetDependency */,
 				FFBA7075146F7C9568D6DA8A /* PBXTargetDependency */,
+				28734AAFC7062AF63B00D701 /* PBXTargetDependency */,
 				1B0C225A4DA616C088D779B1 /* PBXTargetDependency */,
 			);
 			name = JortFoundationTests;
@@ -874,6 +1211,26 @@
 			productName = JortFoundationTests;
 			productReference = 9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		3A16B52213E188C51D5FF571 /* JortToolRuntime */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F33F249F6D6697F34A9FDBE5 /* Build configuration list for PBXNativeTarget "JortToolRuntime" */;
+			buildPhases = (
+				BB247C4512158CD62385C9B1 /* Sources */,
+				B713A97CCA79C888E1A0A2C1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				77DDED0259C3B20D897B2923 /* PBXTargetDependency */,
+				209F3958CD7C207E9E556F12 /* PBXTargetDependency */,
+			);
+			name = JortToolRuntime;
+			packageProductDependencies = (
+			);
+			productName = JortToolRuntime;
+			productReference = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */;
+			productType = "com.apple.product-type.framework";
 		};
 		4996422CDDDC50EC7CF340C1 /* JortPersistence */ = {
 			isa = PBXNativeTarget;
@@ -911,7 +1268,9 @@
 				2DFFC8B86931BDC9F75C09D8 /* PBXTargetDependency */,
 				A00B56163EF247574386A3A5 /* PBXTargetDependency */,
 				7ADFBF35FD4BD6B5A6B82D26 /* PBXTargetDependency */,
+				EE6AD0042388BB5748625ACD /* PBXTargetDependency */,
 				D74537E2B4CFCDE3BC9A7358 /* PBXTargetDependency */,
+				E7DAE3CE0BA6F60082354071 /* PBXTargetDependency */,
 			);
 			name = Jort;
 			packageProductDependencies = (
@@ -954,7 +1313,9 @@
 				4A18F14B7B0579E364EF983D /* PBXTargetDependency */,
 				968769EF85DC7E26938015E0 /* PBXTargetDependency */,
 				8050A09A9F120B48DEAB05A3 /* PBXTargetDependency */,
+				95D3537D20C64980E99254B2 /* PBXTargetDependency */,
 				DAA02E66218E9C5BB198722C /* PBXTargetDependency */,
+				72384697BB6EE889A9A7F32A /* PBXTargetDependency */,
 			);
 			name = JortCoreTests;
 			packageProductDependencies = (
@@ -976,6 +1337,7 @@
 				0D282B9AA469450BECF62371 /* PBXTargetDependency */,
 				CBB330185D75F7B221E6E150 /* PBXTargetDependency */,
 				F5A13F0F853B6D3AC5FDE556 /* PBXTargetDependency */,
+				E31EEAFB9A9B0F0F02A530EA /* PBXTargetDependency */,
 			);
 			name = JortAppKit;
 			packageProductDependencies = (
@@ -1002,6 +1364,23 @@
 			productReference = 5EBF7CA0931124DB116AE610 /* JortUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		C32E76A665123E52BD3970CF /* JortToolContracts */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2E736D7E5276033C057A1979 /* Build configuration list for PBXNativeTarget "JortToolContracts" */;
+			buildPhases = (
+				25FA696DA7BBEADA1D764956 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortToolContracts;
+			packageProductDependencies = (
+			);
+			productName = JortToolContracts;
+			productReference = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		C95C707E2A3214B5F7E60416 /* JortSettings */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E5ED3C67429C01AD9AC40766 /* Build configuration list for PBXNativeTarget "JortSettings" */;
@@ -1012,7 +1391,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				D0A41865A228F7844B15C0B3 /* PBXTargetDependency */,
+				76302F60A2F50EFEBFAAF796 /* PBXTargetDependency */,
 			);
 			name = JortSettings;
 			packageProductDependencies = (
@@ -1040,6 +1419,50 @@
 			productName = StoreLockProbe;
 			productReference = 7B13A1E275C9292115821584 /* StoreLockProbe */;
 			productType = "com.apple.product-type.tool";
+		};
+		DA498A2F774A2F97F713D864 /* JortToolContractsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 326DD616A17708916DE973FC /* Build configuration list for PBXNativeTarget "JortToolContractsTests" */;
+			buildPhases = (
+				124C97A01698935B9E7E2DD9 /* Sources */,
+				96CDFB4E1AA8932F599599E4 /* Frameworks */,
+				3DCF60ACEAAE23624E1E42DA /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2FF6193159918B40883AAC1C /* PBXTargetDependency */,
+			);
+			name = JortToolContractsTests;
+			packageProductDependencies = (
+			);
+			productName = JortToolContractsTests;
+			productReference = 3AF52A5D136B7BFCB3769647 /* JortToolContractsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F9D6C7E3E754E4D1741A4577 /* JortToolRuntimeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6F3B1C50360919027B18F677 /* Build configuration list for PBXNativeTarget "JortToolRuntimeTests" */;
+			buildPhases = (
+				973B5DE48EF9A34BC5350262 /* Sources */,
+				65C421AA0B6F177A4814987A /* Frameworks */,
+				947901CE55973F308CAFFE42 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C89693304D8A37F7A783A861 /* PBXTargetDependency */,
+				010EDC5D24EABE1FF51B94B4 /* PBXTargetDependency */,
+				F0079966D27FF6D46A3CCCB9 /* PBXTargetDependency */,
+				CDC970164D8E76EA2AB6B805 /* PBXTargetDependency */,
+				08100A2C75BFFEC5688C7E52 /* PBXTargetDependency */,
+			);
+			name = JortToolRuntimeTests;
+			packageProductDependencies = (
+			);
+			productName = JortToolRuntimeTests;
+			productReference = 05EF2C69C738581C5CFA5743 /* JortToolRuntimeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -1069,6 +1492,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				C32E76A665123E52BD3970CF /* JortToolContracts */,
+				DA498A2F774A2F97F713D864 /* JortToolContractsTests */,
+				3A16B52213E188C51D5FF571 /* JortToolRuntime */,
+				F9D6C7E3E754E4D1741A4577 /* JortToolRuntimeTests */,
 				9B6298D78A634AC3CF42FC03 /* JortJavaScript */,
 				C95C707E2A3214B5F7E60416 /* JortSettings */,
 				07E5453287B9F8C62DA2C8CB /* JortDocument */,
@@ -1105,6 +1532,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */,
+				CB9392CE9AC09100BF688759 /* tool-invocations-pre-extraction.json in Resources */,
+				BEC567EB8881718ECEDCECB6 /* tool-manifest-pre-extraction.json in Resources */,
 				7630238FB57057423175113F /* v1.json in Resources */,
 				EF5628B16F824A83A9A00909 /* v1.sqlite in Resources */,
 				2FF7F79150A10933EDFDA5A0 /* v2.json in Resources */,
@@ -1151,15 +1580,38 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		124C97A01698935B9E7E2DD9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C3BE10E55FCABBCBEBCA596 /* InvocationLifecycleTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		25FA696DA7BBEADA1D764956 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3A90E17B187ABBF6F07E4A55 /* InvocationLifecycle.swift in Sources */,
+				D34F779E8D8B35F0BA7F7597 /* InvocationPackage.swift in Sources */,
+				EC1702FA2D080F0E9A3E706B /* InvocationTransientState.swift in Sources */,
+				839AC7409371180BD7B595D8 /* ModelCatalog.swift in Sources */,
+				6E6F7D4E49C6527B543C455F /* ModelConnection.swift in Sources */,
+				03463D18696D9274609B3306 /* ModelCredentials.swift in Sources */,
+				496247B7A8D3632656BE8C43 /* ModelProvider.swift in Sources */,
+				070D3989A0D3CBC220564869 /* ToolExecution.swift in Sources */,
+				DBD86C5DD1B157FDF9CF4CBD /* ToolExecutionRequest.swift in Sources */,
+				65347537D8DEA2A549C84F4F /* ToolInputNormalization.swift in Sources */,
+				4ED4BD8F15370F11E2B1A0FD /* ToolPackage.swift in Sources */,
+				C1ECE1FC7156A5BFD014F7F9 /* ToolPackageOrigin.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		27D9200C297B549FB815D066 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D7C8038808BF93FC2AF5C2C /* ModelCatalog.swift in Sources */,
 				94E49DD4CF0CE654613B2CB4 /* ModelCredentials.swift in Sources */,
-				3F2DBE45C848ED97F138F393 /* ModelProvider.swift in Sources */,
-				8E9B25BFC1C4DF91913824DD /* OpenRouterConnection.swift in Sources */,
-				614CE753F800118921A5A3BC /* OpenRouterTransport.swift in Sources */,
 				C1EC2CF63ACED57AB060F91F /* PackageSettingsStore.swift in Sources */,
 				F34B6D9D67A884FF7D957809 /* SQLiteSettingsStore.swift in Sources */,
 				10C248870C4B604A068C3CD6 /* SettingsModels.swift in Sources */,
@@ -1167,7 +1619,6 @@
 				5A19D68DEBB0E7B34ABDE688 /* ToolPackage.swift in Sources */,
 				8316CC5DCDA7F882F313D229 /* ToolPackageRegistry.swift in Sources */,
 				401338A92E9A783E573AF6FC /* ToolPackageStorage.swift in Sources */,
-				2C5D3C73A13EF7224D8DC5BD /* ToolRuntime.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1239,8 +1690,26 @@
 				CDD19338990DA4F6F840FA4B /* DocumentSearch.swift in Sources */,
 				818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */,
 				EAF611328974918CB820FC05 /* HistoryComparison.swift in Sources */,
+				B02791609B7E9B5EF61C0C51 /* ToolDocumentEffects.swift in Sources */,
 				E3D1075EEEDD685A920E967F /* ToolInvocation.swift in Sources */,
+				582DEF48013D0CAE12A81B5D /* ToolInvocationInput.swift in Sources */,
 				105252729BE95E5A1F10E17D /* Transactions.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		973B5DE48EF9A34BC5350262 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10D7DBC3666E9972E1F75A9 /* CoordinatorTests.swift in Sources */,
+				34D1807CFEBEC7FAAFF36CB1 /* CrawlLargeDocument.swift in Sources */,
+				F2BFB87F0B0EA804CD4B4D00 /* FakeModelProvider.swift in Sources */,
+				9D6F7A0C0EF1D8B350CE65CD /* ModelToolTests.swift in Sources */,
+				5F8B550C89C09C1EB9FAD149 /* StartupLoadStore.swift in Sources */,
+				82FAAE0066A1867C7D6831CD /* StoreTestCase.swift in Sources */,
+				84522182CD30EB1A9B34C484 /* SuspendedPackageValidator.swift in Sources */,
+				EA87B07265FD7FFA525FB16C /* ToolPackageTests.swift in Sources */,
+				9DA384B6D7DE55EA2CF69E3B /* ToolRuntimeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1260,6 +1729,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB247C4512158CD62385C9B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2E47DEDE2F0980061D4F8FAD /* OpenRouterConnection.swift in Sources */,
+				8DF7F64CEDE9869F7C59F7AE /* OpenRouterTransport.swift in Sources */,
+				4691B3AA6E12FA7E4E6A3DE6 /* ToolExecutorDispatcher.swift in Sources */,
+				DAC2132EED3BD883F21B901E /* ToolInvocationCoordinator.swift in Sources */,
+				590F42E5FF20AF24622B1141 /* ToolRuntime.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C0ED2BF08DC010A2807A68F8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1267,12 +1748,17 @@
 				D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */,
 				593A3CA36C8F99C7B958A13D /* DocumentSearchWorkspaceTests.swift in Sources */,
 				0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */,
+				0DF5333382446AA5347C77A0 /* FakeModelProvider.swift in Sources */,
 				04DFE6B5D74DD7D82466B457 /* HistoryWorkspaceTests.swift in Sources */,
 				41A7004AF59FCD863A26B003 /* SettingsWorkspaceTests.swift in Sources */,
 				972678B42FF182B84D43E6EB /* StartupEditorTests.swift in Sources */,
 				FC0DDB280C162ED0849A3821 /* StartupLoadStore.swift in Sources */,
 				80A67FCBECD9DBCD43CEF421 /* StoreTestCase.swift in Sources */,
-				3C8A2BE233BAAAAF4653F961 /* ToolInvocationTests.swift in Sources */,
+				ACDD4BF4E884A860D6DFA097 /* SuspendedPackageValidator.swift in Sources */,
+				7A10F7FF937F94C7450D06FC /* ToolInvocationIntegrationTests.swift in Sources */,
+				C450D0050E55BC7ACE2D6B04 /* ToolInvocationPresentationTests.swift in Sources */,
+				15A3DCE18F9D356AA1B222FF /* ToolInvocationTestCase.swift in Sources */,
+				0C314F158147AB6B69DDAC5D /* ToolModelIntegrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1283,11 +1769,12 @@
 				8F36CF2DD3DBB3F6CBF38AC3 /* CrawlLargeDocument.swift in Sources */,
 				FE8279535EA11ADAE468D3F0 /* DocumentSearchTests.swift in Sources */,
 				963EF4108F717821D8675420 /* DocumentTests.swift in Sources */,
+				1A736DE2BCB6C8C5DD70E169 /* FakeModelProvider.swift in Sources */,
 				E1B2AF06ED7F95AE96C63138 /* HistoryComparisonTests.swift in Sources */,
 				E52AEB2D233A54A47B408564 /* HistoryStorageTests.swift in Sources */,
+				8669BB27B9A8D2366D67BDCF /* InjectedValidatorTests.swift in Sources */,
 				B695B5BD3B553B1747430083 /* LandmarkTests.swift in Sources */,
 				568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */,
-				8FF7BA762016CCC278A9BD47 /* ModelToolTests.swift in Sources */,
 				037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */,
 				F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */,
 				738EFFEA93B139D4C2EB00BD /* RunPerformanceTests.swift in Sources */,
@@ -1298,15 +1785,26 @@
 				8347474761FD76586ADA88DC /* StorageTests.swift in Sources */,
 				C11DE1F0CD37F3A010129E69 /* StoreTeardownTests.swift in Sources */,
 				DE88C97D395ECF2B3F3B7D55 /* StoreTestCase.swift in Sources */,
-				162B7D8D703461B40093BA4B /* ToolPackageTests.swift in Sources */,
+				72B7EF35C41BF2CF8696D605 /* SuspendedPackageValidator.swift in Sources */,
+				60F8DEC8B89DE852B7BF7040 /* ToolDocumentEffectTests.swift in Sources */,
+				EFBDADA56A7450FAACA2FE20 /* ToolGoldenCompatibilityTests.swift in Sources */,
 				81AD1C4092CEA2C6CC14DA10 /* ToolPersistenceTests.swift in Sources */,
-				2D9F42630024CEC5750FDD54 /* ToolRuntimeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		010EDC5D24EABE1FF51B94B4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = B2027E6780112E41D74E29B6 /* PBXContainerItemProxy */;
+		};
+		08100A2C75BFFEC5688C7E52 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
+			targetProxy = CB65039B1CD8AB365C4A63A4 /* PBXContainerItemProxy */;
+		};
 		0D282B9AA469450BECF62371 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
@@ -1327,10 +1825,30 @@
 			target = D7119C245676A4F069D25D44 /* StoreLockProbe */;
 			targetProxy = 517D72B211FBCD8D9C026BC8 /* PBXContainerItemProxy */;
 		};
+		209F3958CD7C207E9E556F12 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9B6298D78A634AC3CF42FC03 /* JortJavaScript */;
+			targetProxy = 3AC35F4ED6E29BDF39ABEB83 /* PBXContainerItemProxy */;
+		};
+		28734AAFC7062AF63B00D701 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = 62D38AF9A08CB3C128D5615A /* PBXContainerItemProxy */;
+		};
+		2C72D2877B5E387A7CF202CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = 56B37841A361C545171BC8F9 /* PBXContainerItemProxy */;
+		};
 		2DFFC8B86931BDC9F75C09D8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
 			targetProxy = 83B7C58201E077836D7C08B2 /* PBXContainerItemProxy */;
+		};
+		2FF6193159918B40883AAC1C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = 8D37397654F238AD79A053EC /* PBXContainerItemProxy */;
 		};
 		4A18F14B7B0579E364EF983D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1347,6 +1865,21 @@
 			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
 			targetProxy = E0C5807E9C55E31BC0BF8DBB /* PBXContainerItemProxy */;
 		};
+		72384697BB6EE889A9A7F32A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = 071ECEB5852AA1731956563A /* PBXContainerItemProxy */;
+		};
+		76302F60A2F50EFEBFAAF796 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = 210131BE8F9184FD2D58D991 /* PBXContainerItemProxy */;
+		};
+		77DDED0259C3B20D897B2923 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = A638D3038CB7B10FE629EF27 /* PBXContainerItemProxy */;
+		};
 		7ADFBF35FD4BD6B5A6B82D26 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = C95C707E2A3214B5F7E60416 /* JortSettings */;
@@ -1362,6 +1895,11 @@
 			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
 			targetProxy = 901447BFBBD04FC8ADD7FF02 /* PBXContainerItemProxy */;
 		};
+		95D3537D20C64980E99254B2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A16B52213E188C51D5FF571 /* JortToolRuntime */;
+			targetProxy = 1C9ACF9D4A11A4139BA7CF82 /* PBXContainerItemProxy */;
+		};
 		968769EF85DC7E26938015E0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
@@ -1371,6 +1909,11 @@
 			isa = PBXTargetDependency;
 			target = B386A86BE2EBA3E88CBB0142 /* JortAppKit */;
 			targetProxy = FE875064B8EF691A0628E759 /* PBXContainerItemProxy */;
+		};
+		C89693304D8A37F7A783A861 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A16B52213E188C51D5FF571 /* JortToolRuntime */;
+			targetProxy = 683D15B9F84CBC0C873F3746 /* PBXContainerItemProxy */;
 		};
 		CA7722869FC5D0A3D36C36F4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1382,10 +1925,10 @@
 			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
 			targetProxy = FBA2FE8E44E67AF7B0625B5E /* PBXContainerItemProxy */;
 		};
-		D0A41865A228F7844B15C0B3 /* PBXTargetDependency */ = {
+		CDC970164D8E76EA2AB6B805 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 9B6298D78A634AC3CF42FC03 /* JortJavaScript */;
-			targetProxy = E4424A7D3BB7574649638C42 /* PBXContainerItemProxy */;
+			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
+			targetProxy = 04907754554BF7F7F55866F7 /* PBXContainerItemProxy */;
 		};
 		D32ED6B70C0406E861786C4F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1401,6 +1944,26 @@
 			isa = PBXTargetDependency;
 			target = C95C707E2A3214B5F7E60416 /* JortSettings */;
 			targetProxy = 9039C182674EC542C59D5DA6 /* PBXContainerItemProxy */;
+		};
+		E31EEAFB9A9B0F0F02A530EA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = 9DC63E657B3D642A6C6D9797 /* PBXContainerItemProxy */;
+		};
+		E7DAE3CE0BA6F60082354071 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A16B52213E188C51D5FF571 /* JortToolRuntime */;
+			targetProxy = 3D7BD61036DB557E928CD99B /* PBXContainerItemProxy */;
+		};
+		EE6AD0042388BB5748625ACD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
+			targetProxy = C6040687D115CFB718E0B010 /* PBXContainerItemProxy */;
+		};
+		F0079966D27FF6D46A3CCCB9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C95C707E2A3214B5F7E60416 /* JortSettings */;
+			targetProxy = 2D72F4C8F2A04794E6C4FCCC /* PBXContainerItemProxy */;
 		};
 		F5A13F0F853B6D3AC5FDE556 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1621,6 +2184,43 @@
 			};
 			name = Release;
 		};
+		36D0804BB8C1C2B5F77F451E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolruntimetests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		4A022C9D3FE85F752FF362BB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolruntime;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
 		545AD457DE36FEA98A5343FE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1632,6 +2232,21 @@
 					"@loader_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.foundationtests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		562DAE51263793CEDDAEFCD8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolruntimetests;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -1786,6 +2401,21 @@
 			};
 			name = Release;
 		};
+		6DB1D197CAD0A60ED64FE7F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolcontractstests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		73258C3CEC07ECB9015571EF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1794,6 +2424,87 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		7D6405B05150ADC02166F25B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolruntime;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		8717945E58F9E78B9B55C72D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolcontractstests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		8C659146637D611AB716E5BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolcontracts;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		8E5714DD6B95FC2542BA952F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolcontracts;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
 		};
 		99825EC470C938F54C105C9C /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1959,11 +2670,29 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		2E736D7E5276033C057A1979 /* Build configuration list for PBXNativeTarget "JortToolContracts" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8E5714DD6B95FC2542BA952F /* Debug */,
+				8C659146637D611AB716E5BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		2E9D2C72B1B89D60A37A92CC /* Build configuration list for PBXNativeTarget "JortCoreTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				99825EC470C938F54C105C9C /* Debug */,
 				21D4E65D1EFE190EAE93A8D0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		326DD616A17708916DE973FC /* Build configuration list for PBXNativeTarget "JortToolContractsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8717945E58F9E78B9B55C72D /* Debug */,
+				6DB1D197CAD0A60ED64FE7F1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -1995,6 +2724,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		6F3B1C50360919027B18F677 /* Build configuration list for PBXNativeTarget "JortToolRuntimeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				562DAE51263793CEDDAEFCD8 /* Debug */,
+				36D0804BB8C1C2B5F77F451E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		DB912028270E94BFF8149F90 /* Build configuration list for PBXNativeTarget "StoreLockProbe" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -2009,6 +2747,15 @@
 			buildConfigurations = (
 				1F06EE3CB00C6B5AEFD1CE39 /* Debug */,
 				2A17A1689B16722A4F08AA4F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F33F249F6D6697F34A9FDBE5 /* Build configuration list for PBXNativeTarget "JortToolRuntime" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A022C9D3FE85F752FF362BB /* Debug */,
+				7D6405B05150ADC02166F25B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

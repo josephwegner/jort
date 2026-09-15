@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 
 public struct ToolID: RawRepresentable, Codable, Hashable, Sendable, Comparable {
@@ -277,5 +278,14 @@ public enum SettingsValidation {
     definition.manifest = template.manifest
     definition.instructions = template.instructions
     return diagnostics(for: definition)
+  }
+}
+
+extension SettingsStore {
+  public func readConnectionStatus() async -> String? {
+    await currentSnapshot().preferences["openrouter.connection"]
+  }
+  public func writeConnectionStatus(_ value: String) async {
+    _ = try? await setPreference(key: "openrouter.connection", value: value)
   }
 }

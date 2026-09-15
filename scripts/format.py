@@ -17,7 +17,7 @@ env.setdefault('DEVELOPER_DIR', '/Applications/Xcode.app/Contents/Developer')
 paths = subprocess.check_output(
     ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', *ROOTS],
     cwd=ROOT).decode().split('\0')
-paths = sorted({p for p in paths if p.endswith('.swift')})
+paths = sorted({p for p in paths if p.endswith('.swift') and (ROOT / p).is_file()})
 # Fail if a new tracked Swift root is introduced without an explicit policy decision.
 all_tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
 unknown = [p for p in all_tracked if p.endswith('.swift') and p.split('/')[0] not in ROOTS

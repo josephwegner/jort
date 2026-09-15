@@ -1,3 +1,4 @@
+import JortToolContracts
 import Foundation
 
 public protocol OpenRouterTransport: Sendable {
