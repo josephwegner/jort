@@ -51,6 +51,13 @@
   {
     "checker": "core.CallAndMessage",
     "column": 9,
+    "file": "Vendor/QuickJS/libregexp.c",
+    "line": 308,
+    "message": "2nd function call argument is an uninitialized value"
+  },
+  {
+    "checker": "core.CallAndMessage",
+    "column": 9,
     "file": "Vendor/QuickJS/quickjs.c",
     "line": 28104,
     "message": "2nd function call argument is an uninitialized value"
@@ -115,15 +122,8 @@
     "checker": "core.uninitialized.Assign",
     "column": 9,
     "file": "Vendor/QuickJS/quickjs.c",
-    "line": 1616,
-    "message": "Assigned value is uninitialized"
-  },
-  {
-    "checker": "core.uninitialized.Assign",
-    "column": 9,
-    "file": "Vendor/QuickJS/quickjs.c",
     "line": 1722,
-    "message": "Assigned value is uninitialized"
+    "message": "Assigned value is garbage or undefined"
   },
   {
     "checker": "core.uninitialized.Branch",

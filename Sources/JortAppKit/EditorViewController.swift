@@ -579,19 +579,21 @@ public enum EditorStartupPhase: Equatable {
   ) {
     let savedViewport = viewport ?? scroll.contentView.bounds.origin
     textView.history.registerUndo(withTarget: self) { target in
-      let origin: MutationOrigin = target.textView.history.isUndoing ? .undo : .redo
-      let currentSelection = target.textView.selectedRange()
-      let currentViewport = target.scroll.contentView.bounds.origin
-      do {
-        let result = try target.coordinator.apply(
-          DocumentTransaction(
-            baseRevision: target.state.revision, origin: origin,
-            undoPolicy: .replay, mutation: .restore(snapshot)))
-        target.recordUndo(result.before, selection: currentSelection, viewport: currentViewport)
-        target.display(result, selection: selection)
-        target.scroll.contentView.scroll(to: savedViewport)
-        if target.toolCatalogLoaded { target.toolController.reconcilePackages() }
-      } catch { assertionFailure("Invalid undo snapshot: \(error)") }
+      MainActor.assumeIsolated {
+        let origin: MutationOrigin = target.textView.history.isUndoing ? .undo : .redo
+        let currentSelection = target.textView.selectedRange()
+        let currentViewport = target.scroll.contentView.bounds.origin
+        do {
+          let result = try target.coordinator.apply(
+            DocumentTransaction(
+              baseRevision: target.state.revision, origin: origin,
+              undoPolicy: .replay, mutation: .restore(snapshot)))
+          target.recordUndo(result.before, selection: currentSelection, viewport: currentViewport)
+          target.display(result, selection: selection)
+          target.scroll.contentView.scroll(to: savedViewport)
+          if target.toolCatalogLoaded { target.toolController.reconcilePackages() }
+        } catch { assertionFailure("Invalid undo snapshot: \(error)") }
+      }
     }
   }
   func registerToolUndo(_ snapshot: DocumentSnapshot, restoration: ToolInvocationRestoration?) {

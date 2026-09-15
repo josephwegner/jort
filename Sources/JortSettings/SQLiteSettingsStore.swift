@@ -129,7 +129,7 @@ public actor SQLiteSettingsStore: SettingsStore, ToolCatalog {
     }
     try inject(.write)
     do {
-      try connection.transaction {
+      try connection.transaction { connection in
         try body(connection)
         try connection.advanceCatalogRevision()
         try inject(.commit)
@@ -313,10 +313,10 @@ private final class SettingsConnection {
       throw error
     }
   }
-  func transaction(_ body: () throws -> Void) throws {
+  func transaction(_ body: (SettingsConnection) throws -> Void) throws {
     try execute("BEGIN IMMEDIATE")
     do {
-      try body()
+      try body(self)
       try execute("COMMIT")
     } catch {
       let primary = error

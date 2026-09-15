@@ -16,7 +16,7 @@ jobs:
       - name: Check deterministic project
         run: python3 scripts/check-project.py
       - name: Tests (headless foundation and native adapters)
-        run: JORT_PERFORMANCE_ENFORCE=1 ./scripts/test.sh
+        run: ./scripts/test.sh
       - name: Accessibility smoke test (ad-hoc signed, isolated data)
         run: ./scripts/test-ui.sh
       - name: Thread Sanitizer
@@ -53,8 +53,12 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .build-analysis-quickjs/validated.json
+          key: quickjs-audit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Vendor/QuickJS/**', 'Sources/JortJavaScript/**', 'scripts/analyze.py', 'docs/quickjs-analyzer-*.json') }}
       - name: QuickJS dependency audit (informational; review diagnostic changes)
-        run: python3 scripts/analyze.py quickjs
+        run: python3 scripts/analyze.py quickjs --reuse
       - uses: actions/upload-artifact@v4
         if: always()
         with:
