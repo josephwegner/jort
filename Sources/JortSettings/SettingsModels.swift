@@ -137,6 +137,7 @@ public struct SettingsSnapshot: Equatable, Sendable {
   public var preferences: [String: String]
   public var templateOverrides: [ToolID: Bool]
   public var customTools: [UserToolDefinition]
+  public var maintenanceDiagnostics: [String] = []
   public var availability: SettingsAvailability
   public init(
     revision: CatalogRevision = CatalogRevision(), preferences: [String: String] = [:],

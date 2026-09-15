@@ -71,3 +71,13 @@ The maximum serialized payload is **64 MiB**. Oversize, busy, permissions, disk,
 See [review implementation status](docs/review-status.md), [normative line identity](docs/line-identity.md), and [performance budgets](docs/performance.md). CI configuration includes clean generation checks, tests, static analysis, sanitizer checks, accessibility smoke testing, and a fresh Release package. This workspace is not yet a Git repository, so remote CI has not been executed here.
 
 See [engineering guardrails](docs/engineering-guardrails.md) for formatting, analyzer ownership, SQLite test teardown, and local/CI check enforcement.
+
+### Tool package history and recovery
+
+`Tools/index.json` uses schema version 2. Each installed tool keeps its current immutable package and up to five previous published generations, newest first. Only the current generation executes. Successful deletion or bundled-definition restoration removes the index entry before reclaiming its generations.
+
+Version-one indexes migrate with empty history; unindexed old directories are not treated as proven history. `index.pre-v2.json` preserves the original index until a successful reopen. Older builds require a deliberate reverse migration before opening a version-two index; do not downgrade by changing only the version number.
+
+If publication becomes uncertain after index replacement, Settings keeps the draft and offers **Show Recovery Files**. This opens the Tools directory in Finder. Copy that directory to another location before attempting manual recovery. Each `Recovery-<UUID>` folder contains `prior-index.json` (if an index existed) and `attempted-index.json`; the referenced UUID directories contain `tool.json` and `tool.js` or `instructions.txt`. These copies let you inspect both candidate catalogs and recover source even when the visible index is wrong. No earlier generation is automatically executed.
+
+A surviving recovery folder suspends generation cleanup across restarts. After you have copied the recovery material, repaired the catalog, and verified the tools you intend to keep, move the recovery folders out of Tools and use Retry or relaunch to resume cleanup. At most 32 unresolved recovery folders are allowed before further publications are refused. Recovery material is exceptional and is not pruned to satisfy the normal six-generation limit. Unexpected files and links are preserved. Nonfatal cleanup failures appear in Tools Settings and retry on the next reload or save.

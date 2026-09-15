@@ -58,3 +58,7 @@ After confirmed deletion of a custom tool succeeds, Jort SHALL remove all of tha
 - **WHEN** the user cancels deletion or the expected tool revision conflicts
 - **THEN** Jort changes neither the catalog nor the retained generation set
 - **AND** the draft and current selection remain available
+
+#### Scenario: Publication durability is uncertain
+- **WHEN** replacement is visible but durable publication cannot be confirmed
+- **THEN** Settings keeps the draft and pending transition open, reports uncertainty, and offers Show Recovery Files for the preserved indexes and package sources

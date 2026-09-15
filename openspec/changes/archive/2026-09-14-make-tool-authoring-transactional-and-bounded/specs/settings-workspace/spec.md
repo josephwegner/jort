@@ -35,3 +35,7 @@ Settings SHALL expose the in-flight save state to assistive technologies, SHALL 
 - **WHEN** an awaited save returns diagnostics, conflict, or storage failure
 - **THEN** focus returns to the relevant draft field, diagnostic, or Save workflow
 - **AND** the pending destination does not replace the draft or steal focus
+
+#### Scenario: Publication durability is uncertain
+- **WHEN** replacement is visible but durable publication cannot be confirmed
+- **THEN** Settings keeps the draft and pending transition open, reports uncertainty, and offers Show Recovery Files for the preserved indexes and package sources

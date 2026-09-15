@@ -34,6 +34,7 @@
 		3C8A2BE233BAAAAF4653F961 /* ToolInvocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 618D73AC50B5D97409ED08E3 /* ToolInvocationTests.swift */; };
 		3F1D8773EB88BF5E84AE1EC0 /* HistoryRetention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EA408834ABD32E691793CF /* HistoryRetention.swift */; };
 		3F2DBE45C848ED97F138F393 /* ModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAE644632A85A82F11F2C76 /* ModelProvider.swift */; };
+		401338A92E9A783E573AF6FC /* ToolPackageStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */; };
 		4168D9833F7B605F92C1F9D9 /* ToolInvocationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D83AEEDFD45147CFE6AE4AD2 /* ToolInvocationController.swift */; };
 		41A7004AF59FCD863A26B003 /* SettingsWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D344138FB05A5EA019B7C8B7 /* SettingsWorkspaceTests.swift */; };
 		43B9CC41FB64E27E0135D251 /* JortUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73F5C254EE12140FB60EB69 /* JortUITests.swift */; };
@@ -415,6 +416,7 @@
 		925521D5605C40F2F00E8BB6 /* Tools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tools; path = Jort/Resources/Tools; sourceTree = SOURCE_ROOT; };
 		92AE5B524A0A913C5257E842 /* ToolPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPersistenceTests.swift; sourceTree = "<group>"; };
 		956D7EEB582CB228242A99A3 /* libunicode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libunicode.h; sourceTree = "<group>"; };
+		99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageStorage.swift; sourceTree = "<group>"; };
 		9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortFoundationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortSettings.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9CAC6653C4C60493EC41193C /* dtoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dtoa.h; sourceTree = "<group>"; };
@@ -687,6 +689,7 @@
 				5E3C635626F2EA72B23EDA46 /* ToolCatalog.swift */,
 				C9D1D80CC0A9BC989917816B /* ToolPackage.swift */,
 				382B6626673D4E9ECF7208D3 /* ToolPackageRegistry.swift */,
+				99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */,
 				B4E615EC1B22CB60B16A51FC /* ToolRuntime.swift */,
 			);
 			name = JortSettings;
@@ -1163,6 +1166,7 @@
 				43F5B75595385C4D02CC4CF8 /* ToolCatalog.swift in Sources */,
 				5A19D68DEBB0E7B34ABDE688 /* ToolPackage.swift in Sources */,
 				8316CC5DCDA7F882F313D229 /* ToolPackageRegistry.swift in Sources */,
+				401338A92E9A783E573AF6FC /* ToolPackageStorage.swift in Sources */,
 				2C5D3C73A13EF7224D8DC5BD /* ToolRuntime.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

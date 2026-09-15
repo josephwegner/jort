@@ -67,7 +67,7 @@ Use this save order:
 6. Encode the complete bounded index to a temporary file, sync it, atomically rename it over `index.json`, sync the parent directory, then update in-memory index/snapshot state.
 7. Best-effort remove now-unreferenced valid generation and staging directories without following links.
 
-If generation publication fails, the old index remains authoritative. If index publication fails after the final UUID directory exists, that directory is an orphan and the old index remains authoritative. If garbage collection fails, the save remains published and cleanup is retried on next save/reload with an actionable diagnostic; cleanup failure never rolls the index back to a generation that may already have been exposed.
+If generation publication fails, the old index remains authoritative. If index publication fails before replacement after the final UUID directory exists, that directory is an orphan and the old index remains authoritative. After replacement, sync or in-memory publication failure is a typed publication-uncertain outcome: reload the visible index, preserve the draft, and do not claim durable success. If garbage collection fails, the save remains published and cleanup is retried on next save/reload with an actionable diagnostic; cleanup failure never rolls the index back to a generation that may already have been exposed.
 
 Writing directly into the final UUID directory was rejected because readers can observe partial files. Treating garbage collection as part of the atomic save result was rejected because failure to remove an obsolete file should not invalidate a successfully published current package.
 
@@ -150,3 +150,7 @@ Rollback after a version-two index has been written requires the old build eithe
 - Determine the repository's preferred durable file-publication helper so index fsync/rename behavior is shared rather than reimplemented inconsistently.
 - Confirm a bounded enumeration ceiling for legacy installed directories that is high enough to clean the reviewed unbounded state without allowing pathological startup work.
 - Decide where nonfatal cleanup diagnostics surface in Settings without turning successful saves into apparent failures.
+
+## Approved publication uncertainty and recovery amendment
+
+Before replacing an index, durably create a recovery hold containing the prior index (when present) and attempted index. Remove the hold only after directory sync and in-memory publication succeed. Any surviving hold suppresses all generation cleanup across launches; subsequent publications must not remove earlier holds. Recovery holds are exceptional recovery material, outside healthy generation retention. Bound their count and refuse further writes when exhausted rather than deleting recovery files. Settings offers **Show Recovery Files** for holds, invalid candidates, and unavailable registry state, revealing the tools directory for copying indexes and source files. No automatic recovery promotion is introduced. A post-replacement failure reloads visible state and returns publication uncertainty; transitions stay open and the draft remains intact. Pre-replacement failures preserve old authority. Use a 20,000 direct-child enumeration ceiling and preserve directories with unexpected or nested entries during cleanup.

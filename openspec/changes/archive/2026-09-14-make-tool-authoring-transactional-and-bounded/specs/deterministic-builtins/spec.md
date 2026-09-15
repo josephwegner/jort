@@ -26,8 +26,8 @@ Jort SHALL fully write, sync, reload, and validate a staged immutable package ge
 - **THEN** the prior index and current executable package remain authoritative
 - **AND** no partial directory is referenced by the index
 
-#### Scenario: Index publication fails
-- **WHEN** a verified final generation exists but durable index publication fails
+#### Scenario: Index publication fails before replacement
+- **WHEN** a verified final generation exists but index publication fails before atomic replacement
 - **THEN** the prior index and package remain authoritative in memory and after relaunch
 - **AND** the unreferenced generation is eligible for later trusted-index cleanup
 
@@ -71,3 +71,17 @@ Jort SHALL durably remove a custom tool or bundled-tool override from the index 
 - **WHEN** durable index publication fails during deletion or restoration
 - **THEN** the prior installed package and every referenced generation remain intact and authoritative
 - **AND** no generation is reclaimed for that attempted operation
+
+#### Scenario: Publication becomes uncertain after replacement
+- **WHEN** index replacement has occurred but directory sync or in-memory publication fails
+- **THEN** Jort reports publication uncertainty, reloads the visible index without claiming durable success, and preserves the draft
+- **AND** preserves the prior index, attempted index, and all candidate generations across restart with a durable recovery hold established before replacement
+- **AND** performs no destructive cleanup while that recovery hold exists
+
+### Requirement: Tool recovery files are accessible
+Tools Settings SHALL offer a Show Recovery Files action when registry loading fails, publication is uncertain, or indexed packages are invalid. It SHALL reveal the installed tools directory containing preserved indexes and package generations without modifying, executing, or automatically promoting them.
+
+#### Scenario: Visible index does not represent the intended tool
+- **WHEN** the user opens recovery files after uncertain publication
+- **THEN** the prior and attempted indexes and package sources remain available to copy for recovery
+- **AND** subsequent reloads do not discard that recovery material

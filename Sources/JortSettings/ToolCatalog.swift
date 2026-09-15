@@ -21,6 +21,11 @@ public protocol SettingsStore: Sendable {
     -> SettingsSnapshot
   func delete(id: ToolID, expectedRevision: RecordRevision) async throws -> SettingsSnapshot
   func close() async throws
+  func recoveryDirectory() async -> URL?
+}
+
+public extension SettingsStore {
+  func recoveryDirectory() async -> URL? { nil }
 }
 
 public protocol ToolCatalog: Sendable {

@@ -29,8 +29,17 @@ public actor PackageSettingsStore: SettingsStore {
       legacyIDs[value.id] = original.id
       return value
     }
-    return try await refresh(preferences: legacy.preferences)
+    do {
+      try await registry.reload()
+      return try await refresh(preferences: legacy.preferences)
+    } catch {
+      snapshot.availability = .unavailable(
+        "Tool storage could not be opened. Use Show Recovery Files to preserve your package sources."
+      )
+      throw error
+    }
   }
+  public func recoveryDirectory() -> URL? { registry.installedDirectory }
   public func currentSnapshot() -> SettingsSnapshot { snapshot }
   public func updates() -> AsyncStream<SettingsSnapshot> {
     let id = UUID()
@@ -46,7 +55,12 @@ public actor PackageSettingsStore: SettingsStore {
     return try await refresh(preferences: value.preferences)
   }
   public func setTemplateEnabled(id: ToolID, enabled: Bool?) async throws -> SettingsSnapshot {
-    _ = try await registry.setEnabled(id: id.rawValue, enabled: enabled ?? true)
+    do {
+      _ = try await registry.setEnabled(id: id.rawValue, enabled: enabled ?? true)
+    } catch ToolPublicationError.uncertain {
+      _ = try? await refresh()
+      throw ToolPublicationError.uncertain
+    }
     return try await refresh()
   }
   public func save(_ definition: UserToolDefinition, expectedRevision: RecordRevision?) async throws
@@ -73,9 +87,14 @@ public actor PackageSettingsStore: SettingsStore {
       manifest.executorType == .model
       ? ToolPackage(manifest: manifest, instructions: definition.instructions ?? "")
       : ToolPackage(manifest: manifest, source: definition.source)
-    _ = try await registry.save(
-      package, enabled: definition.isEnabled,
-      replacingVersion: current?.manifest?.version, requireAbsent: current == nil)
+    do {
+      _ = try await registry.save(
+        package, enabled: definition.isEnabled,
+        replacingVersion: current?.manifest?.version, requireAbsent: current == nil)
+    } catch ToolPublicationError.uncertain {
+      _ = try? await refresh()
+      throw ToolPublicationError.uncertain
+    }
     if let originalID = legacyIDs[definition.id], let revision = current?.revision {
       _ = try await preferences.delete(id: originalID, expectedRevision: revision)
       legacyIDs.removeValue(forKey: definition.id)
@@ -94,7 +113,10 @@ public actor PackageSettingsStore: SettingsStore {
       legacyIDs.removeValue(forKey: id)
       legacyTools.removeAll { $0.id == id }
     } else {
-      _ = try await registry.remove(id: id.rawValue)
+      do { _ = try await registry.remove(id: id.rawValue) } catch ToolPublicationError.uncertain {
+        _ = try? await refresh()
+        throw ToolPublicationError.uncertain
+      }
     }
     return try await refresh()
   }
@@ -108,6 +130,7 @@ public actor PackageSettingsStore: SettingsStore {
     var value = SettingsSnapshot(
       revision: CatalogRevision(snapshot.revision.rawValue + 1),
       preferences: preferences ?? snapshot.preferences)
+    value.maintenanceDiagnostics = registry.diagnostics
     for entry in registry.packages {
       if entry.isBundled {
         value.templateOverrides[ToolID(entry.id)] = entry.isEnabled

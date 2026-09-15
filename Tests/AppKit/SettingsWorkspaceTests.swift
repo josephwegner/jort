@@ -337,3 +337,235 @@ extension SettingsWorkspaceTests {
     XCTAssertFalse(pane.sourceEditor.isHidden)
   }
 }
+
+private actor ControlledToolValidator: ToolDefinitionValidator {
+  private var continuation: CheckedContinuation<[ToolDiagnostic], Never>?
+  private var entered: [CheckedContinuation<Void, Never>] = []
+  private(set) var count = 0
+  func diagnostics(for definition: UserToolDefinition) async -> [ToolDiagnostic] {
+    count += 1
+    entered.forEach { $0.resume() }
+    entered = []
+    return await withCheckedContinuation { continuation = $0 }
+  }
+  func waitForEntry() async {
+    if count > 0 { return }
+    await withCheckedContinuation { entered.append($0) }
+  }
+  func finish(_ diagnostics: [ToolDiagnostic] = []) {
+    continuation?.resume(returning: diagnostics)
+    continuation = nil
+  }
+}
+
+private actor ControlledToolStore: SettingsStore {
+  enum Outcome: Sendable { case success, failure, conflict, uncertain }
+  private var value = SettingsSnapshot()
+  private var continuation: CheckedContinuation<Void, Never>?
+  private var entered: [CheckedContinuation<Void, Never>] = []
+  private(set) var count = 0
+  let outcome: Outcome
+  init(_ outcome: Outcome = .success) { self.outcome = outcome }
+  func load() -> SettingsSnapshot { value }
+  func currentSnapshot() -> SettingsSnapshot { value }
+  func updates() -> AsyncStream<SettingsSnapshot> { AsyncStream { $0.finish() } }
+  func setPreference(key: String, value: String?) -> SettingsSnapshot { self.value }
+  func setTemplateEnabled(id: ToolID, enabled: Bool?) -> SettingsSnapshot { value }
+  func delete(id: ToolID, expectedRevision: RecordRevision) -> SettingsSnapshot { value }
+  func close() {}
+  func recoveryDirectory() -> URL? { URL(fileURLWithPath: "/private/tmp") }
+  func save(_ definition: UserToolDefinition, expectedRevision: RecordRevision?) async throws
+    -> SettingsSnapshot
+  {
+    count += 1
+    entered.forEach { $0.resume() }
+    entered = []
+    await withCheckedContinuation { continuation = $0 }
+    switch outcome {
+    case .failure: throw SettingsStoreError.unavailable("Test storage failure")
+    case .conflict: throw SettingsStoreError.conflict(current: RecordRevision(8))
+    case .uncertain: throw ToolPublicationError.uncertain
+    case .success:
+      var committed = definition
+      committed.revision = RecordRevision(1)
+      value.customTools = [committed]
+      return value
+    }
+  }
+  func waitForEntry() async {
+    if count > 0 { return }
+    await withCheckedContinuation { entered.append($0) }
+  }
+  func finish() {
+    continuation?.resume()
+    continuation = nil
+  }
+}
+
+extension SettingsWorkspaceTests {
+  func testOwnedSaveHasNoTimeoutAndAllTransitionsAwaitOneSubmission() async throws {
+    _ = NSApplication.shared
+    let store = ControlledToolStore(), validator = ControlledToolValidator()
+    let pane = ToolsSettingsViewController(store: store, templates: [], validator: validator)
+    let controller = SettingsWindowController(
+      panes: [
+        .init(id: "tools", title: "Tools", symbolName: "hammer") { pane },
+        .init(id: "other", title: "Other", symbolName: "gear") { SettingsPaneViewController() },
+      ], defaults: UserDefaults(suiteName: "OwnedSave-\(UUID())")!)
+    let window = try XCTUnwrap(controller.window)
+    defer { window.orderOut(nil) }
+    try await waitUntil { pane.snapshot.availability == .ready }
+    pane.newTool()
+    let id = pane.draft?.definition.id
+    pane.saveDraft()
+    await validator.waitForEntry()
+    XCTAssertTrue(pane.isSaving)
+    XCTAssertTrue(pane.hasUnsavedChanges)
+    XCTAssertEqual(pane.savingAccessibilityLabel, "Saving tool")
+    XCTAssertFalse(pane.nameField.isEditable)
+    XCTAssertFalse(pane.sourceEditor.isSourceEditable)
+    XCTAssertFalse(pane.instructionsEditor.isSourceEditable)
+    for control: NSControl in [
+      pane.newButton, pane.saveButton, pane.discardButton, pane.deleteButton,
+      pane.duplicateButton, pane.enabledButton, pane.modelButton, pane.executorButton,
+      pane.inputModeButton, pane.outputOperationButton, pane.toolsTable,
+    ] {
+      XCTAssertFalse(control.isEnabled)
+    }
+    pane.newTool()
+    pane.duplicateTool()
+    pane.discardDraft()
+    pane.saveDraft()
+    XCTAssertEqual(pane.draft?.definition.id, id)
+    var completions: [Bool] = []
+    pane.resolvePendingChanges(in: window) { completions.append($0) }
+    controller.prepareForTermination { completions.append($0) }
+    controller.selectPane(id: "other")
+    // Deliberately exceeds the removed two-second polling timeout.
+    try await Task.sleep(for: .milliseconds(2100))
+    XCTAssertTrue(completions.isEmpty)
+    XCTAssertEqual(controller.selectedPaneID, "tools")
+    await validator.finish()
+    await store.waitForEntry()
+    pane.saveDraft()
+    let validations = await validator.count, saves = await store.count
+    XCTAssertEqual(validations, 1)
+    XCTAssertEqual(saves, 1)
+    XCTAssertTrue(completions.isEmpty)
+    await store.finish()
+    try await waitUntil { completions.count == 2 && controller.selectedPaneID == "other" }
+    XCTAssertEqual(completions, [true, true])
+    XCTAssertFalse(pane.isSaving)
+    XCTAssertFalse(pane.hasUnsavedChanges)
+    XCTAssertEqual(pane.snapshot.customTools.count, 1)
+    pane.newTool()
+    let newID = pane.draft?.definition.id
+    await Task.yield()
+    XCTAssertEqual(pane.draft?.definition.id, newID)
+    XCTAssertNotEqual(newID, id)
+  }
+
+  func testFailedOwnedSavePreservesDraftSelectionUndoAndRejectsTransitions() async throws {
+    _ = NSApplication.shared
+    for outcome in [ControlledToolStore.Outcome.failure, .conflict, .uncertain] {
+      let store = ControlledToolStore(outcome)
+      let pane = ToolsSettingsViewController(store: store, templates: [])
+      let controller = SettingsWindowController(
+        panes: [
+          .init(id: "tools", title: "Tools", symbolName: "hammer") { pane },
+          .init(id: "other", title: "Other", symbolName: "gear") { SettingsPaneViewController() },
+        ], defaults: UserDefaults(suiteName: "FailedSave-\(UUID())")!)
+      let window = try XCTUnwrap(controller.window)
+      defer { window.orderOut(nil) }
+      try await waitUntil { pane.snapshot.availability == .ready }
+      pane.newTool()
+      let original = pane.draft
+      let selection = NSRange(location: 3, length: 4)
+      pane.sourceEditor.textView.setSelectedRange(selection)
+      let undo = pane.sourceEditor.textView.undoManager
+      window.makeFirstResponder(pane.sourceEditor.textView)
+      pane.saveDraft()
+      await store.waitForEntry()
+      var completions: [Bool] = []
+      pane.resolvePendingChanges(in: window) { completions.append($0) }
+      controller.prepareForTermination { completions.append($0) }
+      controller.selectPane(id: "other")
+      XCTAssertFalse(controller.windowShouldClose(window))
+      await store.finish()
+      try await waitUntil { completions.count == 2 && !pane.isSaving }
+      XCTAssertEqual(completions, [false, false])
+      XCTAssertEqual(controller.selectedPaneID, "tools")
+      XCTAssertEqual(pane.draft, original)
+      XCTAssertEqual(pane.sourceEditor.textView.selectedRange(), selection)
+      XCTAssertTrue(pane.sourceEditor.textView.undoManager === undo)
+      XCTAssertTrue(window.firstResponder === pane.sourceEditor.textView)
+      XCTAssertTrue(pane.sourceEditor.isSourceEditable)
+      XCTAssertTrue(pane.saveButton.isEnabled)
+      if case .uncertain = outcome { XCTAssertTrue(pane.canShowRecoveryFiles) }
+      let count = await store.count
+      XCTAssertEqual(count, 1)
+    }
+  }
+
+  func testBlockingInjectedValidationNeverSubmitsToStore() async throws {
+    let store = ControlledToolStore(), validator = ControlledToolValidator()
+    let pane = ToolsSettingsViewController(store: store, templates: [], validator: validator)
+    _ = pane.view
+    try await waitUntil { pane.snapshot.availability == .ready }
+    pane.newTool()
+    let before = pane.draft
+    let waiter = Task { await pane.awaitSave() }
+    await validator.waitForEntry()
+    await validator.finish([
+      ToolDiagnostic(severity: .error, field: .source, message: "Blocked by validator")
+    ])
+    let result = await waiter.value
+    XCTAssertFalse(result.succeeded)
+    XCTAssertEqual(pane.draft, before)
+    XCTAssertFalse(pane.isSaving)
+    XCTAssertFalse(pane.saveButton.isEnabled)
+    let count = await store.count
+    XCTAssertEqual(count, 0)
+  }
+}
+
+extension SettingsWorkspaceTests {
+  func testSaveDiscardCancelSheetResolutionAndSuccessfulClose() async throws {
+    _ = NSApplication.shared
+    let store = ControlledToolStore(), validator = ControlledToolValidator()
+    let pane = ToolsSettingsViewController(store: store, templates: [], validator: validator)
+    let controller = SettingsWindowController(panes: [
+      .init(id: "tools", title: "Tools", symbolName: "hammer") { pane }
+    ])
+    let window = try XCTUnwrap(controller.window)
+    defer { window.orderOut(nil) }
+    window.makeKeyAndOrderFront(nil)
+    try await waitUntil { pane.snapshot.availability == .ready }
+    pane.newTool()
+    let original = pane.draft
+    var outcomes: [Bool] = []
+    pane.resolvePendingChanges(in: window) { outcomes.append($0) }
+    window.endSheet(try XCTUnwrap(window.attachedSheet), returnCode: .alertThirdButtonReturn)
+    try await waitUntil { outcomes.count == 1 }
+    XCTAssertEqual(outcomes, [false])
+    XCTAssertEqual(pane.draft, original)
+    pane.resolvePendingChanges(in: window) { outcomes.append($0) }
+    window.endSheet(try XCTUnwrap(window.attachedSheet), returnCode: .alertSecondButtonReturn)
+    try await waitUntil { outcomes.count == 2 }
+    XCTAssertEqual(outcomes, [false, true])
+    XCTAssertFalse(pane.hasUnsavedChanges)
+    pane.newTool()
+    XCTAssertFalse(controller.windowShouldClose(window))
+    window.endSheet(try XCTUnwrap(window.attachedSheet), returnCode: .alertFirstButtonReturn)
+    await validator.waitForEntry()
+    XCTAssertTrue(window.isVisible)
+    await validator.finish()
+    await store.waitForEntry()
+    XCTAssertTrue(window.isVisible)
+    await store.finish()
+    try await waitUntil { !pane.isSaving && !window.isVisible }
+    XCTAssertFalse(pane.hasUnsavedChanges)
+    let saves = await store.count
+    XCTAssertEqual(saves, 1)
+  }
+}

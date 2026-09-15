@@ -254,9 +254,11 @@ final class ToolPackageTests: StoreTestCase {
     let index = try XCTUnwrap(
       JSONSerialization.jsonObject(
         with: Data(contentsOf: installed.appendingPathComponent("index.json"))) as? [String: Any])
-    let generations = try XCTUnwrap(index["installed"] as? [String: String])
-    let source = installed.appendingPathComponent(try XCTUnwrap(generations[user.manifest.id]))
-      .appendingPathComponent("tool.js")
+    let generations = try XCTUnwrap(index["installed"] as? [String: [String: Any]])
+    let source = installed.appendingPathComponent(
+      try XCTUnwrap(generations[user.manifest.id]?["current"] as? String)
+    )
+    .appendingPathComponent("tool.js")
     try Data("broken script !!!".utf8).write(to: source, options: .atomic)
     try await registry.reload()
     let isolated = try await registry.inspect()
@@ -268,7 +270,7 @@ final class ToolPackageTests: StoreTestCase {
     XCTAssertTrue(invalid.isEnabled)
     XCTAssertEqual(try String(contentsOf: source, encoding: .utf8), "broken script !!!")
     _ = try await registry.restore(id: user.manifest.id)
-    XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
   }
 
   func testInspectionIdentifiesMalformedKnownAndUnknownBundles() async throws {
@@ -336,5 +338,284 @@ final class ToolPackageTests: StoreTestCase {
     XCTAssertEqual(Set(conflicts.compactMap(\.packageID)), [first.manifest.id, second.manifest.id])
     XCTAssertEqual(conflicts.first { $0.packageID == first.manifest.id }?.isEnabled, true)
     XCTAssertEqual(conflicts.first { $0.packageID == second.manifest.id }?.isEnabled, false)
+  }
+}
+
+extension ToolPackageTests {
+  private func custom(_ version: Int = 1) -> ToolPackage {
+    ToolPackage(
+      manifest: .init(
+        id: "org.test.history", version: version, name: "History", command: "/history"),
+      source: "export default async function() { return {output:'\(version)'}; }")
+  }
+  private func indexObject(_ root: URL) throws -> [String: Any] {
+    try XCTUnwrap(
+      JSONSerialization.jsonObject(
+        with: Data(contentsOf: root.appendingPathComponent("index.json"))) as? [String: Any])
+  }
+  private func generationNames(_ root: URL) throws -> [String] {
+    try FileManager.default.contentsOfDirectory(atPath: root.path).filter {
+      UUID(uuidString: $0) != nil
+    }
+  }
+  func testRetainsNewestFiveAndDeletesOnlyAfterCatalogRemoval() async throws {
+    let directory = try root()
+    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    var published: [String] = []
+    for version in 1...9 {
+      let state = try await registry.save(custom(version))
+      XCTAssertEqual(
+        state.executable.first { $0.manifest.id == custom().manifest.id }, custom(version))
+      let installed = try XCTUnwrap(indexObject(directory)["installed"] as? [String: [String: Any]])
+      let entry = try XCTUnwrap(installed[custom().manifest.id])
+      XCTAssertEqual(entry["previous"] as? [String], Array(published.reversed().prefix(5)))
+      published.append(try XCTUnwrap(entry["current"] as? String))
+      XCTAssertEqual(try generationNames(directory).count, min(version, 6))
+    }
+    _ = try await registry.remove(id: custom().manifest.id)
+    XCTAssertTrue(try generationNames(directory).isEmpty)
+    let reopened = try await ToolPackageRegistry(
+      bundledDirectory: bundled, installedDirectory: directory
+    ).inspect()
+    XCTAssertFalse(reopened.executable.contains { $0.manifest.id == custom().manifest.id })
+  }
+  func testEveryPublicationBoundaryPreservesCompleteAuthority() async throws {
+    enum Injected: Error { case failure }
+    for stage in ToolPublicationStage.allCases where stage != .cleanup {
+      let directory = try root()
+      let initial = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+      _ = try await initial.save(custom())
+      let oldIndex = try Data(contentsOf: directory.appendingPathComponent("index.json"))
+      let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+        if $0 == stage { throw Injected.failure }
+      }
+      _ = try await registry.inspect()
+      let uncertain = stage == .indexDirectorySync || stage == .memoryPublication
+      do {
+        _ = try await registry.save(custom(2))
+        XCTFail("Expected failure at \(stage)")
+      } catch { if uncertain { XCTAssertEqual(error as? ToolPublicationError, .uncertain) } }
+      let memory = try await registry.inspect()
+      XCTAssertEqual(
+        memory.executable.first { $0.manifest.id == custom().manifest.id },
+        custom(uncertain ? 2 : 1), stage.rawValue)
+      if !uncertain {
+        XCTAssertEqual(
+          try Data(contentsOf: directory.appendingPathComponent("index.json")), oldIndex)
+      }
+      let reopened = try await ToolPackageRegistry(
+        bundledDirectory: bundled, installedDirectory: directory
+      ).inspect()
+      XCTAssertEqual(
+        reopened.executable.first { $0.manifest.id == custom().manifest.id },
+        custom(uncertain ? 2 : 1))
+      if uncertain {
+        let hold = try XCTUnwrap(
+          FileManager.default.contentsOfDirectory(atPath: directory.path).first {
+            $0.hasPrefix("Recovery-")
+          })
+        XCTAssertEqual(
+          try Data(contentsOf: directory.appendingPathComponent(hold + "/prior-index.json")),
+          oldIndex)
+        XCTAssertTrue(
+          FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent(hold + "/attempted-index.json").path))
+        XCTAssertEqual(try generationNames(directory).count, 2)
+        XCTAssertTrue(reopened.diagnostics.contains { $0.contains("recovery") })
+      }
+    }
+  }
+  func testMigrationImportsOnlyProvenCurrentAndKeepsBackupUntilReopen() async throws {
+    let directory = try root(), current = UUID().uuidString, orphan = UUID().uuidString
+    _ = try write(custom(), named: current, to: directory)
+    _ = try write(custom(2), named: orphan, to: directory)
+    try writeIndex(installed: directory, entries: [custom().manifest.id: current])
+    let before = try Data(contentsOf: directory.appendingPathComponent("index.json"))
+    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+      .inspect()
+    XCTAssertEqual(
+      try Data(contentsOf: directory.appendingPathComponent("index.pre-v2.json")), before)
+    let object = try indexObject(directory)
+    XCTAssertEqual(object["schemaVersion"] as? Int, 2)
+    let entry = try XCTUnwrap(
+      (object["installed"] as? [String: [String: Any]])?[custom().manifest.id])
+    XCTAssertEqual(entry["previous"] as? [String], [])
+    XCTAssertEqual(try generationNames(directory), [current])
+    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+      .inspect()
+    XCTAssertFalse(
+      FileManager.default.fileExists(
+        atPath: directory.appendingPathComponent("index.pre-v2.json").path))
+  }
+  func testUntrustedIndexesPreserveAllFiles() async throws {
+    let generation = UUID().uuidString
+    let entry: [String: Any] = ["current": generation, "previous": []]
+    let invalid: [[String: Any]] = [
+      ["schemaVersion": 99, "installed": [:], "disabled": []],
+      [
+        "schemaVersion": 2, "installed": ["org.test.a": entry, "org.test.b": entry], "disabled": [],
+      ],
+      [
+        "schemaVersion": 2,
+        "installed": [
+          "org.test.a": ["current": generation, "previous": (0..<6).map { _ in UUID().uuidString }]
+        ], "disabled": [],
+      ],
+      [
+        "schemaVersion": 2,
+        "installed": ["org.test.a": ["current": generation, "previous": ["../escape"]]],
+        "disabled": [],
+      ],
+      ["schemaVersion": 1, "installed": ["org.test.a": UUID().uuidString], "disabled": []],
+    ]
+    var fixtures = try invalid.map { try JSONSerialization.data(withJSONObject: $0) }
+    fixtures.append(Data("broken json".utf8))
+    for fixture in fixtures {
+      let directory = try root()
+      _ = try write(custom(), named: generation, to: directory)
+      let stage = ".staging-" + UUID().uuidString.lowercased()
+      _ = try write(custom(), named: stage, to: directory)
+      try fixture.write(to: directory.appendingPathComponent("index.json"))
+      do {
+        _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+          .inspect()
+        XCTFail("Expected invalid index")
+      } catch {}
+      XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("index.json")), fixture)
+      XCTAssertTrue(
+        FileManager.default.fileExists(atPath: directory.appendingPathComponent(stage).path))
+      XCTAssertEqual(try generationNames(directory), [generation])
+    }
+  }
+  func testInvalidCurrentDoesNotPromoteHistoryAndCleanupPreservesLinks() async throws {
+    let directory = try root(), outside = try root()
+    let current = UUID().uuidString, previous = UUID().uuidString
+    _ = try write(custom(), named: previous, to: directory)
+    let object: [String: Any] = [
+      "schemaVersion": 2,
+      "installed": [custom().manifest.id: ["current": current, "previous": [previous]]],
+      "disabled": [],
+    ]
+    try JSONSerialization.data(withJSONObject: object).write(
+      to: directory.appendingPathComponent("index.json"))
+    let link = UUID().uuidString, nested = UUID().uuidString, orphan = UUID().uuidString
+    try FileManager.default.createSymbolicLink(
+      at: directory.appendingPathComponent(link), withDestinationURL: outside)
+    let nestedURL = try write(custom(), named: nested, to: directory)
+    try FileManager.default.createSymbolicLink(
+      at: nestedURL.appendingPathComponent("tool.js.link"), withDestinationURL: outside)
+    _ = try write(custom(), named: orphan, to: directory)
+    _ = try write(custom(), named: "unexpected", to: directory)
+    _ = try write(custom(), named: ".staging-" + UUID().uuidString.lowercased(), to: directory)
+    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    let state = try await registry.inspect()
+    XCTAssertFalse(state.executable.contains { $0.manifest.id == custom().manifest.id })
+    XCTAssertTrue(
+      state.candidates.contains {
+        $0.packageID == custom().manifest.id && $0.validation == .invalid
+      })
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: directory.appendingPathComponent(previous).path))
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: directory.appendingPathComponent(link).path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: nestedURL.path))
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: directory.appendingPathComponent("unexpected").path))
+  }
+  func testCleanupFailureIsNonfatalAndRetryReclaimsOrphans() async throws {
+    enum Injected: Error { case failure }
+    let directory = try root()
+    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+      if $0 == .cleanup { throw Injected.failure }
+    }
+    var state = ToolRegistrySnapshot()
+    for version in 1...8 { state = try await registry.save(custom(version)) }
+    XCTAssertEqual(try generationNames(directory).count, 8)
+    XCTAssertTrue(state.diagnostics.contains { $0.contains("Cleanup") })
+    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+      .inspect()
+    XCTAssertEqual(try generationNames(directory).count, 6)
+  }
+  func testFailedRemovalKeepsEveryGeneration() async throws {
+    enum Injected: Error { case failure }
+    let directory = try root()
+    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    for version in 1...3 { _ = try await registry.save(custom(version)) }
+    let failing = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+      if $0 == .indexRename { throw Injected.failure }
+    }
+    do {
+      _ = try await failing.remove(id: custom().manifest.id)
+      XCTFail("Expected failed delete")
+    } catch {}
+    XCTAssertEqual(try generationNames(directory).count, 3)
+    let state = try await failing.inspect()
+    XCTAssertEqual(state.executable.first { $0.manifest.id == custom().manifest.id }, custom(3))
+  }
+}
+
+extension ToolPackageTests {
+  func testRecoveryHoldPreservesUnreferencedSourcesAcrossReloadAndLaterSave() async throws {
+    enum Injected: Error { case failure }
+    let directory = try root()
+    _ = try await ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+      .save(custom())
+    let failing = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+      if $0 == .indexDirectorySync { throw Injected.failure }
+    }
+    do {
+      _ = try await failing.save(custom(2))
+      XCTFail("Expected uncertainty")
+    } catch {}
+    let orphan = UUID().uuidString
+    _ = try write(custom(99), named: orphan, to: directory)
+    let reopened = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory)
+    _ = try await reopened.inspect()
+    _ = try await reopened.save(custom(3))
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: directory.appendingPathComponent(orphan).path))
+    XCTAssertEqual(try generationNames(directory).count, 4)
+    let holds = try FileManager.default.contentsOfDirectory(atPath: directory.path).filter {
+      $0.hasPrefix("Recovery-")
+    }
+    XCTAssertEqual(holds.count, 1)
+  }
+
+  func testFailedMigrationBeforeReplacementPreservesOriginalIndexAndPackages() async throws {
+    enum Injected: Error { case failure }
+    let directory = try root(), current = UUID().uuidString, orphan = UUID().uuidString
+    _ = try write(custom(), named: current, to: directory)
+    _ = try write(custom(9), named: orphan, to: directory)
+    try writeIndex(installed: directory, entries: [custom().manifest.id: current])
+    let old = try Data(contentsOf: directory.appendingPathComponent("index.json"))
+    let registry = ToolPackageRegistry(bundledDirectory: bundled, installedDirectory: directory) {
+      if $0 == .indexRename { throw Injected.failure }
+    }
+    do {
+      _ = try await registry.inspect()
+      XCTFail("Expected migration failure")
+    } catch {}
+    XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("index.json")), old)
+    XCTAssertEqual(Set(try generationNames(directory)), [current, orphan])
+  }
+
+  func testDamagedPreviousPackageIsPreservedAndNeverUsedForExecution() async throws {
+    let directory = try root(), current = UUID().uuidString, previous = UUID().uuidString
+    _ = try write(custom(2), named: current, to: directory)
+    let damaged = try write(custom(), named: previous, to: directory)
+    try Data("broken".utf8).write(to: damaged.appendingPathComponent("tool.js"))
+    let value: [String: Any] = [
+      "schemaVersion": 2,
+      "installed": [custom().manifest.id: ["current": current, "previous": [previous]]],
+      "disabled": [],
+    ]
+    try JSONSerialization.data(withJSONObject: value).write(
+      to: directory.appendingPathComponent("index.json"))
+    let state = try await ToolPackageRegistry(
+      bundledDirectory: bundled, installedDirectory: directory
+    ).inspect()
+    XCTAssertEqual(state.executable.first { $0.manifest.id == custom().manifest.id }, custom(2))
+    XCTAssertEqual(
+      try String(contentsOf: damaged.appendingPathComponent("tool.js"), encoding: .utf8), "broken")
   }
 }

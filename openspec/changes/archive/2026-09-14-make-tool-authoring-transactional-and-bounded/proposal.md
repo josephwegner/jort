@@ -32,3 +32,5 @@ None. This change strengthens existing tool registry, tool configuration, and Se
 - `SettingsWindowController` and application termination paths that wait for active-pane resolution.
 - Package registry failure-injection/migration tests and native Settings tests.
 - Bundled package files remain immutable, and Settings still never executes tool source.
+
+- Report post-replacement publication uncertainty separately and expose preserved indexes and source generations through Show Recovery Files.
