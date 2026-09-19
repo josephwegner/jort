@@ -96,6 +96,8 @@ The storage actor then:
 7. Removes the swapped old store and every recognized pre-boundary diagnostic/replacement/inspection/staging copy, syncing affected directories.
 8. Deletes and syncs the marker only after inventory proves no known pre-boundary managed copy remains, then reports success and releases queued post-boundary saves/history to the new store.
 
+The fresh database also contains a text-free `purge_identity` table holding the operation UUID. This proves replacement provenance even when the old store has identical visible content, revision, and no history rows but still contains free-page residue. Verification checks empty WAL before opening a read-only immutable SQLite connection; preparation switches to DELETE journal mode after WAL truncation, and normal WAL mode is restored only for the active writer.
+
 If edits occur after `P`, they stay authoritative in memory and are persisted only after the new store is active. The deletion promise applies to content absent from `P` and copies existing at the confirmed boundary; post-boundary edits are ordinary new data and may create fresh checkpoints/history after success.
 
 Deleting history rows and running `VACUUM` in the existing database was rejected because recovery slots, backups, and old SQLite pages remain separate concerns and a partially failed in-place operation is harder to recover. Overwriting files was rejected because it is unreliable on APFS and would overstate the security guarantee.

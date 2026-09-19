@@ -99,6 +99,7 @@ import SQLite3
     for size in [NSSize(width: 460, height: 300), NSSize(width: 920, height: 680)] {
       window.setContentSize(size)
       editor.view.layoutSubtreeIfNeeded()
+      await settlePresentationAsync(editor)
       XCTAssertGreaterThan(workspace.snapshotScroll.frame.width, 100)
       XCTAssertEqual(workspace.view.bounds.size, editor.view.bounds.size)
     }
@@ -355,6 +356,7 @@ import SQLite3
       editor.textView.history.endUndoGrouping()
       try await Task.sleep(for: .milliseconds(10))
       editor.view.layoutSubtreeIfNeeded()
+      await settlePresentationAsync(editor)
       XCTAssertEqual(editor.state.text, editor.textView.string)
       let ruler = try XCTUnwrap(editor.scroll.verticalRulerView as? LineRuler)
       XCTAssertEqual(ruler.visibleRows().map(\.number), Array(1...(index + 2)))

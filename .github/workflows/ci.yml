@@ -9,22 +9,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install project generator
         run: brew install xcodegen
-      - name: Report toolchain
-        run: xcodebuild -version && xcrun swift --version
-      - name: Check Swift formatting
-        run: python3 scripts/format.py --check
-      - name: Check deterministic project
-        run: python3 scripts/check-project.py
+      - name: Fast validation
+        run: ./scripts/validate fast
       - name: Tests (headless foundation and native adapters)
-        run: ./scripts/test.sh
+        run: ./scripts/validate test
       - name: Accessibility smoke test (ad-hoc signed, isolated data)
-        run: ./scripts/test-ui.sh
+        run: ./scripts/validate ui
       - name: Thread Sanitizer
-        run: |
-          xcodebuild -project Jort.xcodeproj -scheme JortFoundation -configuration Debug -derivedDataPath .build-tsan -destination 'platform=macOS' -enableThreadSanitizer YES test
-          xcodebuild -project Jort.xcodeproj -scheme JortNativeTests -configuration Debug -derivedDataPath .build-native-tsan -destination 'platform=macOS' -enableThreadSanitizer YES test
+        run: ./scripts/validate tsan
       - name: Release and packaging
-        run: ./scripts/build.sh && python3 scripts/test-packaging.py
+        run: ./scripts/validate package
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -32,13 +26,14 @@ jobs:
           name: validation-logs
           path: |
             .build-*/Logs/Test
+            .build-validation
 
   first-party-analysis:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: First-party analysis (blocking)
-        run: python3 scripts/analyze.py first-party
+        run: ./scripts/validate analysis
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -48,6 +43,7 @@ jobs:
             .build-analysis-first-party/*.log
             .build-analysis-first-party/*.plist
             .build-analysis-first-party/*.json
+            .build-validation
   quickjs-audit:
     runs-on: macos-15
     continue-on-error: true
@@ -58,10 +54,12 @@ jobs:
           path: .build-analysis-quickjs/validated.json
           key: quickjs-audit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Vendor/QuickJS/**', 'Sources/JortJavaScript/**', 'scripts/analyze.py', 'docs/quickjs-analyzer-*.json') }}
       - name: QuickJS dependency audit (informational; review diagnostic changes)
-        run: python3 scripts/analyze.py quickjs --reuse
+        run: ./scripts/validate quickjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           include-hidden-files: true
           name: quickjs-audit
-          path: .build-analysis-quickjs/*
+          path: |
+            .build-analysis-quickjs/*
+            .build-validation

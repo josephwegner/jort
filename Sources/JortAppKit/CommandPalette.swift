@@ -41,7 +41,6 @@ final class CommandPalette: NSWindowController, NSTableViewDataSource, NSTableVi
       styleMask: [.titled, .utilityWindow], backing: .buffered, defer: false)
     panel.title = "Pocket"
     panel.isReleasedWhenClosed = false
-    panel.appearance = parent.appearance
     super.init(window: panel)
     panel.delegate = self
     panel.setAccessibilityRole(.window)

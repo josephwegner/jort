@@ -20,8 +20,11 @@ struct RecoveryCheckpoints {
   private var manifestURL: URL { directory.appendingPathComponent(Self.names[2]) }
 
   private func manifest() throws -> Manifest? {
-    guard FileManager.default.fileExists(atPath: manifestURL.path) else { return nil }
-    let manifest = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: manifestURL))
+    let data: Data
+    do {
+      data = try BoundedRecoveryReader(directory: directory, inject: inject).read(.manifest)
+    } catch let error as RecoveryRejection where error.reason == .missing { return nil }
+    let manifest = try JSONDecoder().decode(Manifest.self, from: data)
     guard manifest.version <= 1 else { throw StoreError.unsupportedVersion }
     guard manifest.version == 1, !manifest.entries.isEmpty, manifest.entries.count <= 2,
       Set(manifest.entries.map(\.slot)).count == manifest.entries.count,
@@ -30,22 +33,83 @@ struct RecoveryCheckpoints {
     else { throw StoreError.invalidPayload }
     return manifest
   }
+  struct Attempt {
+    let snapshot: DocumentSnapshot?
+    let role: RecoverySourceRole?
+    let rejections: [RecoveryRejection]
+    let unsupported: Bool
+  }
+  func attempt() -> Attempt {
+    var rejected: [RecoveryRejection] = []
+    func rejection(_ error: Error, role: RecoverySourceRole) -> RecoveryRejection {
+      if let value = error as? RecoveryRejection { return value }
+      let reason: RecoveryRejectionReason
+      switch error as? StoreError {
+      case .unsupportedVersion: reason = .unsupportedVersion
+      case .checksumMismatch: reason = .checksumMismatch
+      case .sizeLimit: reason = .oversized
+      case .io, .injected, .sqlite: reason = .io
+      default: reason = .malformed
+      }
+      return RecoveryRejection(role: role, reason: reason)
+    }
+    let declared: Manifest?
+    do { declared = try manifest() } catch {
+      let value = rejection(error, role: .manifest)
+      rejected.append(value)
+      if value.reason == .unsupportedVersion {
+        return Attempt(snapshot: nil, role: nil, rejections: rejected, unsupported: true)
+      }
+      declared = nil
+    }
+    if let declared {
+      for entry in declared.entries.sorted(by: { $0.revision > $1.revision }) {
+        let role: RecoverySourceRole = entry.slot == 0 ? .slot0 : .slot1
+        do {
+          let data = try BoundedRecoveryReader(directory: directory, inject: inject).read(role)
+          guard PersistenceFormat.checksum(data) == entry.checksum else {
+            throw RecoveryRejection(role: role, reason: .checksumMismatch)
+          }
+          let snapshot = try PersistenceFormat.decode(data, reportChecksumMismatch: true).snapshot
+          guard snapshot.documentID == entry.documentID, snapshot.revision == entry.revision else {
+            throw RecoveryRejection(role: role, reason: .malformed)
+          }
+          return Attempt(snapshot: snapshot, role: role, rejections: rejected, unsupported: false)
+        } catch {
+          let value = rejection(error, role: role)
+          rejected.append(value)
+          if value.reason == .unsupportedVersion {
+            return Attempt(snapshot: nil, role: nil, rejections: rejected, unsupported: true)
+          }
+        }
+      }
+    } else if rejected.isEmpty {
+      rejected.append(RecoveryRejection(role: .manifest, reason: .missing))
+    }
+    do {
+      let data = try BoundedRecoveryReader(directory: directory, inject: inject).read(.legacy)
+      let snapshot = try PersistenceFormat.decode(data, reportChecksumMismatch: true).snapshot
+      return Attempt(snapshot: snapshot, role: .legacy, rejections: rejected, unsupported: false)
+    } catch {
+      let value = rejection(error, role: .legacy)
+      rejected.append(value)
+      return Attempt(
+        snapshot: nil, role: nil, rejections: rejected,
+        unsupported: value.reason == .unsupportedVersion)
+    }
+  }
   func recover() throws -> DocumentSnapshot {
-    guard let manifest = try manifest() else {
-      return try PersistenceFormat.decode(
-        Data(contentsOf: directory.appendingPathComponent("Recovery.json"))
-      ).snapshot
-    }
-    for entry in manifest.entries.sorted(by: { $0.revision > $1.revision }) {
-      if let snapshot = try verified(entry) { return snapshot }
-    }
-    throw StoreError.invalidPayload
+    let result = attempt()
+    if result.unsupported { throw StoreError.unsupportedVersion }
+    guard let snapshot = result.snapshot else { throw StoreError.invalidPayload }
+    return snapshot
   }
   private func verified(_ entry: Entry) throws -> DocumentSnapshot? {
     do {
-      let data = try Data(contentsOf: directory.appendingPathComponent(Self.names[entry.slot]))
+      let data = try BoundedRecoveryReader(directory: directory, inject: inject).read(
+        entry.slot == 0 ? .slot0 : .slot1)
       guard PersistenceFormat.checksum(data) == entry.checksum else { return nil }
-      let snapshot = try PersistenceFormat.decode(data).snapshot
+      let snapshot = try PersistenceFormat.decode(data, reportChecksumMismatch: true).snapshot
       guard snapshot.revision == entry.revision, snapshot.documentID == entry.documentID else {
         return nil
       }
@@ -68,7 +132,8 @@ struct RecoveryCheckpoints {
     try inject(.checkpointWrite)
     try publishFile(data, to: directory.appendingPathComponent(Self.names[slot]))
     try inject(.checkpointVerify)
-    let stored = try Data(contentsOf: directory.appendingPathComponent(Self.names[slot]))
+    let stored = try BoundedRecoveryReader(directory: directory, inject: inject).read(
+      slot == 0 ? .slot0 : .slot1)
     guard stored == data, try PersistenceFormat.decode(stored).snapshot == snapshot else {
       throw StoreError.invalidPayload
     }

@@ -15,6 +15,7 @@ import JortSettings
     editor.toolPackages = [tool]
     editor.textView.insertText("/test", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     let initial = try XCTUnwrap(editor.state.invocations.first)
     XCTAssertEqual(initial.phase, .inputting)
     editor.toolController.submit(initial.id)
@@ -40,9 +41,11 @@ import JortSettings
     window.makeFirstResponder(editor.textView)
     key("/", code: 44, in: editor, window: window)
     key("ca", code: 0, in: editor, window: window)
+    await settlePresentationAsync(editor)
     XCTAssertNotNil(editor.view.subviews.first { $0.accessibilityLabel() == "Tool completions" })
 
     editor.textView.cancelOperation(nil)
+    await settlePresentationAsync(editor)
 
     XCTAssertEqual(editor.state.text, "/ca")
     XCTAssertEqual(editor.textView.selectedRange(), NSRange(location: 3, length: 0))
@@ -58,6 +61,7 @@ import JortSettings
     window.makeFirstResponder(editor.textView)
     key("/", code: 44, in: editor, window: window)
     key("ca", code: 0, in: editor, window: window)
+    await settlePresentationAsync(editor)
     key("\r", code: 36, in: editor, window: window)
     let id = try XCTUnwrap(editor.state.invocations.first?.id)
 
@@ -77,6 +81,7 @@ import JortSettings
     editor.toolPackages = [tool]
     editor.textView.insertText("/calc tail", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: true)
+    await settlePresentationAsync(editor)
     editor.textView.insertText("owned", replacementRange: editor.textView.selectedRange())
     let invocation = try XCTUnwrap(editor.state.invocations.first)
 
@@ -99,6 +104,7 @@ import JortSettings
       "before /calc input after", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(
       tool, token: (editor.state.text as NSString).range(of: "/calc"), space: false)
+    await settlePresentationAsync(editor)
     let before = editor.state.text
     let token = (before as NSString).range(of: "/calc")
 
@@ -120,6 +126,7 @@ import JortSettings
     editor.toolPackages = [tool]
     editor.textView.insertText("/fast", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     let id = editor.state.invocations[0].id
     var phases: [ToolInvocationPhase] = []
     editor.coordinator.onTransaction = { result in
@@ -143,8 +150,10 @@ import JortSettings
       "/one left /two right", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(
       first, token: (editor.state.text as NSString).range(of: "/one"), space: false)
+    await settlePresentationAsync(editor)
     try editor.toolController.accept(
       second, token: (editor.state.text as NSString).range(of: "/two"), space: false)
+    await settlePresentationAsync(editor)
     let ids = editor.state.invocations.map(\.id)
     XCTAssertEqual(editor.textView.subviews.filter { $0.accessibilityLabel() == "Run" }.count, 2)
 
@@ -176,6 +185,7 @@ import JortSettings
     editor.toolPackages = [tool]
     editor.textView.insertText("/context", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 8), space: false)
+    await settlePresentationAsync(editor)
     let id = editor.state.invocations[0].id, before = editor.state
     editor.textView.history.removeAllActions()
 
@@ -203,6 +213,7 @@ import JortSettings
       editor.toolPackages = [tool]
       editor.textView.insertText("/limit", replacementRange: NSRange(location: 0, length: 0))
       try editor.toolController.accept(tool, token: NSRange(location: 0, length: 6), space: true)
+      await settlePresentationAsync(editor)
       if cap == "input" {
         editor.textView.insertText("🌲a", replacementRange: editor.textView.selectedRange())
       }
@@ -285,6 +296,7 @@ import JortSettings
     editor.textView.insertText(
       "prefix /calc suffix", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 7, length: 5), space: true)
+    await settlePresentationAsync(editor)
     let id = editor.state.invocations[0].id
     editor.toolController.submit(id)
     try await pending(editor)
@@ -318,10 +330,12 @@ import JortSettings
     editor.toolPackages = [tool]
     editor.textView.insertText("/calc\n/calc", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     editor.toolController.submit(editor.state.invocations[0].id)
     try await pending(editor)
     let second = (editor.state.text as NSString).range(of: "/calc", options: .backwards)
     try editor.toolController.accept(tool, token: second, space: false)
+    await settlePresentationAsync(editor)
     let id = try XCTUnwrap(editor.state.invocations.last?.id)
     editor.toolController.submit(id)
     for _ in 0..<300 where editor.state.invocations.contains(where: { $0.phase != .pending }) {
@@ -360,6 +374,7 @@ import JortSettings
     editor.textView.insertText(
       "above\n/dedupe\nbelow", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 6, length: 7), space: false)
+    await settlePresentationAsync(editor)
     let endHandle = try XCTUnwrap(
       editor.textView.subviews.first { $0.accessibilityLabel() == "Context end" })
     let run = try XCTUnwrap(editor.textView.subviews.first { $0.accessibilityLabel() == "Run" })
@@ -383,9 +398,11 @@ import JortSettings
     editor.toolPackages = [tool]
     editor.textView.insertText("/uuid", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: true)
+    await settlePresentationAsync(editor)
     editor.textView.insertText(" test\n", replacementRange: editor.textView.selectedRange())
     editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
     editor.refreshToolPresentation()
+    await settlePresentationAsync(editor)
     XCTAssertEqual(editor.toolController.content(editor.state.invocations[0]), " test\n")
     XCTAssertEqual(editor.state.text, "/uuid  test\n")
     let caret = try XCTUnwrap(
@@ -409,6 +426,7 @@ import JortSettings
     editor.toolPackages = [tool]
     editor.textView.insertText("/write", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 6), space: true)
+    await settlePresentationAsync(editor)
     XCTAssertFalse(
       editor.textView.subviews.contains { ($0 as? NSButton)?.accessibilityLabel() == "Run" })
     let prompt = try XCTUnwrap(
@@ -425,6 +443,7 @@ import JortSettings
     editor.textView.insertText(
       "I need /calc apples", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 7, length: 5), space: true)
+    await settlePresentationAsync(editor)
     XCTAssertEqual(editor.state.invocations.count, 1, "After accept: \(editor.state)")
     XCTAssertEqual(editor.textView.selectedRange().location, 13)
     XCTAssertEqual(editor.textView.selectedRange().length, 0)
@@ -444,8 +463,10 @@ import JortSettings
     XCTAssertTrue(editor.state.invocations[0].validated(in: editor.state))
     window.setContentSize(NSSize(width: 600, height: 400))
     editor.view.layoutSubtreeIfNeeded()
+    await settlePresentationAsync(editor)
     editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
     editor.refreshToolPresentation()
+    await settlePresentationAsync(editor)
     let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
     editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)
     try bitmap.representation(using: .png, properties: [:])?.write(
@@ -464,6 +485,7 @@ import JortSettings
     editor.textView.insertText(
       "apples /dedupe pears\nnext", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 7, length: 7), space: false)
+    await settlePresentationAsync(editor)
     let invocation = try XCTUnwrap(editor.state.invocations.first)
     XCTAssertEqual(editor.toolController.content(invocation), "apples  pears")
     let before = editor.state.text
@@ -485,6 +507,7 @@ import JortSettings
     editor.toolPackages = [package]
     editor.textView.insertText("/write", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 6), space: true)
+    await settlePresentationAsync(editor)
     let id = try XCTUnwrap(editor.state.invocations.first?.id)
     editor.toolController.setPrompt("Secret prompt", for: id)
     XCTAssertFalse(
@@ -503,11 +526,13 @@ import JortSettings
     editor.toolPackages = [package]
     editor.textView.insertText("/calc end /calc", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: true)
+    await settlePresentationAsync(editor)
     editor.textView.insertText("first\nsecond", replacementRange: editor.textView.selectedRange())
     XCTAssertEqual(editor.state.invocations.count, 1)
     XCTAssertEqual(editor.state.lines.count, 2)
     let last = (editor.state.text as NSString).range(of: "/calc", options: .backwards)
     try editor.toolController.accept(package, token: last, space: false)
+    await settlePresentationAsync(editor)
     XCTAssertEqual(editor.state.invocations.count, 2)
     let ids = editor.state.invocations.map(\.id)
     for id in ids { editor.toolController.submit(id) }
@@ -529,6 +554,7 @@ import JortSettings
     editor.toolPackages = [package]
     editor.textView.insertText("/test", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     let id = try XCTUnwrap(editor.state.invocations.first?.id)
     editor.toolController.submit(id)
     for _ in 0..<500 where editor.toolController.warning(for: id) == nil {
@@ -543,6 +569,7 @@ import JortSettings
     package.source = "export default async function() { while(true) {} }"
     editor.toolPackages = [package]
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     let runningID = try XCTUnwrap(editor.state.invocations.first?.id)
     editor.toolController.submit(runningID)
     for _ in 0..<500 where editor.state.invocations.first?.phase == .inputting {
@@ -577,6 +604,7 @@ import JortSettings
     editor.textView.insertText(
       "/test\nunrelated", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     let id = editor.state.invocations[0].id
     editor.textView.history.removeAllActions()
     let before = editor.state
@@ -588,6 +616,7 @@ import JortSettings
     XCTAssertEqual(editor.state, before)
     XCTAssertFalse(editor.textView.history.canUndo)
     editor.refreshToolPresentation()
+    await settlePresentationAsync(editor)
     XCTAssertEqual(editor.toolController.warning(for: id), "Revise captured input")
     editor.textView.insertText(
       "!", replacementRange: NSRange(location: editor.state.text.utf16.count, length: 0))
@@ -613,6 +642,7 @@ import JortSettings
     editor.toolPackages = [success]
     let token = (editor.state.text as NSString).range(of: "/test")
     try editor.toolController.accept(success, token: token, space: false)
+    await settlePresentationAsync(editor)
     let successID = editor.state.invocations[0].id
     editor.toolController.submit(successID)
     try await pending(editor)
@@ -631,6 +661,7 @@ import JortSettings
         replacementRange: NSRange(location: 0, length: 0))
       let token = (editor.state.text as NSString).range(of: "/test")
       try editor.toolController.accept(package, token: token, space: false)
+      await settlePresentationAsync(editor)
       let id = editor.state.invocations[0].id
       editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
       editor.textView.scrollRangeToVisible(token)
@@ -666,6 +697,7 @@ import JortSettings
       replacementRange: NSRange(location: 0, length: 0))
     let token = (editor.state.text as NSString).range(of: "/test")
     try editor.toolController.accept(package, token: token, space: false)
+    await settlePresentationAsync(editor)
     editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
     editor.textView.scrollRangeToVisible(token)
     editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
@@ -727,6 +759,7 @@ import JortSettings
     editor.textView.insertText(
       "source /dedupe tail", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 7, length: 7), space: false)
+    await settlePresentationAsync(editor)
     let id = editor.state.invocations[0].id
     editor.toolController.submit(id)
     try await pending(editor)
@@ -749,6 +782,7 @@ import JortSettings
     editor.toolPackages = [package]
     editor.textView.insertText("/write", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 6), space: false)
+    await settlePresentationAsync(editor)
     let id = editor.state.invocations[0].id
     let input = try XCTUnwrap(window.firstResponder as? NSTextView)
     XCTAssertFalse(input === editor.textView)
@@ -759,6 +793,7 @@ import JortSettings
     try await pending(editor)
     XCTAssertTrue(window.firstResponder === editor.textView)
     try editor.toolController.dismiss(id)
+    await settlePresentationAsync(editor)
     let restored = try XCTUnwrap(window.firstResponder as? NSTextView)
     XCTAssertFalse(restored === editor.textView)
     XCTAssertEqual(restored.string, "Write about new SKUs\nKeep it concise")
@@ -779,6 +814,7 @@ import JortSettings
         "before /test after\nnext", replacementRange: NSRange(location: 0, length: 0))
       try editor.toolController.accept(
         package, token: NSRange(location: 7, length: 5), space: false)
+      await settlePresentationAsync(editor)
       let id = editor.state.invocations[0].id
       editor.toolController.submit(id)
       try await pending(editor)
@@ -805,6 +841,7 @@ import JortSettings
       var start = clock()
       try editor.toolController.accept(
         package, token: NSRange(location: 0, length: 5), space: false)
+      await settlePresentationAsync(editor)
       parse.append(clock() - start)
       let id = editor.state.invocations[0].id
       start = clock()
@@ -812,6 +849,7 @@ import JortSettings
       movement.append(clock() - start)
       start = clock()
       editor.refreshToolPresentation()
+      await settlePresentationAsync(editor)
       geometry.append(clock() - start)
       // A bounded prefix fits the execution cap while retaining the large document.
       try editor.toolController.moveBoundary(id, start: false, to: 100)
@@ -842,12 +880,14 @@ import JortSettings
       "/calc", selectedRange: NSRange(location: 5, length: 0),
       replacementRange: NSRange(location: 0, length: 0))
     editor.refreshToolPresentation()
+    await settlePresentationAsync(editor)
     XCTAssertTrue(editor.state.invocations.isEmpty)
     XCTAssertFalse(
       editor.textView.subviews.contains { ($0 as? NSButton)?.accessibilityLabel() == "/calc  calc" }
     )
     editor.textView.unmarkText()
     editor.refreshToolPresentation()
+    await settlePresentationAsync(editor)
     let accept = NSEvent.keyEvent(
       with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
       windowNumber: window.windowNumber, context: nil, characters: " ",
@@ -888,11 +928,13 @@ import JortSettings
       "/calc\n🦊 before /sort after", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(
       contained, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     let first = editor.state.invocations[0].id
     editor.toolController.submit(first)
     try await pending(editor)
     let token = (editor.state.text as NSString).range(of: "/sort")
     try editor.toolController.accept(contextual, token: token, space: false)
+    await settlePresentationAsync(editor)
     let context = try XCTUnwrap(editor.state.invocations.first { $0.id != first })
     let original = try XCTUnwrap(context.scope.resolve(in: editor.state.lines))
     try editor.toolController.moveBoundary(context.id, start: true, to: original.location + 1)
@@ -905,6 +947,7 @@ import JortSettings
         .location, 11)
     XCTAssertTrue(editor.state.invocations.allSatisfy { $0.validated(in: editor.state) })
     editor.refreshToolPresentation()
+    await settlePresentationAsync(editor)
     let handles = editor.textView.subviews.filter { $0.accessibilityRole() == .slider }
     XCTAssertEqual(
       Set(handles.compactMap { $0.accessibilityLabel() }), ["Context start", "Context end"])
@@ -942,6 +985,7 @@ import JortSettings
     editor.toolPackages = [package]
     editor.textView.insertText("/calc tail", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: true)
+    await settlePresentationAsync(editor)
     editor.textView.insertText("3+3", replacementRange: editor.textView.selectedRange())
     let id = editor.state.invocations[0].id, input = editor.state.text
     editor.textView.history.removeAllActions()
@@ -971,6 +1015,7 @@ import JortSettings
     editor.textView.insertText(
       "/calc tail\nlast", replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
     let id = editor.state.invocations[0].id, lastLineID = editor.state.lines.last?.id
     let selected = (editor.state.text as NSString).range(of: "tail")
     editor.textView.setSelectedRange(selected)
@@ -1000,6 +1045,7 @@ import JortSettings
           "before /test after\nnext", replacementRange: NSRange(location: 0, length: 0))
         try editor.toolController.accept(
           package, token: NSRange(location: 7, length: 5), space: false)
+        await settlePresentationAsync(editor)
         if mode == .contained {
           editor.textView.insertText("input", replacementRange: editor.textView.selectedRange())
         }
@@ -1011,6 +1057,7 @@ import JortSettings
         editor.toolPackages = [package]
         try editor.toolController.accept(
           package, token: NSRange(location: 7, length: 5), space: false)
+        await settlePresentationAsync(editor)
         let running = editor.state.invocations[0].id
         if mode == .contained {
           editor.textView.insertText("owned", replacementRange: editor.textView.selectedRange())

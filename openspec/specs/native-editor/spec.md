@@ -5,6 +5,37 @@ Define Jort's native macOS plain-text editing experience and its integration wit
 
 ## Requirements
 
+### Requirement: Presentation updates preserve native editing continuity
+Jort SHALL reconcile editor, ruler, and overlay presentation without interrupting native text input, marked-text composition, selection, first responder, undo grouping, immediate startup editing, or canonical transaction ownership.
+
+#### Scenario: User types while presentation is dirty
+- **WHEN** a content, layout, or lifecycle update is scheduled while the editor is accepting native input
+- **THEN** committed characters and selection update through the ordinary native transaction path without waiting for presentation reconciliation
+- **AND** the later presentation pass does not create another canonical edit or undo group
+
+#### Scenario: Marked text overlaps a pending presentation update
+- **WHEN** reconciliation would style, mount, or move presentation associated with the active marked-text range
+- **THEN** Jort defers the composition-disturbing portion until marked text commits or is cancelled
+- **AND** preserves candidate interaction and the startup-load deferral contract
+
+#### Scenario: Persistence state changes during paint
+- **WHEN** storage or startup state changes while AppKit is displaying the editor
+- **THEN** its typed projection invalidates presentation outside drawing
+- **AND** drawing cannot advance startup state, retry persistence, replace document state, or move focus
+
+### Requirement: Editor presentation decomposition preserves one document owner
+Splitting native views and presentation coordinators SHALL NOT create another mutable document model; all accepted canonical edits SHALL continue through `DocumentCoordinator` transactions and all presentation components SHALL consume immutable projections.
+
+#### Scenario: Extracted text view accepts an edit
+- **WHEN** the native text view commits a character, paste, service replacement, deletion, or composition
+- **THEN** it forwards one typed native transaction through the editor adapter
+- **AND** no ruler, styling, overlay, or persistence-projection component mutates canonical text independently
+
+#### Scenario: Programmatic presentation changes
+- **WHEN** invocation styles, gutter controls, storage notices, or workspace overlays reconcile
+- **THEN** they update presentation-only state through their narrow owners
+- **AND** the document revision remains unchanged unless an explicit document transaction effect is separately accepted
+
 ### Requirement: One app-owned editable document after load
 Jort SHALL expose exactly one app-owned plain-text document in a single AppKit window and, after persistence load completes, SHALL make its TextKit 2 `NSTextView` the key window's first responder without requiring a click, file choice, title, setup, account, or network access.
 
@@ -267,3 +298,36 @@ Jort SHALL expose a typed editor startup phase that distinguishes loading, loade
 - **WHEN** a controlled persistence fixture delays load completion
 - **THEN** the test can observe the loading phase while the editor remains editable
 - **AND** can deterministically resolve the load as success, failure, or future-version refusal
+
+### Requirement: Recovery and private-data actions remain quiet and accessible
+Jort SHALL place Save/Retry Save, Save Recovery Copy, Clear History and Recovery Data, and applicable Retry Cleanup actions in the File menu or contextual storage-health UI, SHALL keep them out of Pocket, and SHALL expose their state and confirmation to keyboard and accessibility clients without stealing editor focus for routine status changes.
+
+#### Scenario: File menu opens for a dirty healthy document
+- **WHEN** the active editor has a verified loaded store and an unsaved authoritative revision
+- **THEN** File presents enabled Save with Command-S and Save Recovery Copy
+- **AND** Pocket contains neither recovery nor purge actions
+
+#### Scenario: File menu opens after automatic retries are exhausted
+- **WHEN** the active editor requires manual persistence retry
+- **THEN** the Command-S item is titled Retry Save and describes the newest pending revision through accessible state
+- **AND** activating it invokes the explicit retry path rather than waiting for autosave
+
+#### Scenario: Recovery needs attention at launch
+- **WHEN** recovery succeeds from a damaged store or all bounded candidates are rejected
+- **THEN** Jort presents concise localized nonmodal or launch-context UI explaining what was preserved and which actions remain available
+- **AND** keeps recovery editing, copy, selection, and recovery export usable without silently replacing the source
+
+#### Scenario: User saves a recovery copy while source is unhealthy
+- **WHEN** the user chooses Save Recovery Copy and completes the native save panel
+- **THEN** Jort exports the newest coherent in-memory snapshot to the chosen versioned JSON file and reports the actual result
+- **AND** does not overwrite, import, or mark the canonical source healthy
+
+#### Scenario: User confirms destructive purge
+- **WHEN** Clear History and Recovery Data is available and activated
+- **THEN** a keyboard- and VoiceOver-operable confirmation names history, milestones, recovery data, diagnostic backups, current-document preservation, and deletion limits
+- **AND** cancellation changes no persistence, history, or recovery data
+
+#### Scenario: Purge cleanup is incomplete
+- **WHEN** the current-only store is active but recognized old managed copies remain
+- **THEN** Jort reports that cleanup is incomplete and offers Retry Cleanup without claiming deletion succeeded
+- **AND** the editor remains usable with its current text, selection, and focus

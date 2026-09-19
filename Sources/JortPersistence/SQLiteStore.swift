@@ -13,21 +13,50 @@ public enum StoreStage: String, CaseIterable, Sendable {
   case checkpointWrite, checkpointFileSync, checkpointRename, checkpointDirectorySync,
     checkpointVerify, checkpointManifest, checkpointPublished
   case historyWrite, historyVerify, historyCommit, historyPrune
+  case boundedReadOpened, boundedReadChunk, inventory, replacementCreate, walCheckpoint
+  case purgeMarker, purgeMarkerPublished, purgeSwap, purgeSwapped, purgeReopen, purgeVerified
+  case cleanupRemove, maintenanceDirectorySync, purgeMarkerRemoved
 }
 
 /// Connection and filesystem state never leave this actor.
 public actor SQLiteStore: DocumentStore {
   public let directory: URL
-  private var ownership: StoreLock?
-  private var connection: Connection?
-  private let inject: @Sendable (StoreStage) throws -> Void
+  var ownership: StoreLock?
+  var connection: Connection?
+  public internal(set) var maintenanceWarning: MaintenanceWarning?
+  public internal(set) var purgePending = false
+  public internal(set) var purgeWasAbandoned = false
+  var purgeMarker: PurgeMarker?
+  var rejectedRecoveryFiles: [RecoverySourceRole: stat] = [:]
+  var rejectedRecoveryDirectory: URL?
+  public internal(set) var recoveryDisposition: RecoveryDisposition = .none
+  let inject: @Sendable (StoreStage) throws -> Void
   public init(directory: URL, inject: @escaping @Sendable (StoreStage) throws -> Void = { _ in }) {
     self.directory = directory
     self.inject = inject
   }
-  private var active: URL { directory.appendingPathComponent("Store", isDirectory: true) }
+  var active: URL { directory.appendingPathComponent("Store", isDirectory: true) }
   private func own() throws {
     if ownership == nil { ownership = try StoreLock(directory: directory) }
+  }
+  private func sourceContains(_ name: String, in source: URL) throws -> Bool {
+    try ManagedCopies(root: source).withRoot { fd in
+      var info = stat()
+      if fstatat(fd, name, &info, AT_SYMLINK_NOFOLLOW) == 0 { return true }
+      guard errno == ENOENT else { throw StoreError.io("Source entry inspection") }
+      return false
+    }
+  }
+  private func sourceDirectory() throws -> URL {
+    try ManagedCopies(root: directory).withRoot { fd in
+      var info = stat()
+      if fstatat(fd, "Store", &info, AT_SYMLINK_NOFOLLOW) != 0 {
+        guard errno == ENOENT else { throw StoreError.io("Store directory inspection") }
+        return directory
+      }
+      guard info.st_mode & S_IFMT == S_IFDIR else { throw StoreError.io("Unsafe Store directory") }
+      return active
+    }
   }
   public func close() throws {
     try connection?.close()
@@ -36,15 +65,15 @@ public actor SQLiteStore: DocumentStore {
   }
   public func load() throws -> DocumentSnapshot {
     try own()
+    do { try reconcilePurge() } catch { throw StoreError.io("Purge needs attention: \(error)") }
     if connection != nil { return try connection!.read().snapshot }
-    let source = FileManager.default.fileExists(atPath: active.path) ? active : directory
-    let db = source.appendingPathComponent("Jort.sqlite")
+    let source = try sourceDirectory()
     let state: DocumentSnapshot
-    if FileManager.default.fileExists(atPath: db.path) {
+    if try sourceContains("Jort.sqlite", in: source) {
       // Inspect a private copy, so future versions and failed migrations never modify source WAL/SHM.
       let copy = directory.appendingPathComponent(".Inspect-\(UUID())")
       defer { try? FileManager.default.removeItem(at: copy) }
-      try copyFiles(from: source, to: copy)
+      try copyFiles(from: source, to: copy, includeRecovery: false)
       let reader = try Connection(directory: copy, create: false)
       defer { try? reader.close() }
       let loaded = try reader.read()
@@ -56,19 +85,23 @@ public actor SQLiteStore: DocumentStore {
       }
     } else {
       // Unknown version-zero schemas are never treated as new databases.
-      guard source != active,
-        !FileManager.default.fileExists(atPath: source.appendingPathComponent("Recovery.json").path)
-      else { throw StoreError.invalidPayload }
+      var hasRecovery = false
+      for role in RecoverySourceRole.allCases {
+        if try sourceContains(role.rawValue, in: source) { hasRecovery = true }
+      }
+      guard source != active, !hasRecovery else { throw StoreError.invalidPayload }
       state = DocumentSnapshot()
       try install(state, preserving: nil, prefix: "Initial")
     }
     connection = try Connection(directory: active, create: false)
     try connection!.configureWrites()
+    guard try connection!.read().snapshot == state else { throw StoreError.invalidPayload }
+    if !purgePending { maintainBackups() }
     return state
   }
   public func save(_ snapshot: DocumentSnapshot) throws -> Int64 {
     try own()
-    guard let connection else { throw StoreError.io("Store has not loaded safely") }
+    guard !purgePending, let connection else { throw StoreError.io("Store has not loaded safely") }
     let data = try PersistenceFormat.encode(snapshot)
     try connection.write(data, inject: inject)
     guard try connection.read().snapshot == snapshot else { throw StoreError.invalidPayload }
@@ -79,7 +112,7 @@ public actor SQLiteStore: DocumentStore {
   }
   /// History cannot acquire its own writer or bypass successful current-state loading.
   func historyConnection() throws -> Connection {
-    guard ownership != nil, let connection else {
+    guard ownership != nil, !purgePending, let connection else {
       throw StoreError.io("Store has not loaded safely")
     }
     try connection.validateHistorySchema()
@@ -88,29 +121,58 @@ public actor SQLiteStore: DocumentStore {
   func historyInjection(_ stage: StoreStage) throws { try inject(stage) }
   public func recover() throws -> DocumentSnapshot {
     try own()
+    guard !purgePending else { throw StoreError.io("Purge needs attention") }
     try connection?.close()
     connection = nil
-    let source = FileManager.default.fileExists(atPath: active.path) ? active : directory
-    let snapshot = try RecoveryCheckpoints(directory: source, inject: inject).recover()
+    let source = try sourceDirectory()
+    let attempt = RecoveryCheckpoints(directory: source, inject: inject).attempt()
+    recoveryDisposition = .rejected(attempt.rejections)
+    rejectedRecoveryDirectory = source
+    rejectedRecoveryFiles = [:]
+    try ManagedCopies(root: source).withRoot { fd in
+      for rejection in attempt.rejections
+      where rejection.reason != .missing && rejection.reason != .unsupportedVersion {
+        if let metadata = try? ManagedCopies.metadata(rejection.role.rawValue, at: fd) {
+          rejectedRecoveryFiles[rejection.role] = metadata
+        }
+      }
+    }
+    if attempt.unsupported { throw StoreError.unsupportedVersion }
+    guard let snapshot = attempt.snapshot, let role = attempt.role else {
+      throw StoreError.invalidPayload
+    }
     try install(snapshot, preserving: source, prefix: "Damaged")
+    recoveryDisposition = .recovered(role)
     connection = try Connection(directory: active, create: false)
     try connection!.configureWrites()
+    maintainBackups()
     return snapshot
   }
   public func historyRecoveryWasIncomplete() -> Bool {
     FileManager.default.fileExists(
       atPath: active.appendingPathComponent("HistoryRecoveryIncomplete").path)
   }
-  private func copyFiles(from source: URL, to target: URL) throws {
+  private func copyFiles(from source: URL, to target: URL, includeRecovery: Bool = true) throws {
     try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
     for name in [
       "Jort.sqlite", "Jort.sqlite-wal", "Jort.sqlite-shm", "Recovery.json",
       "HistoryRecoveryIncomplete",
     ] + RecoveryCheckpoints.names {
+      if let role = RecoverySourceRole(rawValue: name) {
+        if includeRecovery,
+          let bytes = try? BoundedRecoveryReader(directory: source, inject: inject).read(role)
+        {
+          try bytes.write(to: target.appendingPathComponent(name), options: .withoutOverwriting)
+        }
+        continue
+      }
       let file = source.appendingPathComponent(name)
       if FileManager.default.fileExists(atPath: file.path) {
-        guard try file.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else {
-          throw StoreError.malformedSchema
+        try ManagedCopies(root: source).withRoot { fd in
+          let info = try ManagedCopies.metadata(name, at: fd)
+          guard info.st_mode & S_IFMT == S_IFREG, info.st_nlink == 1 else {
+            throw StoreError.malformedSchema
+          }
         }
         try FileManager.default.copyItem(at: file, to: target.appendingPathComponent(name))
       }
@@ -122,7 +184,7 @@ public actor SQLiteStore: DocumentStore {
     // Originals are not opened or moved during preparation. WAL companions stay together.
     if let source {
       try inject(.backup)
-      try copyFiles(from: source, to: directory.appendingPathComponent("\(prefix)-\(UUID())"))
+      try copyFiles(from: source, to: directory.appendingPathComponent(ManagedNames.backup(prefix)))
     }
     let stage = directory.appendingPathComponent(".Replacement-\(UUID())")
     var swapped = false
@@ -173,7 +235,7 @@ public actor SQLiteStore: DocumentStore {
   {
     let inspection = directory.appendingPathComponent(".HistoryInspect-\(UUID())")
     defer { try? FileManager.default.removeItem(at: inspection) }
-    try copyFiles(from: source, to: inspection)
+    try copyFiles(from: source, to: inspection, includeRecovery: false)
     var incomplete = FileManager.default.fileExists(
       atPath: source.appendingPathComponent("HistoryRecoveryIncomplete").path)
     let reader: Connection?
@@ -243,13 +305,19 @@ public actor SQLiteStore: DocumentStore {
 final class Connection {
   private var db: OpaquePointer?
   private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-  init(directory: URL, create: Bool) throws {
+  init(directory: URL, create: Bool, readOnly: Bool = false) throws {
     if create {
       try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
-    let flags = create ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE : SQLITE_OPEN_READWRITE
+    let flags =
+      create
+      ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+      : readOnly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_READWRITE
+    let database = directory.appendingPathComponent("Jort.sqlite")
+    // Used only for a closed, checkpointed purge candidate whose WAL was checked empty.
+    let path = readOnly ? database.absoluteString + "?immutable=1" : database.path
     let result = sqlite3_open_v2(
-      directory.appendingPathComponent("Jort.sqlite").path, &db, flags | SQLITE_OPEN_FULLMUTEX, nil)
+      path, &db, flags | SQLITE_OPEN_FULLMUTEX | (readOnly ? SQLITE_OPEN_URI : 0), nil)
     guard result == SQLITE_OK else {
       let error = failure(result)
       sqlite3_close_v2(db)

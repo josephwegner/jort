@@ -9,7 +9,7 @@ import JortSettings
 
 @MainActor class ToolInvocationTestCase: StoreTestCase {
   func editor(directory: URL? = nil) async throws -> (EditorViewController, NSWindow) {
-    _ = NSApplication.shared
+    ApplicationTheme.install()
     let directory =
       directory
       ?? FileManager.default.temporaryDirectory.appendingPathComponent("ToolEditor-\(UUID())")
@@ -19,6 +19,12 @@ import JortSettings
       contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled],
       backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
+    // Rapid fixture teardown must not release AppKit window animations during a CA commit.
+    window.animationBehavior = .none
+    addTeardownBlock { @MainActor in
+      window.close()
+      window.contentViewController = nil
+    }
     window.contentViewController = editor
     window.setContentSize(NSSize(width: 600, height: 400))
     window.makeKeyAndOrderFront(nil)
@@ -50,14 +56,20 @@ import JortSettings
   }
   func pending(_ editor: EditorViewController) async throws {
     for _ in 0..<500 {
-      if editor.state.invocations.first?.phase == .pending { return }
+      if editor.state.invocations.first?.phase == .pending {
+        await settlePresentationAsync(editor)
+        return
+      }
       try await Task.sleep(for: .milliseconds(10))
     }
     XCTFail("Tool did not enter pending: \(editor.state.invocations)")
   }
   func pending(_ editor: EditorViewController, id: UUID) async throws {
     for _ in 0..<500 {
-      if editor.state.invocations.first(where: { $0.id == id })?.phase == .pending { return }
+      if editor.state.invocations.first(where: { $0.id == id })?.phase == .pending {
+        await settlePresentationAsync(editor)
+        return
+      }
       try await Task.sleep(for: .milliseconds(10))
     }
     XCTFail("Tool did not enter pending: \(editor.state.invocations)")

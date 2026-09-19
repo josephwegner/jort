@@ -129,11 +129,16 @@ final class ToolPackageTests: StoreTestCase {
     }
     for input in [
       "", "1/0", "1%0", "2***3", "2(3)", "1e3", "2^99999", "1+",
-      String(repeating: "-", count: 1000) + "1",
     ] {
       let result = await ToolRuntime.execute(package, input: .init(content: input))
       XCTAssertNotNil(result.error, input)
     }
+  }
+  func testBundledCalculatorRejectsDeepUnaryExpression() async throws {
+    let package = try ToolPackage.load(from: bundled.appendingPathComponent("calc"))
+    let input = String(repeating: "-", count: 1000) + "1"
+    let result = await ToolRuntime.execute(package, input: .init(content: input))
+    XCTAssertNotNil(result.error)
   }
   func testBundledExactLinesClockUUIDAndEmptyOutput() async throws {
     for (name, input, expected) in [

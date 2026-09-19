@@ -42,10 +42,12 @@ import JortPersistence
         mutation: .edit(text: text, range: nil, replacementLength: nil)))
     let before = editor.state
     editor.view.layoutSubtreeIfNeeded()
+    await settlePresentationAsync(editor)
     let windowSize = window.frame.size
     editor.showDocumentSearch()
     let search = try XCTUnwrap(editor.documentSearch)
     editor.view.layoutSubtreeIfNeeded()
+    await settlePresentationAsync(editor)
     let collapsedHeight = search.view.frame.height
     XCTAssertTrue(search.view.superview === editor.view)
     XCTAssertTrue(search.window === window)
@@ -54,6 +56,7 @@ import JortPersistence
     search.refreshQuery()
     try await waitUntil { search.model.results.count == 2 }
     editor.view.layoutSubtreeIfNeeded()
+    await settlePresentationAsync(editor)
     XCTAssertGreaterThan(search.view.frame.height, collapsedHeight)
     XCTAssertEqual(window.frame.size, windowSize)
     XCTAssertTrue(editor.view.bounds.contains(search.view.frame))

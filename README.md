@@ -7,9 +7,18 @@ A native, dark macOS scratch canvas: one app-owned plain-text document, local pe
 Requires macOS 14+, full Xcode with Swift 6, and XcodeGen **2.46.0**. `project.yml` is the configuration source of truth; `.xcodegen-version` pins the generator. Generated project/plist files are included and checked for drift.
 
 ```sh
-python3 scripts/check-project.py
-./scripts/test.sh
+./scripts/validate fast  # Formatting and generated-project checks
+./scripts/validate test  # Headless, native, and packaging tests
 ```
+
+`scripts/validate` is the canonical validation entry point for local development and CI. It
+prints one concise result per check and stores complete command output plus `summary.json` under
+`.build-validation/<run-id>/`. Run `./scripts/validate --help` for the available lanes, including
+`analysis`, `quickjs`, `tsan`, `ui`, `package`, and `all`. Validation stops at the first failure by
+default; pass `--keep-going` to collect every result.
+
+`./scripts/validate presentation` runs localization checks and focused native presentation tests,
+including the strict Core Animation transaction-warning gate.
 
 Normal tests build only frameworks and command-line test bundles. Document/persistence tests do not construct AppKit objects; separate native adapter tests exercise their own AppKit views inside `xctest`. Neither suite builds or modifies an installed Jort application. Computer Use is not part of the test workflow.
 
@@ -85,3 +94,5 @@ Version-one indexes migrate with empty history; unindexed old directories are no
 If publication becomes uncertain after index replacement, Settings keeps the draft and offers **Show Recovery Files**. This opens the Tools directory in Finder. Copy that directory to another location before attempting manual recovery. Each `Recovery-<UUID>` folder contains `prior-index.json` (if an index existed) and `attempted-index.json`; the referenced UUID directories contain `tool.json` and `tool.js` or `instructions.txt`. These copies let you inspect both candidate catalogs and recover source even when the visible index is wrong. No earlier generation is automatically executed.
 
 A surviving recovery folder suspends generation cleanup across restarts. After you have copied the recovery material, repaired the catalog, and verified the tools you intend to keep, move the recovery folders out of Tools and use Retry or relaunch to resume cleanup. At most 32 unresolved recovery folders are allowed before further publications are refused. Recovery material is exceptional and is not pruned to satisfy the normal six-generation limit. Unexpected files and links are preserved. Nonfatal cleanup failures appear in Tools Settings and retry on the next reload or save.
+
+See [recovery and private-data controls](docs/recovery-and-private-data.md) for explicit Save/Retry, bounded recovery ingestion, diagnostic retention, and the confirmed history/recovery purge and its logical-deletion limits.

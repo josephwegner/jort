@@ -30,17 +30,36 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
 /// All positions are TextKit container coordinates, before the text view inset.
 @MainActor final class LinePresentationLayout: NSObject, @preconcurrency NSTextLayoutManagerDelegate
 {
-  struct Band {
-    let id: UUID
-    let number: Int
-    let frame: NSRect
-    let textY: CGFloat
-    let accessoryFrame: NSRect?
+  typealias Band = PresentationGeometry.LineBand
+  private(set) var snapshot = PresentationGeometry.Snapshot(epoch: 0, viewport: .zero, bands: [])
+  private(set) var fragmentVisits = 0
+  private(set) var layoutRequests = 0
+  private(set) var targetedLayoutRequests = 0
+  private(set) var largestMeasuredRange = 0
+  func prepareViewportLayout() {
+    layoutRequests += 1
+    editor?.textLayoutManager?.textViewportLayoutController.layoutViewport()
+  }
+  func capture(epoch: UInt64) {
+    fragmentVisits = 0
+    geometryDirty = false
+    snapshot = PresentationGeometry.Snapshot(
+      epoch: epoch, viewport: editor?.visibleRect ?? .zero, bands: visibleBands())
+    if let (id, offset, x) = pendingAnchor {
+      pendingAnchor = nil
+      if let band = snapshot.bands.first(where: { $0.id == id }) {
+        editor?.enclosingScrollView?.contentView.scroll(
+          to: NSPoint(x: x, y: max(0, band.frame.minY + offset)))
+      }
+    }
   }
   weak var editor: NSTextView?
   private(set) var lines: [LineMeta] = []
   private var byOffset: [Int: UUID] = [:]
   private var byID: [UUID: LineMeta] = [:]
+  private var ordinalByID: [UUID: Int] = [:]
+  private var geometryDirty = true
+  private var pendingAnchor: (UUID, CGFloat, CGFloat)?
   private var mounted: Set<UUID> = []
   private(set) var accessories: [UUID: LineAccessory] = [:]
   init(editor: NSTextView) {
@@ -49,7 +68,10 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     editor.textLayoutManager?.delegate = self
   }
   func update(lines: [LineMeta]) {
+    geometryDirty = true
     self.lines = lines
+    ordinalByID = Dictionary(
+      uniqueKeysWithValues: lines.enumerated().map { ($0.element.id, $0.offset + 1) })
     byOffset = Dictionary(uniqueKeysWithValues: lines.map { ($0.location, $0.id) })
     byID = Dictionary(uniqueKeysWithValues: lines.map { ($0.id, $0) })
     let surviving = Set(lines.map(\.id))
@@ -58,7 +80,7 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
       mounted.remove(id)
     }
   }
-  func setAccessories(_ values: [LineAccessory]) {
+  func setAccessories(_ values: [LineAccessory], deferLayout: Bool = false) {
     guard let editor, let manager = editor.textLayoutManager,
       let content = manager.textContentManager
     else { return }
@@ -81,11 +103,19 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
         manager.invalidateLayout(for: range)
       }
     }
+    geometryDirty = true
+    if deferLayout {
+      if let (id, offset) = anchor { pendingAnchor = (id, offset, originalX) }
+      return
+    }
+    layoutRequests += 1
     manager.textViewportLayoutController.layoutViewport()
+    capture(epoch: snapshot.epoch)
     if let (id, relative) = anchor, let band = band(for: id) {
       editor.enclosingScrollView?.contentView.scroll(
         to: NSPoint(x: originalX, y: max(0, band.frame.minY + relative)))
     }
+    capture(epoch: snapshot.epoch)
     refreshViews()
   }
   func textLayoutManager(
@@ -115,11 +145,12 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
       (editor.enclosingScrollView?.contentView.bounds.maxY ?? editor.visibleRect.maxY)
       - editor.textContainerOrigin.y
     manager.enumerateTextLayoutFragments(
-      from: viewport.location, options: [.ensuresExtraLineFragment]
+      from: viewport.location, options: []
     ) { fragment in
       // TextKit can retain the pre-edit viewport end while new paragraphs are
       // already visible. Stop at the visible geometry, not that stale offset.
       guard fragment.layoutFragmentFrame.minY <= visibleBottom else { return false }
+      self.fragmentVisits += 1
       result.append(contentsOf: self.bands(fragment, content: content))
       return fragment.layoutFragmentFrame.maxY < visibleBottom
     }
@@ -128,41 +159,32 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
   private func bands(_ fragment: NSTextLayoutFragment, content: NSTextContentManager) -> [Band] {
     let offset = content.offset(
       from: content.documentRange.location, to: fragment.rangeInElement.location)
-    var result: [Band] = []
-    for textLine in fragment.textLineFragments {
-      let start = offset + textLine.characterRange.location
-      var low = 0, high = lines.count
-      while low < high {
-        let mid = (low + high) / 2
-        if lines[mid].location < start { low = mid + 1 } else { high = mid }
-      }
-      guard low < lines.count, lines[low].location == start else { continue }
-      let line = lines[low], frame = fragment.layoutFragmentFrame
-      let height = accessories[line.id]?.height ?? 0
-      let bottom =
-        fragment.textLineFragments.map { $0.typographicBounds.maxY }.max() ?? frame.height
-      let accessoryFrame =
-        height > 0
-        ? NSRect(x: frame.minX, y: frame.minY + bottom, width: frame.width, height: height) : nil
-      result.append(
-        Band(
-          id: line.id, number: low + 1, frame: frame,
-          textY: frame.minY + textLine.typographicBounds.minY, accessoryFrame: accessoryFrame))
+    let input = PresentationGeometry.Fragment(
+      frame: fragment.layoutFragmentFrame,
+      lines: fragment.textLineFragments.map {
+        (offset + $0.characterRange.location, $0.typographicBounds)
+      })
+    return PresentationGeometry.bands(in: input) { start in
+      guard let id = byOffset[start], let number = ordinalByID[id] else { return nil }
+      return .init(id: id, number: number, accessoryHeight: accessories[id]?.height ?? 0)
     }
-    return result
   }
+
   func band(for id: UUID) -> Band? {
+    if !geometryDirty, let band = snapshot.bands.first(where: { $0.id == id }) { return band }
     guard let line = byID[id], let manager = editor?.textLayoutManager,
       let content = manager.textContentManager,
       let location = content.location(content.documentRange.location, offsetBy: line.location)
     else { return nil }
+    layoutRequests += 1
+    targetedLayoutRequests += 1
     manager.ensureLayout(for: NSTextRange(location: location))
     guard let fragment = manager.textLayoutFragment(for: location) else { return nil }
     return bands(fragment, content: content).first { $0.id == id }
   }
   func refreshViews() {
     guard !accessories.isEmpty, let editor else { return }
-    let visible = visibleBands()
+    let visible = snapshot.bands
     let ids = Set(visible.map(\.id))
     for id in mounted.subtracting(ids) {
       accessories[id]?.view.removeFromSuperview()
@@ -176,16 +198,25 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
       if value.view.superview !== editor { editor.addSubview(value.view) }
       mounted.insert(band.id)
       value.view.frame = frame
-      value.view.setAccessibilityHelp("After line \(band.number)")
+      value.view.setAccessibilityHelp(
+        LocalizedCopy.format("line.accessory_after", fallback: "After line %ld", band.number))
     }
   }
   func viewportAnchor() -> (UUID, CGFloat)? {
-    guard let editor, let scroll = editor.enclosingScrollView, let band = visibleBands().first
+    guard let editor, let scroll = editor.enclosingScrollView, let band = snapshot.bands.first
     else { return nil }
     return (band.id, scroll.contentView.bounds.minY - band.frame.minY)
   }
   /// Visible canonical selection fragments, in text-view coordinates. Tool
   /// wrappers and handles share this layout manager with gutter/accessory bands.
+  var visibleCanonicalRange: NSRange? {
+    guard let manager = editor?.textLayoutManager, let content = manager.textContentManager,
+      let viewport = manager.textViewportLayoutController.viewportRange
+    else { return nil }
+    let start = content.offset(from: content.documentRange.location, to: viewport.location)
+    let end = content.offset(from: content.documentRange.location, to: viewport.endLocation)
+    return NSRange(location: start, length: max(0, end - start))
+  }
   func canonicalRects(for range: NSRange) -> [NSRect] {
     guard let editor, let manager = editor.textLayoutManager,
       let content = manager.textContentManager,
@@ -197,7 +228,7 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
       (editor.enclosingScrollView?.contentView.bounds.maxY ?? editor.visibleRect.maxY)
       - editor.textContainerOrigin.y
     manager.enumerateTextLayoutFragments(
-      from: viewport.location, options: [.ensuresLayout, .ensuresExtraLineFragment]
+      from: viewport.location, options: []
     ) { fragment in
       guard fragment.layoutFragmentFrame.minY <= visibleBottom else { return false }
       b = max(
@@ -214,6 +245,7 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
       let end = content.location(start, offsetBy: clipped.length),
       let textRange = NSTextRange(location: start, end: end)
     else { return [] }
+    largestMeasuredRange = max(largestMeasuredRange, clipped.length)
     var frames: [NSRect] = []
     var lineFrames: [NSRect] = []
     manager.enumerateTextSegments(in: textRange, type: .selection, options: [.rangeNotRequired]) {
@@ -281,13 +313,14 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
   func accessibilityChildren() -> [Any]? {
     guard !accessories.isEmpty, let editor else { return nil }
     var children: [Any] = []
-    for band in visibleBands() {
+    for band in snapshot.bands {
       guard let line = byID[band.id], line.location + line.length <= editor.string.utf16.count
       else { continue }
       let text = NSAccessibilityElement()
       text.setAccessibilityRole(.staticText)
       text.setAccessibilityParent(editor)
-      text.setAccessibilityLabel("Line \(band.number)")
+      text.setAccessibilityLabel(
+        LocalizedCopy.format("line.number", fallback: "Line %ld", band.number))
       text.setAccessibilityValue(
         (editor.string as NSString).substring(
           with: NSRange(location: line.location, length: line.length)))

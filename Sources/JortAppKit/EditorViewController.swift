@@ -5,159 +5,36 @@ import JortDocument
 import JortPersistence
 import JortSettings
 
-@MainActor public final class JortTextView: NSTextView {
-  public let history = UndoManager()
-  // Native text mutations must not register a second, text-only undo action.
-  public override var undoManager: UndoManager? { nil }
-  public override func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
-    if item.action == #selector(undo(_:)) { return history.canUndo }
-    if item.action == #selector(redo(_:)) { return history.canRedo }
-    return super.validateUserInterfaceItem(item)
-  }
-  @objc public func undo(_ sender: Any?) { history.undo() }
-  @objc public func redo(_ sender: Any?) { history.redo() }
-  var onCompositionCommit: (() -> Void)?
-  var onTextChange: (() -> Void)?
-  var onEscape: (() -> Bool)?
-  var onToolKey: ((NSEvent) -> Bool)?
-  var onToolDraw: ((NSRect) -> Void)?
-  var isPasting = false
-  var onPaste: (() -> Void)?
-  var onCommittedSlash: (() -> Void)?
-  public override func resetCursorRects() {
-    super.resetCursorRects()
-    // NSTextView installs an I-beam across its entire visible area, including
-    // embedded controls. Partition that region instead of competing with it.
-    discardCursorRects()
-    var regions = [visibleRect]
-    for button in subviews where button is NSButton && !button.isHidden {
-      let hit = button.frame.intersection(visibleRect)
-      guard !hit.isEmpty else { continue }
-      regions = regions.flatMap { region -> [NSRect] in
-        let cut = region.intersection(hit)
-        guard !cut.isEmpty else { return [region] }
-        return [
-          NSRect(
-            x: region.minX, y: region.minY, width: region.width, height: cut.minY - region.minY),
-          NSRect(x: region.minX, y: cut.maxY, width: region.width, height: region.maxY - cut.maxY),
-          NSRect(x: region.minX, y: cut.minY, width: cut.minX - region.minX, height: cut.height),
-          NSRect(x: cut.maxX, y: cut.minY, width: region.maxX - cut.maxX, height: cut.height),
-        ].filter { !$0.isEmpty }
-      }
-      addCursorRect(hit, cursor: .pointingHand)
-    }
-    for region in regions { addCursorRect(region, cursor: .iBeam) }
-  }
-  public override func mouseMoved(with event: NSEvent) {
-    super.mouseMoved(with: event)
-    let point = convert(event.locationInWindow, from: nil)
-    if subviews.contains(where: { $0 is NSButton && !$0.isHidden && $0.frame.contains(point) }) {
-      NSCursor.pointingHand.set()
-    }
-  }
-  public override func cursorUpdate(with event: NSEvent) {
-    let point = convert(event.locationInWindow, from: nil)
-    if subviews.contains(where: { $0 is NSButton && !$0.isHidden && $0.frame.contains(point) }) {
-      NSCursor.pointingHand.set()
-    } else {
-      super.cursorUpdate(with: event)
-    }
-  }
-  public override func keyDown(with event: NSEvent) {
-    if !hasMarkedText(), onToolKey?(event) == true { return }
-    super.keyDown(with: event)
-  }
-  public override func performKeyEquivalent(with event: NSEvent) -> Bool {
-    if window?.firstResponder === self, event.modifierFlags.contains([.command, .option]),
-      [123, 124, 125, 126].contains(event.keyCode),
-      !hasMarkedText(), onToolKey?(event) == true
-    {
-      return true
-    }
-    return super.performKeyEquivalent(with: event)
-  }
-  public override func insertText(_ insertString: Any, replacementRange: NSRange) {
-    let committed = (insertString as? NSAttributedString)?.string ?? (insertString as? String ?? "")
-    if !isPasting, committed == "/" || (hasMarkedText() && committed.contains("/")) {
-      onCommittedSlash?()
-    }
-    var attributes = typingAttributes
-    attributes[.kern] = 0
-    attributes.removeValue(forKey: NSAttributedString.Key("JortToolDecoration"))
-    attributes[.font] = NSFont.monospacedSystemFont(ofSize: 15, weight: .regular)
-    typingAttributes = attributes
-    super.insertText(insertString, replacementRange: replacementRange)
-  }
-  public override func paste(_ sender: Any?) {
-    pasteAsPlainText(sender)
-  }
-  public override func pasteAsPlainText(_ sender: Any?) {
-    let previous = isPasting
-    isPasting = true
-    defer { isPasting = previous }
-    onPaste?()
-    super.pasteAsPlainText(sender)
-  }
-  public override func copy(_ sender: Any?) {
-    let range = selectedRange()
-    guard NSMaxRange(range) <= string.utf16.count else { return }
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString((string as NSString).substring(with: range), forType: .string)
-  }
-  public override func drawBackground(in rect: NSRect) {
-    super.drawBackground(in: rect)
-    onToolDraw?(rect)
-  }
-  public override func didChangeText() {
-    super.didChangeText()
-    onTextChange?()
-  }
-  public override func cancelOperation(_ sender: Any?) {
-    if onEscape?() != true { super.cancelOperation(sender) }
-  }
-  var lineAccessibilityChildren: (() -> [Any]?)?
-  var toolAccessibilityChildren: (() -> [Any])?
-  public override func accessibilityChildren() -> [Any]? {
-    let children = lineAccessibilityChildren?() ?? super.accessibilityChildren() ?? []
-    let tools = toolAccessibilityChildren?() ?? []
-    return children
-      + tools.filter { tool in !children.contains { ($0 as AnyObject) === (tool as AnyObject) } }
-  }
-  public override func unmarkText() {
-    let marked = markedRange()
-    if !isPasting, marked.location != NSNotFound, NSMaxRange(marked) <= string.utf16.count,
-      (string as NSString).substring(with: marked).contains("/")
-    {
-      onCommittedSlash?()
-    }
-    super.unmarkText()
-    onCompositionCommit?()
-  }
-}
-
-public enum EditorStartupPhase: Equatable {
-  case loading, resolvingLoadedSnapshot, ready, recoveryEditing(StoreError), ownershipConflict
-}
-
 @MainActor public final class EditorViewController: NSViewController, NSTextViewDelegate {
   public let persistence: PersistenceController
-  public let scroll = NSScrollView()
-  public let textView = JortTextView(usingTextLayoutManager: true)
+  let scroll = NSScrollView()
+  let textView = JortTextView(usingTextLayoutManager: true)
   let notice = NSTextField(wrappingLabelWithString: "")
-  let retry = NSButton(title: "Retry save", target: nil, action: nil)
+  let retry = NSButton(
+    title: LocalizedCopy.text("EditorViewController.retry_save", fallback: "Retry save"),
+    target: nil, action: nil)
   let footer = EditorFooter(frame: .zero)
   private(set) var modifierMonitor: Any?
   private let unloaded = DocumentSnapshot()
   public private(set) var coordinator: DocumentCoordinator!
   public var state: DocumentSnapshot { coordinator?.snapshot ?? unloaded }
-  public private(set) var startupPhase: EditorStartupPhase = .loading {
-    didSet { onStartupPhase?(startupPhase) }
+  private let storageProjection = EditorStorageProjection()
+  public private(set) var startupPhase: EditorStartupPhase {
+    get { storageProjection.phase }
+    set {
+      storageProjection.phase = newValue
+      onStartupPhase?(newValue)
+    }
   }
   public var onStartupPhase: ((EditorStartupPhase) -> Void)?
-  private var loadedForReconciliation: DocumentSnapshot?
+  private var loadedForReconciliation: DocumentSnapshot? {
+    get { storageProjection.loadedForReconciliation }
+    set { storageProjection.loadedForReconciliation = newValue }
+  }
   private var acceptsEditing: Bool { coordinator != nil && startupPhase != .ownershipConflict }
   private var pendingEdit: (NSRange, Int)?
   private var ruler: LineRuler!
+  let presentationCoordinator = PresentationCoordinator()
   private(set) var linePresentation: LinePresentationLayout!
   private(set) var palette: CommandPalette?
   private(set) var documentSearch: DocumentSearchController?
@@ -191,6 +68,7 @@ public enum EditorStartupPhase: Equatable {
     self.persistence = persistence
     super.init(nibName: nil, bundle: nil)
   }
+  public func finishComposition() { textView.unmarkText() }
   public required init?(coder: NSCoder) { fatalError() }
 
   public override func loadView() {
@@ -245,9 +123,12 @@ public enum EditorStartupPhase: Equatable {
     textView.typingAttributes = [
       .font: textView.font!, .foregroundColor: textView.textColor!, .paragraphStyle: paragraph,
     ]
-    textView.setAccessibilityLabel("Jort document")
+    textView.setAccessibilityLabel(
+      LocalizedCopy.text("EditorViewController.jort_document", fallback: "Jort document"))
     textView.setAccessibilityHelp(
-      "Your private plain text canvas. Changes save automatically on this Mac.")
+      LocalizedCopy.text(
+        "EditorViewController.your_private_plain_text_canvas_changes_save_automatically_on_this",
+        fallback: "Your private plain text canvas. Changes save automatically on this Mac."))
     coordinator = try! DocumentCoordinator(snapshot: unloaded)
     textView.delegate = self
     textView.isSelectable = true
@@ -259,6 +140,9 @@ public enum EditorStartupPhase: Equatable {
     }
     ruler = LineRuler(scrollView: scroll, textView: textView)
     ruler.presentation = linePresentation
+    ruler.invalidatePresentation = { [weak self] in
+      self?.presentationCoordinator.invalidate(.viewport)
+    }
     ruler.onModeChange = { [weak self] in self?.updateFooter() }
     ruler.onEdit = { [weak self] id in self?.chooseLandmark(on: id) }
     ruler.onNavigate = { [weak self] id in self?.navigate(to: id) }
@@ -308,11 +192,39 @@ public enum EditorStartupPhase: Equatable {
       retry.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -8),
       retry.centerYAnchor.constraint(equalTo: notice.centerYAnchor),
     ])
-    textView.onCompositionCommit = { [weak self] in self?.commitText() }
+    textView.onCompositionCommit = { [weak self] in
+      self?.commitText()
+      self?.presentationCoordinator.invalidate(.document)
+    }
     toolController = ToolInvocationController(editor: self)
     toolController.packages = toolPackages
     toolController.coordinator = toolInvocationCoordinator
     toolPresentation = ToolInvocationPresentation(editor: self)
+    presentationCoordinator.prepare = { [weak self] _ in
+      guard let self, !self.textView.hasMarkedText() else { return nil }
+      return { [weak self] in
+        guard let self else { return }
+        let epoch = self.presentationCoordinator.epoch
+        self.linePresentation.prepareViewportLayout()
+        guard self.presentationCoordinator.epoch == epoch else { return }
+        if self.toolPresentation.reconcileStyles() {
+          self.presentationCoordinator.invalidate(.layout)
+          return
+        }
+        self.linePresentation.capture(epoch: self.presentationCoordinator.epoch)
+        self.toolPresentation.reconcileControls()
+        self.linePresentation.refreshViews()
+        self.ruler.refreshControls()
+        self.ruler.needsDisplay = true
+      }
+    }
+    textView.onLayout = { [weak self] in self?.presentationCoordinator.invalidate(.layout) }
+    textView.onWindowGeometry = { [weak self] in self?.presentationCoordinator.invalidate(.window) }
+    NSWorkspace.shared.notificationCenter.addObserver(
+      self, selector: #selector(accessibilityDisplayChanged),
+      name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
+    textView.onAppearance = { [weak self] in self?.presentationCoordinator.invalidate(.appearance) }
+    presentationCoordinator.invalidate(.document)
     textView.onToolKey = { [weak self] in self?.toolPresentation.handle($0) ?? false }
     textView.onToolDraw = { [weak self] in self?.toolPresentation.draw($0) }
     textView.toolAccessibilityChildren = { [weak self] in
@@ -336,6 +248,10 @@ public enum EditorStartupPhase: Equatable {
     }
     persistence.onCommit = { [weak self] revision in self?.coordinator?.markCommitted(revision) }
     persistence.onHistoryState = { [weak self] in
+      guard let self else { return }
+      self.present(self.persistence.status)
+    }
+    persistence.onMaintenance = { [weak self] in
       guard let self else { return }
       self.present(self.persistence.status)
     }
@@ -410,7 +326,8 @@ public enum EditorStartupPhase: Equatable {
           mutation: .edit(
             text: prefix + snapshot.text,
             range: NSRange(location: 0, length: 0), replacementLength: prefix.utf16.count)))
-      textView.history.setActionName("Startup Typing")
+      textView.history.setActionName(
+        LocalizedCopy.text("EditorViewController.startup_typing", fallback: "Startup Typing"))
       textView.history.endUndoGrouping()
     } else {
       textView.string = snapshot.text
@@ -430,31 +347,15 @@ public enum EditorStartupPhase: Equatable {
     if toolCatalogLoaded { toolController.reconcilePackages() }
   }
   func present(_ status: PersistenceState) {
-    let message: String?
-    switch status {
-    case .loadBlockedFuture:
-      message = String(
-        localized: "This store needs a newer version of Jort. Existing files are unchanged.")
-    case .loadFailed:
-      message = String(
-        localized:
-          "Storage could not be opened. Your typing stays in memory; save a recovery copy to keep it."
-      )
-    case .ownershipConflict:
-      message = String(localized: "This canvas is already open in another Jort process.")
-    default:
-      message =
-        status.failure == nil
-        ? nil : String(localized: "Couldn’t save. Your text is still here. Retry with ⌘S.")
-    }
-    let visibleMessage = message ?? persistence.historyMessage
-    notice.stringValue = visibleMessage ?? ""
-    notice.toolTip = visibleMessage
-    notice.isHidden = visibleMessage == nil
-    retry.isHidden = message == nil || status == .ownershipConflict
-    retry.title =
-      status.permitsRetry
-      ? String(localized: "Retry save") : String(localized: "Save Recovery Copy…")
+    let projection = storageProjection.notice(
+      for: status, historyMessage: persistence.historyMessage)
+    let message = maintenanceMessage() ?? projection.message
+    notice.stringValue = message ?? ""
+    notice.toolTip = message
+    notice.isHidden = message == nil
+    retry.isHidden = !projection.canRetry
+    retry.title = projection.actionTitle
+    presentationCoordinator.invalidate(.storage)
   }
 
   public override func viewDidAppear() {
@@ -484,6 +385,9 @@ public enum EditorStartupPhase: Equatable {
     NotificationCenter.default.removeObserver(self)
     clearHeldOption()
   }
+  @objc private func accessibilityDisplayChanged() {
+    presentationCoordinator.invalidate([.accessibility, .appearance])
+  }
   @objc private func clearHeldOption() { ruler?.optionHeld = false }
   @objc private func windowResigned(_ notification: Notification) {
     if notification.object as? NSWindow === view.window { clearHeldOption() }
@@ -505,10 +409,16 @@ public enum EditorStartupPhase: Equatable {
         let alert = NSAlert()
         alert.messageText = "\(locked.count) mergeable responses will be deleted"
         alert.informativeText =
-          "Only the selected text will be deleted. Any remaining text from affected tool calls will become ordinary text."
+          LocalizedCopy.text(
+            "EditorViewController.only_the_selected_text_will_be_deleted_any_remaining_text_from_af",
+            fallback:
+              "Only the selected text will be deleted. Any remaining text from affected tool calls will become ordinary text."
+          )
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Delete")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(
+          withTitle: LocalizedCopy.text("EditorViewController.delete", fallback: "Delete"))
+        alert.addButton(
+          withTitle: LocalizedCopy.text("EditorViewController.cancel", fallback: "Cancel"))
         alert.beginSheetModal(for: window) { [weak self] response in
           guard response == .alertFirstButtonReturn, let self else { return }
           try? self.toolController.deletePending(in: affectedCharRange, expectedRevision: revision)
@@ -533,12 +443,9 @@ public enum EditorStartupPhase: Equatable {
     refreshGutterAfterLayout()
   }
   private func refreshGutterAfterLayout() {
-    DispatchQueue.main.async { [weak self] in
-      self?.ruler?.needsDisplay = true
-      self?.linePresentation?.refreshViews()
-      self?.refreshToolPresentation()
-    }
+    presentationCoordinator.invalidate([.layout, .interaction])
   }
+
   private func commitText() {
     // Native input may still be closing an undo group or replacing marked text.
     // Reconcile only after that complete input operation has returned to AppKit.
@@ -568,8 +475,9 @@ public enum EditorStartupPhase: Equatable {
             mutation: .edit(text: textView.string, range: nil, replacementLength: nil)))
         recordUndo(result.before, selection: NSRange(location: 0, length: 0))
       } catch {
-        notice.stringValue = String(
-          localized: "This edit could not be recorded. Copy your text to preserve it.")
+        notice.stringValue = LocalizedCopy.text(
+          "EditorViewController.this_edit_could_not_be_recorded_copy_your_text_to_preserve_it",
+          fallback: "This edit could not be recorded. Copy your text to preserve it.")
         notice.isHidden = false
       }
     }
@@ -618,7 +526,7 @@ public enum EditorStartupPhase: Equatable {
         to: NSPoint(x: scroll.contentView.bounds.minX, y: band.frame.minY + CGFloat(offset)))
     }
   }
-  func refreshToolPresentation() { toolPresentation?.refresh() }
+  func refreshToolPresentation() { presentationCoordinator.invalidate([.document, .lifecycle]) }
   /// Future commands and captures submit transactions here; they never receive NSTextStorage.
   @discardableResult public func apply(_ transaction: DocumentTransaction) throws
     -> TransactionResult
@@ -669,7 +577,7 @@ public enum EditorStartupPhase: Equatable {
     refreshGutterAfterLayout()
   }
   @objc public func save() {
-    if persistence.status.permitsRetry { persistence.retry() } else { saveRecoveryCopy() }
+    if persistence.status.permitsRetry { saveDocument() } else { saveRecoveryCopy() }
   }
   var currentLineID: UUID? {
     guard acceptsEditing else { return nil }
@@ -716,7 +624,9 @@ public enum EditorStartupPhase: Equatable {
     do {
       try apply(.init(baseRevision: state.revision, origin: .metadata, mutation: mutation))
     } catch {
-      notice.stringValue = "This landmark is no longer available. Choose a current line."
+      notice.stringValue = LocalizedCopy.text(
+        "EditorViewController.this_landmark_is_no_longer_available_choose_a_current_line",
+        fallback: "This landmark is no longer available. Choose a current line.")
       notice.isHidden = false
     }
   }
@@ -732,13 +642,13 @@ public enum EditorStartupPhase: Equatable {
       guard let self else { return }
       self.mutateLandmark(
         .landmark(Landmark(id: landmark?.id ?? LandmarkID(), lineID: id, emoji: emoji)))
-      self.ruler.refreshControls()
+      self.ruler.requestPresentation()
       self.ruler.needsDisplay = true
     }
     picker.clear = { [weak self] in
       guard let self, let landmark else { return }
       self.mutateLandmark(.removeLandmark(landmark.id))
-      self.ruler.refreshControls()
+      self.ruler.requestPresentation()
       self.ruler.needsDisplay = true
     }
     picker.finished = { [weak self] in
@@ -778,31 +688,56 @@ public enum EditorStartupPhase: Equatable {
   func paletteActions() -> [PaletteAction] {
     var actions = [
       PaletteAction(
-        id: "settings.open", title: "Open Settings", keywords: "preferences tools configuration",
+        id: "settings.open",
+        title: LocalizedCopy.text("EditorViewController.open_settings", fallback: "Open Settings"),
+        keywords: LocalizedCopy.text(
+          "EditorViewController.preferences_tools_configuration",
+          fallback: "preferences tools configuration"),
         execute: { [weak self] in self?.openSettings?() }),
       PaletteAction(
-        id: "history.open", title: "Version History", keywords: "revision restore snapshot changes",
+        id: "history.open",
+        title: LocalizedCopy.text(
+          "EditorViewController.version_history", fallback: "Version History"),
+        keywords: LocalizedCopy.text(
+          "EditorViewController.revision_restore_snapshot_changes",
+          fallback: "revision restore snapshot changes"),
         enabled: { [weak self] in self?.persistence.status.permitsRetry == true },
         execute: { [weak self] in self?.showHistory() }),
       PaletteAction(
-        id: "search.document", title: "Search Document", keywords: "find text matches",
+        id: "search.document",
+        title: LocalizedCopy.text(
+          "EditorViewController.search_document", fallback: "Search Document"),
+        keywords: LocalizedCopy.text(
+          "EditorViewController.find_text_matches", fallback: "find text matches"),
         execute: { [weak self] in self?.showDocumentSearch() }),
       PaletteAction(
-        id: "landmark.edit", title: "Add or Change Landmark", keywords: "emoji bookmark",
+        id: "landmark.edit",
+        title: LocalizedCopy.text(
+          "EditorViewController.add_or_change_landmark", fallback: "Add or Change Landmark"),
+        keywords: LocalizedCopy.text(
+          "EditorViewController.emoji_bookmark", fallback: "emoji bookmark"),
         enabled: { [weak self] in self?.currentLineID != nil },
         execute: { [weak self] in self?.addOrChangeLandmark() }),
       PaletteAction(
-        id: "landmark.clear", title: "Clear Landmark at Current Line",
+        id: "landmark.clear",
+        title: LocalizedCopy.text(
+          "EditorViewController.clear_landmark_at_current_line",
+          fallback: "Clear Landmark at Current Line"),
         enabled: { [weak self] in
           guard let self, let id = self.currentLineID else { return false }
           return self.state.landmarks.contains { !$0.detached && $0.lineID == id }
         }, execute: { [weak self] in self?.clearCurrentLandmark() }),
       PaletteAction(
-        id: "landmark.next", title: "Scroll to Next Landmark",
+        id: "landmark.next",
+        title: LocalizedCopy.text(
+          "EditorViewController.scroll_to_next_landmark", fallback: "Scroll to Next Landmark"),
         enabled: { [weak self] in self?.state.landmarks.contains { !$0.detached } == true },
         execute: { [weak self] in self?.nextLandmark() }),
       PaletteAction(
-        id: "landmark.previous", title: "Scroll to Last Landmark", keywords: "previous",
+        id: "landmark.previous",
+        title: LocalizedCopy.text(
+          "EditorViewController.scroll_to_last_landmark", fallback: "Scroll to Last Landmark"),
+        keywords: "previous",
         enabled: { [weak self] in self?.state.landmarks.contains { !$0.detached } == true },
         execute: { [weak self] in self?.previousLandmark() }),
     ]
@@ -811,7 +746,8 @@ public enum EditorStartupPhase: Equatable {
         PaletteAction(
           id: "tool.\(package.manifest.id)",
           title: "Insert \(package.manifest.command) — \(package.manifest.name)",
-          keywords: "tool " + package.manifest.description,
+          keywords: LocalizedCopy.text("EditorViewController.tool", fallback: "tool ")
+            + package.manifest.description,
           enabled: { [weak self] in
             guard let self else { return false }
             return !self.textView.hasMarkedText() && self.textView.selectedRange().length == 0
@@ -840,7 +776,8 @@ public enum EditorStartupPhase: Equatable {
       actions.append(
         PaletteAction(
           id: "move.\(identity)", title: "Move \(label) to Current Line",
-          keywords: "resolve repair landmark",
+          keywords: LocalizedCopy.text(
+            "EditorViewController.resolve_repair_landmark", fallback: "resolve repair landmark"),
           enabled: { [weak self] in
             guard let self, let id = self.currentLineID else { return false }
             return self.state.landmarks.contains { $0.id == landmark.id }
@@ -853,7 +790,9 @@ public enum EditorStartupPhase: Equatable {
       if landmark.detached {
         actions.append(
           PaletteAction(
-            id: "delete.\(identity)", title: "Delete \(label)", keywords: "resolve clear landmark",
+            id: "delete.\(identity)", title: "Delete \(label)",
+            keywords: LocalizedCopy.text(
+              "EditorViewController.resolve_clear_landmark", fallback: "resolve clear landmark"),
             execute: { [weak self] in self?.mutateLandmark(.removeLandmark(landmark.id)) }))
       }
     }
@@ -930,7 +869,9 @@ public enum EditorStartupPhase: Equatable {
         view.window?.makeFirstResponder(workspace.revisions)
       } catch {
         notice.stringValue =
-          "History could not be opened. Your current document is still available."
+          LocalizedCopy.text(
+            "EditorViewController.history_could_not_be_opened_your_current_document_is_still_availa",
+            fallback: "History could not be opened. Your current document is still available.")
         notice.isHidden = false
       }
     }
@@ -972,7 +913,8 @@ public enum EditorStartupPhase: Equatable {
         .init(
           baseRevision: before.revision, origin: .restore, mutation: .restore(revision.snapshot)))
       if toolCatalogLoaded { toolController.reconcilePackages() }
-      textView.history.setActionName("Restore Version")
+      textView.history.setActionName(
+        LocalizedCopy.text("EditorViewController.restore_version", fallback: "Restore Version"))
       textView.history.endUndoGrouping()
     } catch {
       textView.history.endUndoGrouping()
@@ -982,336 +924,33 @@ public enum EditorStartupPhase: Equatable {
     persistence.flush()
   }
   @objc public func saveRecoveryCopy() {
-    guard let window = view.window else { return }
+    guard coordinator != nil, startupPhase != .ownershipConflict, let window = view.window else {
+      return
+    }
+    finishComposition()
     let panel = NSSavePanel()
-    panel.title = "Save Recovery Copy"
-    panel.message = "Preserve your current text and line metadata in a separate recovery file."
-    panel.nameFieldStringValue = "Jort Recovery.json"
+    panel.title = LocalizedCopy.text(
+      "EditorViewController.save_recovery_copy", fallback: "Save Recovery Copy")
+    panel.message = LocalizedCopy.text(
+      "EditorViewController.preserve_your_current_text_and_line_metadata_in_a_separate_recove",
+      fallback: "Preserve your current text and line metadata in a separate recovery file.")
+    panel.nameFieldStringValue = LocalizedCopy.text(
+      "EditorViewController.jort_recovery_json", fallback: "Jort Recovery.json")
     panel.allowedContentTypes = [.json]
     panel.beginSheetModal(for: window) { [weak self] response in
       guard response == .OK, let url = panel.url, let self else { return }
       self.persistence.saveRecoveryCopy(snapshot: self.state, to: url) { result in
         switch result {
         case .success:
-          self.notice.stringValue = "Recovery copy saved to \(url.lastPathComponent)."
+          self.notice.stringValue = LocalizedCopy.format(
+            "storage.recovery_saved", fallback: "Recovery copy saved to %@.", url.lastPathComponent)
         case .failure(let error):
-          self.notice.stringValue = "Couldn’t save recovery copy: \(String(describing: error))"
+          self.notice.stringValue = LocalizedCopy.format(
+            "storage.recovery_failed", fallback: "Couldn’t save recovery copy: %@",
+            String(describing: error))
         }
         self.notice.isHidden = false
       }
     }
-  }
-}
-
-/// Uses TextKit 2's already-visible fragments; scrolling never forces whole-document layout.
-@MainActor public final class LineRuler: NSRulerView {
-  var readOnly = false
-  weak var editor: NSTextView?
-  weak var presentation: LinePresentationLayout?
-  var lines: [LineMeta] = [] { didSet { needsDisplay = true } }
-  var landmarks: [Landmark] = [] {
-    didSet {
-      rebuildIndex()
-      refreshControls()
-      needsDisplay = true
-    }
-  }
-  var modeState = LandmarkModeState() {
-    didSet {
-      refreshControls()
-      needsDisplay = true
-      onModeChange?()
-    }
-  }
-  var landmarkMode: Bool {
-    get { modeState.isVisible }
-    set { modeState.latched = newValue }
-  }
-  var optionHeld: Bool {
-    get { modeState.optionHeld }
-    set { if modeState.optionHeld != newValue { modeState.optionHeld = newValue } }
-  }
-  var onModeChange: (() -> Void)?
-  func toggleLatchedMode() { modeState.latched.toggle() }
-  var onEdit: ((UUID) -> Void)?
-  var onNavigate: ((UUID) -> Void)?
-  var onClear: ((UUID) -> Void)?
-  var onClearAll: (() -> Void)?
-  var onMove: ((UUID) -> Void)?
-  private var index: [(id: UUID, emoji: String, number: Int)] = []
-  private var emojiByLine: [UUID: String] = [:]
-  private var indexOffset = 0
-  private var scrollAccumulator: CGFloat = 0
-  private let clearButton = LandmarkClearButton(title: "Clear", target: nil, action: nil)
-  private var entryButtons: [NSButton] = []
-  private var hits: [(id: UUID, frame: NSRect)] = []
-  init(scrollView: NSScrollView, textView: NSTextView) {
-    editor = textView
-    super.init(scrollView: scrollView, orientation: .verticalRuler)
-    clientView = textView
-    ruleThickness = EditorMetrics.gutterWidth
-    clipsToBounds = true
-    clearButton.target = self
-    clearButton.action = #selector(clearAll)
-    clearButton.isBordered = false
-    clearButton.font = .systemFont(ofSize: 10)
-    clearButton.setAccessibilityLabel("Clear all landmarks")
-    clearButton.toolTip = "Clear all landmarks"
-    clearButton.isHidden = true
-    addSubview(clearButton)
-    scrollView.contentView.postsBoundsChangedNotifications = true
-    NotificationCenter.default.addObserver(
-      self, selector: #selector(update), name: NSView.boundsDidChangeNotification,
-      object: scrollView.contentView)
-  }
-  public required init(coder: NSCoder) { fatalError() }
-  deinit { NotificationCenter.default.removeObserver(self) }
-  @objc private func update() {
-    refreshControls()
-    presentation?.refreshViews()
-    needsDisplay = true
-  }
-  public override func layout() {
-    super.layout()
-    refreshControls()
-  }
-  @objc private func clearAll() {
-    onClearAll?()
-    landmarkMode = false
-  }
-  private func rebuildIndex() {
-    emojiByLine = Dictionary(
-      uniqueKeysWithValues: landmarks.filter { !$0.detached }.map { ($0.lineID, $0.emoji) })
-    index = lines.enumerated().compactMap { position, line in
-      emojiByLine[line.id].map { (line.id, $0, position + 1) }
-    }
-  }
-  public override func scrollWheel(with event: NSEvent) {
-    guard landmarkMode else {
-      super.scrollWheel(with: event)
-      return
-    }
-    guard event.momentumPhase.isEmpty else { return }
-    if event.phase == .began { scrollAccumulator = 0 }
-    let capacity = max(1, Int((bounds.height - 24) / 28))
-    let delta =
-      event.hasPreciseScrollingDeltas ? -event.scrollingDeltaY : -event.scrollingDeltaY * 28
-    scrollAccumulator += delta
-    let rows = Int(scrollAccumulator / 28)
-    guard rows != 0 else { return }
-    scrollAccumulator -= CGFloat(rows * 28)
-    indexOffset = max(0, min(max(0, index.count - capacity), indexOffset + rows))
-    refreshControls()
-    needsDisplay = true
-  }
-  public override func mouseDown(with event: NSEvent) {
-    guard !readOnly else { return }
-    let point = convert(event.locationInWindow, from: nil)
-    if let hit = hits.first(where: { $0.frame.contains(point) }) {
-      if landmarkMode {
-        landmarkMode = false
-        onNavigate?(hit.id)
-      } else {
-        onEdit?(hit.id)
-      }
-    }
-  }
-  @objc private func activateEntry(_ sender: NSButton) {
-    guard !readOnly else { return }
-    guard hits.indices.contains(sender.tag) else { return }
-    let id = hits[sender.tag].id
-    if landmarkMode {
-      landmarkMode = false
-      onNavigate?(id)
-    } else {
-      onEdit?(id)
-    }
-  }
-  public override func menu(for event: NSEvent) -> NSMenu? {
-    guard !readOnly else { return nil }
-    let point = convert(event.locationInWindow, from: nil)
-    guard let hit = hits.first(where: { $0.frame.contains(point) }) else { return nil }
-    return menu(for: hit.id)
-  }
-  private func menu(for id: UUID) -> NSMenu {
-    let menu = NSMenu()
-    let marked = emojiByLine[id] != nil
-    for (title, action) in [
-      (marked ? "Change Landmark…" : "Add Landmark…", #selector(editEntry(_:)))
-    ]
-      + (marked
-        ? [
-          ("Clear Landmark", #selector(clearEntry(_:))),
-          ("Move Landmark to Current Line", #selector(moveEntry(_:))),
-        ] : [])
-    {
-      let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-      item.target = self
-      item.representedObject = id
-      menu.addItem(item)
-    }
-    return menu
-  }
-  @objc private func editEntry(_ item: NSMenuItem) {
-    if let id = item.representedObject as? UUID { onEdit?(id) }
-  }
-  @objc private func clearEntry(_ item: NSMenuItem) {
-    if let id = item.representedObject as? UUID { onClear?(id) }
-  }
-  @objc private func moveEntry(_ item: NSMenuItem) {
-    if let id = item.representedObject as? UUID { onMove?(id) }
-  }
-  /// Coordinates are in the text container; include the extra, zero-length EOF row.
-  public func visibleRows() -> [(number: Int, y: CGFloat)] {
-    if let presentation, !presentation.lines.isEmpty {
-      return presentation.visibleBands().map { ($0.number, $0.textY) }
-    }
-    guard let editor else { return [] }
-    if editor.string.isEmpty { return [(1, 0)] }
-    guard let manager = editor.textLayoutManager, let content = manager.textContentManager,
-      let viewport = manager.textViewportLayoutController.viewportRange
-    else { return [] }
-    var rows: [(number: Int, y: CGFloat)] = []
-    let visibleBottom =
-      (editor.enclosingScrollView?.contentView.bounds.maxY ?? editor.visibleRect.maxY)
-      - editor.textContainerOrigin.y
-    manager.enumerateTextLayoutFragments(
-      from: viewport.location, options: [.ensuresExtraLineFragment]
-    ) { fragment in
-      guard fragment.layoutFragmentFrame.minY <= visibleBottom else { return false }
-      let paragraphOffset = content.offset(
-        from: content.documentRange.location, to: fragment.rangeInElement.location)
-      for line in fragment.textLineFragments {
-        let offset = paragraphOffset + line.characterRange.location
-        var low = 0, high = self.lines.count
-        while low < high {
-          let mid = (low + high) / 2
-          if self.lines[mid].location < offset { low = mid + 1 } else { high = mid }
-        }
-        if low < self.lines.count, self.lines[low].location == offset,
-          rows.last?.number != low + 1
-        {
-          rows.append((low + 1, fragment.layoutFragmentFrame.minY + line.typographicBounds.minY))
-        }
-      }
-      return fragment.layoutFragmentFrame.maxY < visibleBottom
-    }
-    return rows
-  }
-  public override func drawHashMarksAndLabels(in rect: NSRect) {
-    EditorMetrics.chrome.setFill()
-    NSRect(x: 0, y: rect.minY, width: ruleThickness, height: rect.height).fill()
-    EditorMetrics.separator.setFill()
-    let pixel = EditorMetrics.pixel(in: self)
-    NSRect(x: ruleThickness - pixel, y: rect.minY, width: pixel, height: rect.height).fill()
-    refreshControls()
-    guard !landmarkMode, let editor else { return }
-    let attrs: [NSAttributedString.Key: Any] = [
-      .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular),
-      .foregroundColor: NSColor.secondaryLabelColor,
-    ]
-    for row in visibleRows() {
-      guard lines.indices.contains(row.number - 1), emojiByLine[lines[row.number - 1].id] == nil
-      else { continue }
-      let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
-      guard point.y >= bounds.minY else { continue }
-      let label = "\(row.number)" as NSString
-      let size = label.size(withAttributes: attrs)
-      label.draw(
-        at: NSPoint(x: (ruleThickness - size.width) / 2, y: point.y + 7), withAttributes: attrs)
-    }
-  }
-  func refreshControls() {
-    guard let editor else { return }
-    clearButton.frame = NSRect(x: 4, y: bounds.maxY - 24, width: 40, height: 20)
-    clearButton.isHidden = !landmarkMode
-    clearButton.isEnabled = !landmarks.isEmpty
-    var entries: [(id: UUID, label: String, number: Int, frame: NSRect)] = []
-    hits = []
-    if landmarkMode {
-      let capacity = max(1, Int((bounds.height - 24) / 28))
-      indexOffset = min(indexOffset, max(0, index.count - capacity))
-      for (offset, row) in index.dropFirst(indexOffset).prefix(capacity).enumerated() {
-        entries.append(
-          (
-            row.id, row.emoji, row.number,
-            NSRect(x: 4, y: bounds.minY + CGFloat(offset * 28), width: 40, height: 28)
-          ))
-      }
-    }
-    for row in landmarkMode ? [] : visibleRows() {
-      guard lines.indices.contains(row.number - 1) else { continue }
-      let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
-      guard point.y >= bounds.minY else { continue }
-      let id = lines[row.number - 1].id
-      let frame = NSRect(x: (ruleThickness - 24) / 2, y: point.y + 2, width: 24, height: 24)
-      if let emoji = emojiByLine[id] {
-        entries.append((id, emoji, row.number, frame))
-        continue
-      }
-      hits.append((id, frame))
-    }
-    while entryButtons.count > entries.count { entryButtons.removeLast().removeFromSuperview() }
-    while entryButtons.count < entries.count {
-      let button = LandmarkEntryButton(
-        title: "", target: self, action: #selector(activateEntry(_:)))
-      button.isBordered = false
-      button.font = .systemFont(ofSize: 11)
-      addSubview(button)
-      entryButtons.append(button)
-    }
-    for (position, entry) in entries.enumerated() {
-      let button = entryButtons[position]
-      button.frame = entry.frame
-      button.title = entry.label
-      button.menu = readOnly ? nil : menu(for: entry.id)
-      button.tag = hits.count
-      hits.append((entry.id, entry.frame))
-      let name =
-        "\(entry.label), line \(entry.number), \(readOnly ? "historical landmark" : landmarkMode ? "navigate" : "change landmark")"
-      button.setAccessibilityLabel(name)
-      if landmarkMode, lines.indices.contains(entry.number - 1) {
-        let line = lines[entry.number - 1]
-        button.toolTip = (editor.string as NSString)
-          .substring(with: NSRange(location: line.location, length: line.length))
-          .trimmingCharacters(in: .newlines)
-      } else {
-        button.toolTip = name
-      }
-    }
-  }
-  func frame(for id: UUID) -> NSRect? { hits.first(where: { $0.id == id })?.frame }
-}
-
-@MainActor private final class LandmarkEntryButton: NSButton {
-  override func draw(_ dirtyRect: NSRect) {
-    let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: 11)]
-    let label = title as NSString
-    let size = label.size(withAttributes: attributes)
-    label.draw(
-      at: NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2),
-      withAttributes: attributes)
-  }
-}
-
-@MainActor private final class LandmarkClearButton: NSButton {
-  override func draw(_ dirtyRect: NSRect) {
-    let warning = NSColor(
-      srgbRed: 0xCD / 255, green: 0xA9 / 255, blue: 0x77 / 255, alpha: isEnabled ? 1 : 0.4)
-    let outline = bounds.insetBy(dx: 0.5, dy: 0.5)
-    let path = NSBezierPath(roundedRect: outline, xRadius: 4, yRadius: 4)
-    warning.setStroke()
-    path.lineWidth = 1
-    path.stroke()
-
-    let attributes: [NSAttributedString.Key: Any] = [
-      .font: font ?? NSFont.systemFont(ofSize: 10),
-      .foregroundColor: warning,
-    ]
-    let label = title as NSString
-    let size = label.size(withAttributes: attributes)
-    label.draw(
-      at: NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2),
-      withAttributes: attributes)
   }
 }

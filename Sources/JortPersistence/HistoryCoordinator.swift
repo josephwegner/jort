@@ -28,6 +28,7 @@ public enum HistoryBoundary: String, Sendable {
   private var tail: Task<Bool, Never>?
   private var settingsTask: Task<HistorySettings, Error>?
   private var seeded = false
+  private var suspended = false
   public private(set) var state: HistoryState = .healthy { didSet { onState?(state) } }
   public var onState: (@MainActor (HistoryState) -> Void)?
 
@@ -46,6 +47,7 @@ public enum HistoryBoundary: String, Sendable {
   }
 
   public func changed(_ snapshot: DocumentSnapshot, reason: HistoryBoundary? = nil) {
+    guard !suspended else { return }
     latest = snapshot
     idle?.cancel()
     if let reason {
@@ -71,16 +73,25 @@ public enum HistoryBoundary: String, Sendable {
 
   /// Waits through preceding semantic boundaries, including work already in flight.
   @discardableResult public func flush(reason: HistoryBoundary = .deactivation) async -> Bool {
+    guard !suspended else { return false }
     idle?.cancel()
     idle = nil
     return await enqueue(latest, reason: reason).value
+  }
+
+  /// Discard queued boundaries and drain any already-entered store operation.
+  public func suspendForPurge() async {
+    suspended = true
+    idle?.cancel()
+    idle = nil
+    _ = await tail?.value
   }
 
   private func enqueue(_ snapshot: DocumentSnapshot, reason: HistoryBoundary) -> Task<Bool, Never> {
     let previous = tail, timestamp = now()
     let task = Task { [weak self] in
       _ = await previous?.value
-      guard let self else { return false }
+      guard let self, !self.suspended else { return false }
       do {
         if !seeded {
           if try await store.revisions(before: nil, limit: 1).isEmpty {

@@ -61,8 +61,12 @@ final class SchedulerTests: XCTestCase {
     await store.setFailing(false)
     let saved = expectation(description: "Manual retry")
     controller.onState = { if case .clean(committed: 3) = $0 { saved.fulfill() } }
-    controller.retry()
-    await fulfillment(of: [saved], timeout: 5)
+    let result = expectation(description: "typed retry")
+    controller.saveImmediately { outcome in
+      XCTAssertEqual(outcome, .retried(3))
+      result.fulfill()
+    }
+    await fulfillment(of: [saved, result], timeout: 5)
     let actual = await store.saved
     XCTAssertEqual(actual, owner.snapshot)
   }

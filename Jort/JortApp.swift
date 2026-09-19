@@ -10,6 +10,7 @@ import JortSettings
 enum JortApp {
   @MainActor static func main() {
     let application = NSApplication.shared
+    ApplicationTheme.install(on: application)
     let delegate = AppDelegate()
     application.setActivationPolicy(.regular)
     application.delegate = delegate
@@ -110,7 +111,6 @@ enum JortApp {
       DispatchQueue.main.async { NSApp.applicationIconImage = icon }
     }
     window.minSize = NSSize(width: 460, height: 300)
-    window.appearance = NSAppearance(named: .darkAqua)
     window.titlebarAppearsTransparent = false
     window.backgroundColor = NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1)
     window.contentViewController = editor
@@ -179,7 +179,7 @@ enum JortApp {
     return .terminateLater
   }
   private func finishTermination(_ sender: NSApplication) {
-    editor.textView.unmarkText()
+    editor.finishComposition()
     persistence.flushLifecycle(reason: .shutdown) { saved in
       if saved {
         sender.reply(toApplicationShouldTerminate: true)
@@ -240,6 +240,7 @@ enum JortApp {
     app.addItem(.separator())
     add(app, "Quit Jort", #selector(NSApplication.terminate(_:)), "q")
     let file = submenu("File")
+    editor.addStorageCommands(to: file)
     add(file, "Close Window", #selector(NSWindow.performClose(_:)), "w")
     let edit = submenu("Edit")
     add(edit, "Undo", #selector(JortTextView.undo(_:)), "z")

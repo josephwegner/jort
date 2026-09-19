@@ -4,12 +4,13 @@ import JortDocument
 
 public enum StoreError: Error, Equatable, Sendable {
   case sqlite(Int32, String)
-  case unsupportedVersion, malformedSchema, invalidPayload, sizeLimit, ownership, io(String),
+  case unsupportedVersion, malformedSchema, invalidPayload, checksumMismatch, sizeLimit, ownership,
+    io(String),
     injected(String)
   public var recoverableCorruption: Bool {
     switch self {
     case .sqlite(let code, _): return code == 11 || code == 26
-    case .invalidPayload: return true
+    case .invalidPayload, .checksumMismatch: return true
     default: return false
     }
   }
@@ -108,7 +109,9 @@ public enum PersistenceFormat {
     guard data.count <= maximumBytes else { throw StoreError.sizeLimit }
     return data
   }
-  public static func decode(_ data: Data) throws -> (snapshot: DocumentSnapshot, version: Int) {
+  public static func decode(_ data: Data, reportChecksumMismatch: Bool = false) throws -> (
+    snapshot: DocumentSnapshot, version: Int
+  ) {
     guard data.count <= maximumBytes else { throw StoreError.sizeLimit }
     do {
       let decoder = JSONDecoder(), header = try JSONDecoder().decode(Header.self, from: data)
@@ -136,7 +139,7 @@ public enum PersistenceFormat {
           documentID: value.id, text: value.content, revision: value.liveRevision,
           lines: value.lines, landmarks: value.landmarks)
         guard envelope.checksum == checksum(try encoder().encode(Payload(plain))) else {
-          throw StoreError.invalidPayload
+          throw reportChecksumMismatch ? StoreError.checksumMismatch : StoreError.invalidPayload
         }
         let stored = value.invocations ?? []
         let annotationHash = checksum(try encoder().encode(stored))

@@ -3,6 +3,26 @@ import Darwin
 import JortPersistence
 import JortDocument
 
+private final class CrashBoundary: @unchecked Sendable {
+  private let lock = NSLock()
+  private var armed = false
+  private var hits = 0
+  let stage: String
+  let hit: Int
+  init(stage: String, hit: Int) {
+    self.stage = stage
+    self.hit = hit
+  }
+  func arm() { lock.withLock { armed = true } }
+  func visit(_ value: StoreStage) {
+    lock.withLock {
+      guard armed, value.rawValue == stage else { return }
+      hits += 1
+      if hits == hit { Darwin._exit(99) }
+    }
+  }
+}
+
 @main enum StoreLockProbe {
   @MainActor static func main() async {
     let args = CommandLine.arguments
@@ -10,7 +30,18 @@ import JortDocument
     let directory = URL(fileURLWithPath: args[1])
     let mode = args[2]
     do {
-      if mode == "lock" {
+      if mode.hasPrefix("purge:") {
+        let parts = mode.split(separator: ":")
+        guard parts.count == 3, let hit = Int(parts[2]) else { exit(64) }
+        let boundary = CrashBoundary(stage: String(parts[1]), hit: hit)
+        let store = SQLiteStore(directory: directory, inject: boundary.visit)
+        let snapshot = try await store.load()
+        boundary.arm()
+        let result = await store.purge(snapshot)
+        FileHandle.standardOutput.write(Data("\(result)\n".utf8))
+        try await store.close()
+        exit(0)
+      } else if mode == "lock" {
         let lock = try StoreLock(directory: directory)
         FileHandle.standardOutput.write(Data("OWNED\n".utf8))
         try await Task.sleep(for: .seconds(1))

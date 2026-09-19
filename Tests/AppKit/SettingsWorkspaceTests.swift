@@ -170,8 +170,10 @@ import JortPersistence
     editor.textView.insertText("/", replacementRange: NSRange(location: 0, length: 0))
     editor.textView.insertText("ec", replacementRange: editor.textView.selectedRange())
     editor.view.layoutSubtreeIfNeeded()
+    await settlePresentationAsync(editor)
     editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
     editor.refreshToolPresentation()
+    await settlePresentationAsync(editor)
     let popup = try XCTUnwrap(
       editor.view.subviews.first { $0.accessibilityLabel() == "Tool completions" })
     let option = try XCTUnwrap(popup.subviews.first as? NSButton)

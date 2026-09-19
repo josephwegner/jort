@@ -1,6 +1,52 @@
 import XCTest
 
 @MainActor final class JortUITests: XCTestCase {
+  func testFileMenuPurgeCancellationCompletionAndRelaunch() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("PurgeUI-\(UUID())")
+    let app = XCUIApplication()
+    app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
+    app.launch()
+    defer { app.terminate() }
+    let editor = app.textViews["Jort document"]
+    XCTAssertTrue(editor.waitForExistence(timeout: 5))
+    editor.click()
+    editor.typeText("Current text to preserve")
+    app.typeKey("s", modifierFlags: .command)
+    let backup = root.appendingPathComponent("Damaged-\(UUID())")
+    try FileManager.default.createDirectory(at: backup, withIntermediateDirectories: false)
+    let sentinel = Data("OLDER_PRIVATE_UI_SENTINEL".utf8)
+    try sentinel.write(to: backup.appendingPathComponent("Recovery.json"))
+    app.menuBars.menuBarItems["File"].click()
+    XCTAssertTrue(app.menuItems["Save Recovery Copy…"].exists)
+    app.menuItems["Clear History and Recovery Data…"].click()
+    let cancel = app.sheets.buttons["Cancel"]
+    XCTAssertTrue(cancel.waitForExistence(timeout: 3))
+    XCTAssertTrue(
+      app.sheets.staticTexts.matching(NSPredicate(format: "value CONTAINS %@", "milestones"))
+        .firstMatch.exists)
+    cancel.click()
+    XCTAssertEqual(try Data(contentsOf: backup.appendingPathComponent("Recovery.json")), sentinel)
+    XCTAssertEqual(editor.value as? String, "Current text to preserve")
+    app.menuBars.menuBarItems["File"].click()
+    app.menuItems["Clear History and Recovery Data…"].click()
+    app.sheets.buttons["Clear History and Recovery Data"].click()
+    XCTAssertTrue(
+      app.staticTexts["History and recovery data cleared. Your current document was preserved."]
+        .waitForExistence(timeout: 5))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: backup.path))
+    XCTAssertFalse(
+      FileManager.default.fileExists(atPath: root.appendingPathComponent("Purge.json").path))
+    XCTAssertEqual(editor.value as? String, "Current text to preserve")
+    app.terminate()
+    app.launch()
+    XCTAssertTrue(editor.waitForExistence(timeout: 5))
+    let restored = XCTNSPredicateExpectation(
+      predicate: NSPredicate { _, _ in
+        editor.value as? String == "Current text to preserve"
+      }, object: nil)
+    XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 5), .completed)
+  }
+
   func testShellOptionRevealAndPocket() throws {
     let app = XCUIApplication()
     app.launchEnvironment["JORT_DATA_DIRECTORY"] =
@@ -111,7 +157,9 @@ import XCTest
     app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
     app.launch()
     defer { app.terminate() }
-    XCTAssertTrue(app.textViews["Jort document"].waitForExistence(timeout: 5))
+    let editor = app.textViews["Jort document"]
+    XCTAssertTrue(editor.waitForExistence(timeout: 5))
+    editor.click()
     app.typeKey(",", modifierFlags: .command)
     XCTAssertTrue(app.windows["Jort Settings"].waitForExistence(timeout: 3))
     app.buttons["New Tool"].click()

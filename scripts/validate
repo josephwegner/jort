@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+JORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec python3 "$JORT_ROOT/scripts/validate.py" "$@"

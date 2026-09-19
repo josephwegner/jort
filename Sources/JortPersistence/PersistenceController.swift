@@ -35,27 +35,50 @@ public enum PersistenceState: Equatable, Sendable {
 @MainActor public final class PersistenceController {
   private let store: any DocumentStore
   private let retryDelays: [TimeInterval]
+  private let autosaveDelay: TimeInterval
   private var scheduled: Task<Void, Never>?
   private var pending: DocumentSnapshot?
   private var writing = false
   private var failures = 0
   private var ready = false
+  private var purgeBarrier = false
+  private var historyGeneration = 0
+  public private(set) var purgePhase: PurgePhase?
+  public private(set) var purgeResult: PurgeResult?
+  public private(set) var maintenanceWarning: MaintenanceWarning?
+  public var onMaintenance: (@MainActor () -> Void)?
+  public var canPurge: Bool { ready && !purgeBarrier && store is SQLiteStore }
+  public var canSave: Bool { ready && !purgeBarrier }
+  public var pendingRevision: Int64? { pending?.revision }
+  public var requiresHistoryRetry: Bool {
+    if case .failed = history?.state { return true }
+    return false
+  }
+  public var canRetryCleanup: Bool { purgePhase == .incomplete && purgeBarrier }
+  private var purgeBoundary: DocumentSnapshot?
   private var loadedSnapshot: DocumentSnapshot?
   public private(set) var history: HistoryCoordinator?
   public private(set) var historyRecoveryIncomplete = false
+  public private(set) var recoveryDisposition: RecoveryDisposition = .none
   public var onHistoryState: (@MainActor () -> Void)?
   public func openHistory() async throws -> any HistoryStore {
-    guard ready, let store = store as? any HistoryStore, let initial = loadedSnapshot else {
+    guard ready, !purgeBarrier, let store = store as? any HistoryStore, let initial = loadedSnapshot
+    else {
       throw StoreError.io("History is unavailable")
     }
+    let generation = historyGeneration
     if try await store.revisions(before: nil, limit: 1).isEmpty {
+      guard !purgeBarrier, generation == historyGeneration else {
+        throw StoreError.io("History maintenance in progress")
+      }
       _ = try await store.retain(
         initial, reason: "Initial state", timestamp: Date(), milestone: false)
     }
     return store
   }
   public func preserveBeforeRestore(_ snapshot: DocumentSnapshot) async throws {
-    guard ready, let store = store as? any HistoryStore, let initial = loadedSnapshot else {
+    guard ready, !purgeBarrier, let store = store as? any HistoryStore, let initial = loadedSnapshot
+    else {
       throw StoreError.io("History is unavailable")
     }
     if history == nil {
@@ -88,8 +111,13 @@ public enum PersistenceState: Equatable, Sendable {
   public init(directory: URL) {
     store = SQLiteStore(directory: directory)
     retryDelays = [1, 2, 3]
+    autosaveDelay = 0.5
   }
-  public init(store: any DocumentStore, retryDelays: [TimeInterval] = [1, 2, 3]) {
+  public init(
+    store: any DocumentStore, retryDelays: [TimeInterval] = [1, 2, 3],
+    autosaveDelay: TimeInterval = 0.5
+  ) {
+    self.autosaveDelay = autosaveDelay
     self.store = store
     self.retryDelays = retryDelays
   }
@@ -109,11 +137,25 @@ public enum PersistenceState: Equatable, Sendable {
         loadedSnapshot = snapshot
         if let sqlite = store as? SQLiteStore {
           historyRecoveryIncomplete = await sqlite.historyRecoveryWasIncomplete()
+          recoveryDisposition = await sqlite.recoveryDisposition
+          maintenanceWarning = await sqlite.maintenanceWarning
+          if await sqlite.purgeWasAbandoned {
+            purgePhase = .incomplete
+            purgeResult = .failed(.io("Purge was not performed; original data remains"))
+          }
+          if await sqlite.purgePending {
+            purgeBarrier = true
+            purgeBoundary = snapshot
+            purgePhase = .incomplete
+          }
           onHistoryState?()
         }
         status = .clean(committed: snapshot.revision)
         completion(.success(snapshot))
       } catch {
+        if let sqlite = store as? SQLiteStore {
+          recoveryDisposition = await sqlite.recoveryDisposition
+        }
         let failure = Self.normalize(error)
         switch failure {
         case .unsupportedVersion: status = .loadBlockedFuture
@@ -127,6 +169,7 @@ public enum PersistenceState: Equatable, Sendable {
   public func changed(_ snapshot: DocumentSnapshot, historyReason: HistoryBoundary? = nil) {
     guard ready else { return }
     pending = snapshot
+    if purgeBarrier { return }
     if history == nil, let store = store as? any HistoryStore, let initial = loadedSnapshot {
       history = HistoryCoordinator(store: store, initial: initial)
       history?.onState = { [weak self] _ in self?.onHistoryState?() }
@@ -139,7 +182,7 @@ public enum PersistenceState: Equatable, Sendable {
       return
     }
     if status.failure == nil { status = .dirty(revision: snapshot.revision) }
-    if scheduled == nil && !writing { schedule(after: 0.5) }
+    if scheduled == nil && !writing { schedule(after: autosaveDelay) }
   }
   private func schedule(after delay: TimeInterval) {
     scheduled?.cancel()
@@ -148,6 +191,113 @@ public enum PersistenceState: Equatable, Sendable {
       guard let self else { return }
       self.scheduled = nil
       self.flush()
+    }
+  }
+  public var canCleanRejectedRecovery: Bool {
+    guard !ready, case .loadFailed = status, case .rejected(let rejected) = recoveryDisposition
+    else { return false }
+    return rejected.contains { $0.reason != .missing && $0.reason != .unsupportedVersion }
+  }
+  public func cleanupRejectedRecovery() async -> [RemainingCopy] {
+    guard canCleanRejectedRecovery, let sqlite = store as? SQLiteStore else { return [] }
+    return await sqlite.cleanupRejectedRecovery()
+  }
+
+  public func clearHistoryAndRecoveryData() async -> PurgeResult {
+    guard canPurge, let sqlite = store as? SQLiteStore, let boundary = pending else {
+      return .unavailable
+    }
+    purgeBarrier = true
+    historyGeneration += 1
+    purgeBoundary = boundary
+    purgePhase = .preparing
+    purgeResult = nil
+    scheduled?.cancel()
+    scheduled = nil
+    onMaintenance?()
+    await history?.suspendForPurge()
+    history = nil
+    if writing {
+      await withCheckedContinuation { continuation in waiters.append { _ in continuation.resume() }
+      }
+    }
+    let generation = historyGeneration
+    let result = await sqlite.purge(boundary) { [weak self] phase in
+      Task { @MainActor in
+        guard let self, self.purgeBarrier, self.purgeResult == nil,
+          self.historyGeneration == generation
+        else { return }
+        let order: [PurgePhase] = [.preparing, .swapping, .cleaning]
+        guard let next = order.firstIndex(of: phase),
+          let current = self.purgePhase.flatMap({ order.firstIndex(of: $0) }), next >= current
+        else { return }
+        self.purgePhase = phase
+        self.onMaintenance?()
+      }
+    }
+    return completePurge(result, boundary: boundary, pendingOnDisk: await sqlite.purgePending)
+  }
+  public func retryCleanup() async -> PurgeResult {
+    guard canRetryCleanup, let sqlite = store as? SQLiteStore, let boundary = purgeBoundary else {
+      return .unavailable
+    }
+    purgePhase = .cleaning
+    onMaintenance?()
+    let result = await sqlite.retryPurgeCleanup()
+    return completePurge(result, boundary: boundary, pendingOnDisk: await sqlite.purgePending)
+  }
+  private func completePurge(_ result: PurgeResult, boundary: DocumentSnapshot, pendingOnDisk: Bool)
+    -> PurgeResult
+  {
+    purgeResult = result
+    if result == .completed {
+      failures = 0
+      committedRevision = boundary.revision
+      status = .clean(committed: boundary.revision)
+      onCommit?(boundary.revision)
+      loadedSnapshot = boundary
+      historyRecoveryIncomplete = false
+      maintenanceWarning = nil
+      purgePhase = .completed
+    } else {
+      purgePhase = .incomplete
+    }
+    // Before-swap failures can resume ordinary saving; post-swap failures keep edits queued.
+    purgeBarrier = pendingOnDisk
+    if !purgeBarrier {
+      if let pending, pending != boundary || result != .completed { changed(pending) }
+      if pending?.revision == committedRevision { status = .clean(committed: committedRevision!) }
+    }
+    onMaintenance?()
+    onHistoryState?()
+    return result
+  }
+
+  public func saveImmediately(completion: @escaping @MainActor (ImmediateSaveOutcome) -> Void) {
+    guard ready, !purgeBarrier, let snapshot = pending else {
+      completion(.unavailable)
+      return
+    }
+    let coalescing = writing
+    let retrying = status.failure != nil
+    if !writing, committedRevision == snapshot.revision, !retrying {
+      if requiresHistoryRetry { Task { _ = await history?.flush(reason: .retry) } }
+      completion(.clean(snapshot.revision))
+      return
+    }
+    if retrying { failures = 0 }
+    flush { [weak self] success in
+      guard let self, !self.purgeBarrier else {
+        completion(.unavailable)
+        return
+      }
+      if success, let revision = self.committedRevision {
+        completion(
+          retrying ? .retried(revision) : coalescing ? .coalesced(revision) : .saved(revision))
+        if retrying { Task { _ = await self.history?.flush(reason: .retry) } }
+      } else {
+        completion(.failed(self.status.failure?.error ?? .io("Save unavailable")))
+      }
     }
   }
   public func retry() {
@@ -179,7 +329,7 @@ public enum PersistenceState: Equatable, Sendable {
     if let completion { waiters.append(completion) }
     scheduled?.cancel()
     scheduled = nil
-    guard ready, let snapshot = pending else {
+    guard ready, !purgeBarrier, let snapshot = pending else {
       finish(false)
       return
     }
@@ -200,7 +350,9 @@ public enum PersistenceState: Equatable, Sendable {
         committedRevision = revision
         failures = 0
         onCommit?(revision)
-        if pending?.revision != revision {
+        if purgeBarrier {
+          finish(true)
+        } else if pending?.revision != revision {
           flush()
         } else {
           status = .clean(committed: revision)
@@ -213,7 +365,7 @@ public enum PersistenceState: Equatable, Sendable {
         let failure = SaveFailure(error: Self.normalize(error), retriesRemaining: remaining)
         let revision = pending?.revision ?? snapshot.revision
         status = .saveFailed(revision: revision, failure: failure)
-        if remaining > 0 {
+        if remaining > 0 && !purgeBarrier {
           status = .retryScheduled(revision: revision, attempt: failures, failure: failure)
           schedule(after: retryDelays[failures - 1])
         }
