@@ -31,6 +31,7 @@ struct DocumentState: Equatable {
     var start = 0
     while start < source.length {
       let range = source.lineRange(for: NSRange(location: start, length: 0))
+      DocumentInstrumentation.count(.visitedLines)
       result.append(range)
       start = NSMaxRange(range)
     }
@@ -44,7 +45,7 @@ struct DocumentState: Equatable {
 
   mutating func replaceText(
     _ newText: String, editRange: NSRange? = nil, replacementLength: Int? = nil,
-    at time: Date = Date()
+    at time: Date = Date(), makeLineID: () -> UUID = { UUID() }
   ) {
     guard text != newText else { return }
     let source = newText as NSString
@@ -125,7 +126,8 @@ struct DocumentState: Equatable {
         if oldLocation >= oldEnd { inherited = byLocation[oldLocation] }
       }
       if let candidate = inherited, used.contains(candidate.id) { inherited = nil }
-      var line = inherited ?? LineMeta(location: range.location, length: range.length)
+      var line =
+        inherited ?? LineMeta(id: makeLineID(), location: range.location, length: range.length)
       used.insert(line.id)
       let content = source.substring(with: range)
       if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -143,12 +145,20 @@ struct DocumentState: Equatable {
       line.length = range.length
       return line
     }
+    DocumentInstrumentation.count(.visitedLines, end - first + ranges.count)
+    DocumentInstrumentation.count(.copiedLineRecords, first + updated.count + lines.count - end)
+    // Payload lower bound, excluding allocator capacity and temporary Foundation buffers.
+    DocumentInstrumentation.count(
+      .allocatedPayloadBytes,
+      (first + updated.count + lines.count - end) * MemoryLayout<LineMeta>.stride)
     var result = Array(lines[..<first])
     result.append(contentsOf: updated)
     for var line in lines[end...] {
+      DocumentInstrumentation.count(.visitedLines)
       line.location += delta
       result.append(line)
     }
+    DocumentInstrumentation.count(.visitedLines, result.count)
     let surviving = Set(result.map(\.id))
     let destination = lines[leading].id
     let occupied = landmarks.contains { !$0.detached && $0.lineID == destination }
@@ -165,7 +175,12 @@ struct DocumentState: Equatable {
     lines = result
   }
 
-  func validate() throws {
+  func validate(fullDocument: Bool = true) throws {
+    let measurement = DocumentInstrumentation.begin(
+      fullDocument ? "CompleteDocumentValidation" : "LocalDocumentValidation", revision: revision)
+    defer { DocumentInstrumentation.end(measurement) }
+    if fullDocument { DocumentInstrumentation.count(.completeValidations) }
+    DocumentInstrumentation.count(.visitedLines, lines.count * 3)
     guard revision >= 0, Set(landmarks.map(\.id)).count == landmarks.count else {
       throw DocumentError.invalidState
     }

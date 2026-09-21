@@ -63,7 +63,7 @@ enum InvocationOverlayAction {
             : LocalizedCopy.text("ToolInvocationPresentation.context_end", fallback: "Context end"))
         handle.setAccessibilityValue(NSNumber(value: offset))
         handle.setAccessibilityMinValue(NSNumber(value: 0))
-        handle.setAccessibilityMaxValue(NSNumber(value: snapshot.text.utf16.count))
+        handle.setAccessibilityMaxValue(NSNumber(value: snapshot.utf16Count))
         handle.adjusted = { [weak self] direction in
           guard isCurrent() else { return }
           self?.send?(.adjustBoundary(invocation.id, start, direction))

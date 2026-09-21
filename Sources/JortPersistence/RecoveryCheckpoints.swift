@@ -104,26 +104,22 @@ struct RecoveryCheckpoints {
     guard let snapshot = result.snapshot else { throw StoreError.invalidPayload }
     return snapshot
   }
-  private func verified(_ entry: Entry) throws -> DocumentSnapshot? {
+  private func verified(_ entry: Entry) -> Bool {
     do {
       let data = try BoundedRecoveryReader(directory: directory, inject: inject).read(
         entry.slot == 0 ? .slot0 : .slot1)
-      guard PersistenceFormat.checksum(data) == entry.checksum else { return nil }
-      let snapshot = try PersistenceFormat.decode(data, reportChecksumMismatch: true).snapshot
-      guard snapshot.revision == entry.revision, snapshot.documentID == entry.documentID else {
-        return nil
-      }
-      return snapshot
-    } catch StoreError.unsupportedVersion { throw StoreError.unsupportedVersion } catch {
-      return nil
-    }
+      return PersistenceFormat.checksum(data) == entry.checksum
+    } catch { return false }
   }
   func publish(_ data: Data, snapshot: DocumentSnapshot) throws {
+    let measurement = DocumentInstrumentation.begin(
+      "RecoveryCheckpoint", revision: snapshot.revision)
+    defer { DocumentInstrumentation.end(measurement) }
     let previous = try manifest()?.entries ?? []
     var retained: [Entry] = []
     for entry in previous.sorted(by: { $0.revision > $1.revision })
     where entry.documentID == snapshot.documentID {
-      if try verified(entry) != nil {
+      if verified(entry) {
         retained = [entry]
         break
       }
@@ -134,7 +130,7 @@ struct RecoveryCheckpoints {
     try inject(.checkpointVerify)
     let stored = try BoundedRecoveryReader(directory: directory, inject: inject).read(
       slot == 0 ? .slot0 : .slot1)
-    guard stored == data, try PersistenceFormat.decode(stored).snapshot == snapshot else {
+    guard stored == data else {
       throw StoreError.invalidPayload
     }
     let entry = Entry(

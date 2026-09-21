@@ -9,12 +9,12 @@ public struct ToolAnchor: Codable, Equatable, Sendable {
     self.lineID = lineID
     self.offset = offset
   }
-  public func resolve(in lines: [LineMeta]) -> Int? {
+  public func resolve(in lines: some RandomAccessCollection<LineMeta>) -> Int? {
     guard let line = lines.first(where: { $0.id == lineID }), offset >= 0, offset <= line.length
     else { return nil }
     return line.location + offset
   }
-  public static func at(_ offset: Int, in lines: [LineMeta]) -> Self? {
+  public static func at(_ offset: Int, in lines: some RandomAccessCollection<LineMeta>) -> Self? {
     guard offset >= 0, let line = lines.last(where: { $0.location <= offset }),
       offset <= line.location + line.length
     else { return nil }
@@ -25,7 +25,7 @@ public struct ToolAnchor: Codable, Equatable, Sendable {
 public struct ToolAnchoredRange: Codable, Equatable, Sendable {
   public var start: ToolAnchor
   public var end: ToolAnchor
-  public init(_ range: NSRange, lines: [LineMeta]) throws {
+  public init(_ range: NSRange, lines: some RandomAccessCollection<LineMeta>) throws {
     guard range.location >= 0, range.length >= 0, range.length <= Int.max - range.location,
       let start = ToolAnchor.at(range.location, in: lines),
       let end = ToolAnchor.at(NSMaxRange(range), in: lines)
@@ -33,7 +33,7 @@ public struct ToolAnchoredRange: Codable, Equatable, Sendable {
     self.start = start
     self.end = end
   }
-  public func resolve(in lines: [LineMeta]) -> NSRange? {
+  public func resolve(in lines: some RandomAccessCollection<LineMeta>) -> NSRange? {
     guard let a = start.resolve(in: lines), let b = end.resolve(in: lines), b >= a else {
       return nil
     }
@@ -135,7 +135,6 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
   }
   public func validated(in snapshot: DocumentSnapshot) -> Bool {
-    let text = snapshot.text as NSString
     guard packageID.utf8.count <= 256, packageVersion > 0, entryContract == 1,
       ["javascript", "model"].contains(executor ?? "javascript"),
       packageID.range(of: #"^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$"#, options: .regularExpression)
@@ -148,10 +147,10 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
       ["replace-invocation", "replace-context", "insert-at-invocation"].contains(outputOperation),
       outputOperation != "replace-context" || inputMode == "contextual",
       message?.utf8.count ?? 0 <= 2048,
-      let token = token.resolve(in: snapshot.lines), let scope = scope.resolve(in: snapshot.lines),
-      NSMaxRange(scope) <= text.length, token.location >= scope.location,
+      let token = token.resolve(in: snapshot), let scope = scope.resolve(in: snapshot),
+      NSMaxRange(scope) <= snapshot.utf16Count, token.location >= scope.location,
       NSMaxRange(token) <= NSMaxRange(scope),
-      text.substring(with: token) == command
+      (try? snapshot.text(in: token)) == command
     else { return false }
     guard inputMode == "contextual" || scope.location == token.location,
       !inputMode.hasPrefix("ephemeral") || scope == token
@@ -162,17 +161,17 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
         restoration.entryContract == 1, restoration.command.utf8.count <= 65,
         restoration.timestamp.timeIntervalSinceReferenceDate.isFinite,
         restoration.message?.utf8.count ?? 0 <= 2048,
-        restoration.token.resolve(in: snapshot.lines) != nil,
-        restoration.scope.resolve(in: snapshot.lines) != nil,
-        restoration.selection?.resolve(in: snapshot.lines) != nil || restoration.selection == nil,
+        restoration.token.resolve(in: snapshot) != nil,
+        restoration.scope.resolve(in: snapshot) != nil,
+        restoration.selection?.resolve(in: snapshot) != nil || restoration.selection == nil,
         restoration.viewportOffset?.isFinite != false
       else { return false }
     }
-    var source = text.substring(with: scope)
+    guard var source = try? snapshot.text(in: scope) else { return false }
     if let output {
-      guard let range = output.resolve(in: snapshot.lines), NSMaxRange(range) <= text.length,
+      guard let range = output.resolve(in: snapshot), NSMaxRange(range) <= snapshot.utf16Count,
         range.location == (inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token)),
-        Self.hash(text.substring(with: range)) == outputHash
+        (try? snapshot.text(in: range)).map(Self.hash) == outputHash
       else { return false }
       let intersection = NSIntersectionRange(scope, range)
       if intersection.length > 0 {
@@ -189,12 +188,12 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     let valid = values.filter { $0.validated(in: snapshot) }
     var seen = Set<UUID>(), rejected = Set<UUID>()
     let intervals = valid.compactMap { invocation -> (UUID, Int, Int)? in
-      guard let scope = invocation.scope.resolve(in: snapshot.lines) else { return nil }
+      guard let scope = invocation.scope.resolve(in: snapshot) else { return nil }
       return (
         invocation.id, scope.location,
         max(
           NSMaxRange(scope),
-          invocation.output?.resolve(in: snapshot.lines).map(NSMaxRange) ?? NSMaxRange(scope))
+          invocation.output?.resolve(in: snapshot).map(NSMaxRange) ?? NSMaxRange(scope))
       )
     }.sorted { $0.1 < $1.1 }
     var cluster: [UUID] = [], end = -1
@@ -224,10 +223,10 @@ public enum ToolRangeEditing {
   {
     snapshot.invocations.filter { invocation in
       guard invocation.isLocked else { return false }
-      guard let scope = invocation.scope.resolve(in: snapshot.lines) else { return false }
+      guard let scope = invocation.scope.resolve(in: snapshot) else { return false }
       let end = max(
         NSMaxRange(scope),
-        invocation.output?.resolve(in: snapshot.lines).map(NSMaxRange) ?? NSMaxRange(scope))
+        invocation.output?.resolve(in: snapshot).map(NSMaxRange) ?? NSMaxRange(scope))
       let range = NSRange(location: scope.location, length: end - scope.location)
       return edit.length == 0
         ? edit.location > range.location && edit.location < NSMaxRange(range)
@@ -248,15 +247,15 @@ public enum ToolRangeEditing {
     func range(_ value: ToolAnchoredRange, grow: Bool, growStart: Bool = false)
       -> ToolAnchoredRange?
     {
-      guard let source = value.resolve(in: old.lines) else { return nil }
+      guard let source = value.resolve(in: old) else { return nil }
       let a = offset(
         source.location, end: !growStart && edit.length == 0 && source.location == edit.location)
       let b = offset(NSMaxRange(source), end: grow)
       guard b >= a else { return nil }
-      return try? ToolAnchoredRange(NSRange(location: a, length: b - a), lines: new.lines)
+      return try? ToolAnchoredRange(NSRange(location: a, length: b - a), snapshot: new)
     }
     return invocations.compactMap { original in
-      guard let oldToken = original.token.resolve(in: old.lines),
+      guard let oldToken = original.token.resolve(in: old),
         NSIntersectionRange(oldToken, edit).length == 0
       else { return nil }
       var value = original
@@ -279,12 +278,46 @@ public enum ToolRangeEditing {
         }
         value.restoration = restoration
       }
-      if !value.isLocked, let source = scope.resolve(in: new.lines),
-        NSMaxRange(source) <= new.text.utf16.count
+      if !value.isLocked, let source = scope.resolve(in: new),
+        NSMaxRange(source) <= new.utf16Count
       {
-        value.sourceHash = ToolInvocation.hash((new.text as NSString).substring(with: source))
+        guard let text = try? new.text(in: source) else { return nil }
+        value.sourceHash = ToolInvocation.hash(text)
       }
       return value.validated(in: new) ? value : nil
     }
+  }
+}
+
+// Indexed anchor queries for ordinary transactions. Array overloads remain for
+// explicit flat compatibility consumers during migration.
+extension ToolAnchor {
+  public func resolve(in snapshot: DocumentSnapshot) -> Int? {
+    guard let line = snapshot.line(id: lineID), offset >= 0, offset <= line.length else {
+      return nil
+    }
+    return line.location + offset
+  }
+  public static func at(_ offset: Int, in snapshot: DocumentSnapshot) -> Self? {
+    guard let line = snapshot.line(containingUTF16Offset: offset), offset >= 0,
+      offset <= line.location + line.length
+    else { return nil }
+    return .init(lineID: line.id, offset: offset - line.location)
+  }
+}
+extension ToolAnchoredRange {
+  public init(_ range: NSRange, snapshot: DocumentSnapshot) throws {
+    guard range.location >= 0, range.length >= 0, range.length <= Int.max - range.location,
+      let start = ToolAnchor.at(range.location, in: snapshot),
+      let end = ToolAnchor.at(NSMaxRange(range), in: snapshot)
+    else { throw DocumentError.invalidRange }
+    self.start = start
+    self.end = end
+  }
+  public func resolve(in snapshot: DocumentSnapshot) -> NSRange? {
+    guard let a = start.resolve(in: snapshot), let b = end.resolve(in: snapshot), b >= a else {
+      return nil
+    }
+    return NSRange(location: a, length: b - a)
   }
 }

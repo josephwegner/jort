@@ -1,5 +1,5 @@
 import XCTest
-import JortDocument
+@testable import JortDocument
 import JortPersistence
 
 final class StartupPersistenceTests: StoreTestCase {
@@ -194,4 +194,61 @@ private actor StartupHistoryStore: DocumentStore, HistoryStore {
     try await disk.setHistorySettings(settings)
   }
   func pruneHistory() async throws -> HistoryPruneResult { try await disk.pruneHistory() }
+}
+
+extension StartupPersistenceTests {
+  @MainActor func testSlowSaveCoalescesIndexedRootsWithoutInputFlattening() async throws {
+    let gate = StartupLoadStore(), initial = DocumentSnapshot()
+    await gate.resolve(.success(initial))
+    let persistence = PersistenceController(store: gate, autosaveDelay: 3600)
+    await withCheckedContinuation { continuation in
+      persistence.load { _ in continuation.resume() }
+    }
+    let owner = try DocumentCoordinator(snapshot: initial)
+    owner.onTransaction = { persistence.changed($0.after) }
+    let first = try owner.apply(
+      .init(
+        baseRevision: 0, origin: .native,
+        mutation: .replace(
+          range: NSRange(location: 0, length: 0),
+          text: String(repeating: "short line\n", count: 5000)))
+    ).after
+    await gate.delaySaves()
+    let saved = expectation(description: "newest root saved")
+    persistence.flush { success in
+      XCTAssertTrue(success)
+      saved.fulfill()
+    }
+    await gate.waitForSave()
+    let recorder = DocumentWorkRecorder()
+    weak var superseded: LineIndexNode?
+    var peakBytes = 0
+    try DocumentInstrumentation.$recorder.withValue(recorder) {
+      for step in 0..<50 {
+        try owner.apply(
+          .init(
+            baseRevision: owner.snapshot.revision, origin: .native,
+            mutation: .replace(range: NSRange(location: 1, length: 0), text: "x")))
+        if step == 25 { superseded = try owner.snapshot.indexed().root }
+        let counts = recorder.snapshot
+        peakBytes = max(
+          peakBytes,
+          counts[.retainedStorageBytes, default: 0]
+            - counts[.releasedStorageBytes, default: 0])
+      }
+      persistence.changed(first)
+    }
+    XCTAssertNil(recorder.snapshot[.flattenCalls])
+    XCTAssertNil(recorder.snapshot[.completeValidations])
+    XCTAssertLessThan(peakBytes, 2 * 1024 * 1024)
+    XCTAssertNil(superseded)
+    let newest = owner.snapshot
+    XCTAssertEqual(persistence.pendingRevision, newest.revision)
+    XCTAssertEqual(persistence.committedRevision, initial.revision)
+    await gate.releaseSave()
+    await fulfillment(of: [saved], timeout: 5)
+    let writes = await gate.writes
+    XCTAssertEqual(writes, [first, newest])
+    XCTAssertEqual(persistence.committedRevision, newest.revision)
+  }
 }

@@ -9,7 +9,16 @@ import JortDocument
   var readOnly = false
   weak var editor: NSTextView?
   weak var presentation: LinePresentationLayout?
-  var lines: [LineMeta] = [] { didSet { needsDisplay = true } }
+  var lineView = DocumentLineView([]) {
+    didSet {
+      rebuildIndex()
+      needsDisplay = true
+    }
+  }
+  var lines: [LineMeta] {
+    get { lineView.materialized() }
+    set { lineView = DocumentLineView(newValue) }
+  }
   var landmarks: [Landmark] = [] {
     didSet {
       rebuildIndex()
@@ -95,9 +104,12 @@ import JortDocument
   private func rebuildIndex() {
     emojiByLine = Dictionary(
       uniqueKeysWithValues: landmarks.filter { !$0.detached }.map { ($0.lineID, $0.emoji) })
-    index = lines.enumerated().compactMap { position, line in
-      emojiByLine[line.id].map { (line.id, $0, position + 1) }
-    }
+    index = landmarks.compactMap { landmark -> (id: UUID, emoji: String, number: Int)? in
+      guard !landmark.detached, let ordinal = lineView.ordinal(of: landmark.lineID) else {
+        return nil
+      }
+      return (landmark.lineID, landmark.emoji, ordinal + 1)
+    }.sorted { $0.number < $1.number }
   }
   public override func scrollWheel(with event: NSEvent) {
     guard landmarkMode else {
@@ -133,7 +145,7 @@ import JortDocument
     guard !readOnly else { return }
     guard sender.superview === self,
       let id = (sender as? LandmarkEntryButton)?.lineID,
-      lines.contains(where: { $0.id == id })
+      lineView.line(id: id) != nil
     else { return }
     if landmarkMode {
       landmarkMode = false
@@ -210,12 +222,12 @@ import JortDocument
         from: content.documentRange.location, to: fragment.rangeInElement.location)
       for line in fragment.textLineFragments {
         let offset = paragraphOffset + line.characterRange.location
-        var low = 0, high = self.lines.count
+        var low = 0, high = self.lineView.count
         while low < high {
           let mid = (low + high) / 2
-          if self.lines[mid].location < offset { low = mid + 1 } else { high = mid }
+          if self.lineView[mid].location < offset { low = mid + 1 } else { high = mid }
         }
-        if low < self.lines.count, self.lines[low].location == offset,
+        if low < self.lineView.count, self.lineView[low].location == offset,
           rows.last?.number != low + 1
         {
           rows.append((low + 1, fragment.layoutFragmentFrame.minY + line.typographicBounds.minY))
@@ -254,7 +266,8 @@ import JortDocument
     preparedLabels = []
     if !landmarkMode {
       for row in visibleRows() {
-        guard lines.indices.contains(row.number - 1), emojiByLine[lines[row.number - 1].id] == nil
+        guard lineView.indices.contains(row.number - 1),
+          emojiByLine[lineView[row.number - 1].id] == nil
         else { continue }
         let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
         guard point.y >= bounds.minY else { continue }
@@ -278,10 +291,10 @@ import JortDocument
       }
     }
     for row in landmarkMode ? [] : visibleRows() {
-      guard lines.indices.contains(row.number - 1) else { continue }
+      guard lineView.indices.contains(row.number - 1) else { continue }
       let point = convert(NSPoint(x: 0, y: editor.textContainerOrigin.y + row.y), from: editor)
       guard point.y >= bounds.minY else { continue }
-      let id = lines[row.number - 1].id
+      let id = lineView[row.number - 1].id
       let frame = NSRect(x: (ruleThickness - 24) / 2, y: point.y + 2, width: 24, height: 24)
       if let emoji = emojiByLine[id] {
         entries.append((id, emoji, row.number, frame))
@@ -315,8 +328,8 @@ import JortDocument
       let name = LocalizedCopy.format(
         "landmarks.entry", fallback: "%@, line %ld, %@", entry.label, entry.number, action)
       button.setAccessibilityLabel(name)
-      if landmarkMode, lines.indices.contains(entry.number - 1) {
-        let line = lines[entry.number - 1]
+      if landmarkMode, lineView.indices.contains(entry.number - 1) {
+        let line = lineView[entry.number - 1]
         button.toolTip = (editor.string as NSString)
           .substring(with: NSRange(location: line.location, length: line.length))
           .trimmingCharacters(in: .newlines)

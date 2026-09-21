@@ -15,13 +15,13 @@ struct InvocationPresentationIndex {
     guard revision != snapshot.revision else { return }
     revision = snapshot.revision
     let ranges = snapshot.invocations.compactMap { invocation -> (ToolInvocation, NSRange)? in
-      guard let scope = invocation.scope.resolve(in: snapshot.lines),
-        let token = invocation.token.resolve(in: snapshot.lines)
+      guard let scope = invocation.scope.resolve(in: snapshot),
+        let token = invocation.token.resolve(in: snapshot)
       else { return nil }
       return (
         invocation,
         NSUnionRange(
-          NSUnionRange(scope, token), invocation.output?.resolve(in: snapshot.lines) ?? scope)
+          NSUnionRange(scope, token), invocation.output?.resolve(in: snapshot) ?? scope)
       )
     }.sorted { $0.1.location < $1.1.location }
     var end = 0

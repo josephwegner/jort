@@ -4,6 +4,59 @@ import JortDocument
 import JortToolContracts
 
 @MainActor final class ToolDocumentEffectTests: XCTestCase {
+  func testMultipleReplacementsAreAtomicAndBounded() throws {
+    let owner = try DocumentCoordinator()
+    try owner.apply(
+      .init(
+        baseRevision: 0, origin: .native,
+        mutation: .replace(
+          range: NSRange(location: 0, length: 0),
+          text: String(repeating: "short line\n", count: 10_000))))
+    let before = owner.snapshot
+    let replacements = try [
+      DocumentPatch.Replacement(range: NSRange(location: 1, length: 1), text: "NEW", in: before),
+      DocumentPatch.Replacement(range: NSRange(location: 50_000, length: 2), text: "x", in: before),
+    ]
+    let invalid = DocumentPatch(
+      in: before, replacements: replacements,
+      landmarks: [.upsert(Landmark(lineID: before.lines[0].id, emoji: "not emoji"))])
+    XCTAssertThrowsError(
+      try owner.apply(
+        .init(
+          baseRevision: before.revision, origin: .automation,
+          mutation: .patch(invalid))))
+    XCTAssertEqual(owner.snapshot, before)
+    let overlap = DocumentPatch(in: before, replacements: [replacements[0], replacements[0]])
+    XCTAssertThrowsError(
+      try owner.apply(
+        .init(
+          baseRevision: before.revision, origin: .automation,
+          mutation: .patch(overlap))))
+    XCTAssertEqual(owner.snapshot, before)
+    var publications = 0
+    owner.onTransaction = { _ in publications += 1 }
+    let recorder = DocumentWorkRecorder()
+    let after = try DocumentInstrumentation.$recorder.withValue(recorder) {
+      try owner.apply(
+        .init(
+          baseRevision: before.revision, origin: .automation,
+          mutation: .patch(DocumentPatch(in: before, replacements: replacements)))
+      ).after
+    }
+    XCTAssertEqual(publications, 1)
+    XCTAssertEqual(after.revision, before.revision + 1)
+    XCTAssertNil(recorder.snapshot[.flattenCalls])
+    XCTAssertNil(recorder.snapshot[.completeValidations])
+    XCTAssertLessThan(recorder.snapshot[.visitedLines, default: 0], 1024)
+    var expected = before.text
+    for replacement in replacements.reversed() {
+      expected = (expected as NSString).replacingCharacters(
+        in: replacement.range, with: replacement.text)
+    }
+    XCTAssertEqual(after.text, expected)
+    try after.validate()
+  }
+
   private func submitted() throws -> DocumentSnapshot {
     let url = try XCTUnwrap(
       Bundle(for: Self.self).url(

@@ -28,6 +28,13 @@ import JortSettings
   private var focusedBoundary: (UUID, Bool)?
   private var errorAccessoryIDs = Set<UUID>()
   func invalidateStyles() { styleReconciler.invalidate() }
+  func clearChangedStyles(before: DocumentSnapshot, after: DocumentSnapshot) {
+    guard let editor, let storage = editor.textView.textStorage else { return }
+    styleReconciler.clearChanged(
+      before: before, after: after, storage: storage,
+      paragraphStyle: editor.textView.defaultParagraphStyle,
+      documentFont: .monospacedSystemFont(ofSize: 15, weight: .regular))
+  }
   init(editor: EditorViewController) {
     self.editor = editor
     overlays = InvocationOverlayCoordinator(textView: editor.textView, parent: editor.view)
@@ -46,7 +53,7 @@ import JortSettings
         id, start: start, to: editor.textView.characterIndexForInsertion(at: point))
     case .adjustBoundary(let id, let start, let direction):
       guard let current = editor.state.invocations.first(where: { $0.id == id }),
-        let scope = current.scope.resolve(in: editor.state.lines)
+        let scope = current.scope.resolve(in: editor.state)
       else { return }
       let offset = start ? scope.location : NSMaxRange(scope), text = editor.state.text as NSString
       let next =
@@ -124,7 +131,7 @@ import JortSettings
     if (event.modifierFlags.contains([.command, .option])
       || event.modifierFlags.contains([.option, .shift])), let invocation = focusedContext,
       invocation.inputMode == "contextual",
-      let scope = invocation.scope.resolve(in: editor.state.lines),
+      let scope = invocation.scope.resolve(in: editor.state),
       [123, 124, 125, 126].contains(event.keyCode)
     {
       let start =
@@ -157,15 +164,18 @@ import JortSettings
   private func updateCompletion() {
     guard let editor else { return }
     completionController.update(
-      text: editor.state.text, selection: editor.textView.selectedRange(),
+      snapshot: editor.state, selection: editor.textView.selectedRange(),
       packages: editor.toolController.packages,
       acceptsCompletion: !editor.textView.hasMarkedText() && !editor.textView.isPasting
         && editor.toolController.focused() == nil)
   }
   func reconcileStyles() -> Bool {
     guard let editor, let storage = editor.textView.textStorage else { return false }
+    index.update(editor.state)
+    let visible = editor.linePresentation.visibleCanonicalRange ?? NSRange(location: 0, length: 0)
     if styleReconciler.reconcile(
-      snapshot: editor.state, storage: storage,
+      snapshot: editor.state, storage: storage, visibleRange: visible,
+      invocations: index.visible(in: visible),
       paragraphStyle: editor.textView.defaultParagraphStyle,
       documentFont: .monospacedSystemFont(ofSize: 15, weight: .regular),
       hasMarkedText: editor.textView.hasMarkedText())
@@ -211,15 +221,17 @@ import JortSettings
         else { return false }
         return current.generation == invocation.generation && current.phase == invocation.phase
       }
-      guard let token = invocation.token.resolve(in: snapshot.lines),
-        let scope = invocation.scope.resolve(in: snapshot.lines)
+      guard let token = invocation.token.resolve(in: snapshot),
+        let scope = invocation.scope.resolve(in: snapshot)
       else { continue }
-      let output = invocation.output?.resolve(in: snapshot.lines)
+      let output = invocation.output?.resolve(in: snapshot)
       var ranges = [
         token, scope, NSRange(location: scope.location, length: 0),
         NSRange(location: NSMaxRange(scope), length: 0),
       ]
-      if scope.length > 0, (snapshot.text as NSString).character(at: NSMaxRange(scope) - 1) == 10 {
+      if scope.length > 0,
+        (try? snapshot.utf16(in: NSRange(location: NSMaxRange(scope) - 1, length: 1)).first) == 10
+      {
         ranges.append(NSRange(location: scope.location, length: scope.length - 1))
       }
       if let output { ranges += [output, NSRange(location: output.location, length: 0)] }

@@ -100,11 +100,13 @@ public actor SQLiteStore: DocumentStore {
     return state
   }
   public func save(_ snapshot: DocumentSnapshot) throws -> Int64 {
+    let measurement = DocumentInstrumentation.begin("PersistenceSave", revision: snapshot.revision)
+    defer { DocumentInstrumentation.end(measurement) }
     try own()
     guard !purgePending, let connection else { throw StoreError.io("Store has not loaded safely") }
     let data = try PersistenceFormat.encode(snapshot)
     try connection.write(data, inject: inject)
-    guard try connection.read().snapshot == snapshot else { throw StoreError.invalidPayload }
+    guard try connection.storedData() == data else { throw StoreError.invalidPayload }
     try inject(.snapshot)
     // This failure deliberately remains a failed save, even after SQLite commits.
     try RecoveryCheckpoints(directory: active, inject: inject).publish(data, snapshot: snapshot)
@@ -456,5 +458,20 @@ final class Connection {
       }
       throw primary
     }
+  }
+  func storedData() throws -> Data? {
+    let statement = try prepare("SELECT payload FROM current_state WHERE id=1")
+    defer {
+      let code = sqlite3_finalize(statement)
+      if code != SQLITE_OK { NSLog("Jort finalize secondary error: %d", code) }
+    }
+    let row = sqlite3_step(statement)
+    if row == SQLITE_DONE { return nil }
+    guard row == SQLITE_ROW, let bytes = sqlite3_column_blob(statement, 0) else {
+      throw failure(row)
+    }
+    let size = Int(sqlite3_column_bytes(statement, 0))
+    guard size <= PersistenceFormat.maximumBytes else { throw StoreError.sizeLimit }
+    return Data(bytes: bytes, count: size)
   }
 }

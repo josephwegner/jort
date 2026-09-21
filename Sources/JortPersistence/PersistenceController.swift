@@ -167,7 +167,15 @@ public enum PersistenceState: Equatable, Sendable {
     }
   }
   public func changed(_ snapshot: DocumentSnapshot, historyReason: HistoryBoundary? = nil) {
+    let measurement = DocumentInstrumentation.begin(
+      "PersistenceNotification", revision: snapshot.revision)
+    defer { DocumentInstrumentation.end(measurement) }
     guard ready else { return }
+    if let pending {
+      guard snapshot.documentID == pending.documentID, snapshot.revision >= pending.revision else {
+        return
+      }
+    }
     pending = snapshot
     if purgeBarrier { return }
     if history == nil, let store = store as? any HistoryStore, let initial = loadedSnapshot {

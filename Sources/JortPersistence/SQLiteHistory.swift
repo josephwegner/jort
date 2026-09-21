@@ -18,6 +18,8 @@ extension SQLiteStore: HistoryStore {
   }
 
   public func revision(sequence: Int64) throws -> HistoryRevision {
+    let measurement = DocumentInstrumentation.begin("HistoryRestorePreparation", revision: sequence)
+    defer { DocumentInstrumentation.end(measurement) }
     let connection = try historyConnection()
     let revision = try connection.historyRevision(sequence: sequence)
     guard revision.snapshot.documentID == (try connection.read()).snapshot.documentID else {
@@ -30,6 +32,8 @@ extension SQLiteStore: HistoryStore {
     _ snapshot: DocumentSnapshot, reason: String, timestamp: Date = Date(),
     milestone: Bool = false
   ) throws -> HistoryEntry {
+    let measurement = DocumentInstrumentation.begin("HistoryRetain", revision: snapshot.revision)
+    defer { DocumentInstrumentation.end(measurement) }
     let connection = try historyConnection()
     guard snapshot.documentID == (try connection.read()).snapshot.documentID else {
       throw StoreError.invalidPayload
@@ -70,7 +74,9 @@ extension SQLiteStore: HistoryStore {
   }
 
   public func pruneHistory() throws -> HistoryPruneResult {
-    try historyConnection().pruneHistory { try self.historyInjection($0) }
+    let measurement = DocumentInstrumentation.begin("HistoryPrune")
+    defer { DocumentInstrumentation.end(measurement) }
+    return try historyConnection().pruneHistory { try self.historyInjection($0) }
   }
 }
 

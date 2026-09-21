@@ -29,17 +29,22 @@ public enum HistoryBoundary: String, Sendable {
   private var settingsTask: Task<HistorySettings, Error>?
   private var seeded = false
   private var suspended = false
+  private var idlePending: DocumentSnapshot?
+  private var rejectedRevision: Int64?
+  private let maximumQueuedBoundaries: Int
+  public private(set) var queuedBoundaryCount = 0
   public private(set) var state: HistoryState = .healthy { didSet { onState?(state) } }
   public var onState: (@MainActor (HistoryState) -> Void)?
 
   public init(
-    store: any HistoryStore, initial: DocumentSnapshot,
+    store: any HistoryStore, initial: DocumentSnapshot, maximumQueuedBoundaries: Int = 32,
     now: @escaping @Sendable () -> Date = { Date() },
     sleep: @escaping @Sendable (TimeInterval) async throws -> Void = {
       try await Task.sleep(for: .seconds($0))
     }
   ) {
     self.store = store
+    self.maximumQueuedBoundaries = max(1, maximumQueuedBoundaries)
     self.initial = initial
     latest = initial
     self.now = now
@@ -47,11 +52,16 @@ public enum HistoryBoundary: String, Sendable {
   }
 
   public func changed(_ snapshot: DocumentSnapshot, reason: HistoryBoundary? = nil) {
-    guard !suspended else { return }
+    let measurement = DocumentInstrumentation.begin(
+      "HistoryNotification", revision: snapshot.revision)
+    defer { DocumentInstrumentation.end(measurement) }
+    guard !suspended, snapshot.documentID == latest.documentID,
+      snapshot.revision >= latest.revision
+    else { return }
     latest = snapshot
     idle?.cancel()
     if let reason {
-      _ = enqueue(snapshot, reason: reason)
+      _ = enqueue(snapshot, reason: reason, coalescible: reason == .idle)
       return
     }
     if settingsTask == nil { settingsTask = Task { try await store.historySettings() } }
@@ -63,7 +73,7 @@ public enum HistoryBoundary: String, Sendable {
         try await sleep(policy.idleInterval)
         try Task.checkCancellation()
         guard let self else { return }
-        _ = self.enqueue(self.latest, reason: .idle)
+        _ = self.enqueue(self.latest, reason: .idle, coalescible: true)
       } catch is CancellationError {} catch {
         self?.state = .failed(Self.normalize(error))
         self?.settingsTask = nil
@@ -84,14 +94,32 @@ public enum HistoryBoundary: String, Sendable {
     suspended = true
     idle?.cancel()
     idle = nil
+    idlePending = nil
     _ = await tail?.value
   }
 
-  private func enqueue(_ snapshot: DocumentSnapshot, reason: HistoryBoundary) -> Task<Bool, Never> {
+  private func enqueue(
+    _ snapshot: DocumentSnapshot, reason: HistoryBoundary, coalescible: Bool = false
+  ) -> Task<Bool, Never> {
+    if coalescible, queuedBoundaryCount > 0, let tail {
+      idlePending = snapshot
+      return tail
+    }
+    guard queuedBoundaryCount < maximumQueuedBoundaries else {
+      // Never silently drop an explicit restore/milestone boundary: its caller
+      // receives failure and cannot proceed with restoration until a retry succeeds.
+      rejectedRevision = snapshot.revision
+      state = .failed(.io("History is busy. Retry after pending boundaries finish."))
+      return Task { false }
+    }
+    if let idlePending, idlePending.revision <= snapshot.revision { self.idlePending = nil }
+    queuedBoundaryCount += 1
     let previous = tail, timestamp = now()
     let task = Task { [weak self] in
       _ = await previous?.value
-      guard let self, !self.suspended else { return false }
+      guard let self else { return false }
+      defer { self.finishedBoundary() }
+      guard !self.suspended else { return false }
       do {
         if !seeded {
           if try await store.revisions(before: nil, limit: 1).isEmpty {
@@ -104,7 +132,10 @@ public enum HistoryBoundary: String, Sendable {
           snapshot, reason: reason.rawValue, timestamp: timestamp,
           milestone: reason == .beforeRestore)
         let result = try await store.pruneHistory()
-        state = result.exceedsBudget ? .budgetExceeded(result.retainedBytes) : .healthy
+        if rejectedRevision == nil || snapshot.revision >= rejectedRevision! {
+          rejectedRevision = nil
+          state = result.exceedsBudget ? .budgetExceeded(result.retainedBytes) : .healthy
+        }
         return true
       } catch {
         state = .failed(Self.normalize(error))
@@ -113,6 +144,12 @@ public enum HistoryBoundary: String, Sendable {
     }
     tail = task
     return task
+  }
+  private func finishedBoundary() {
+    queuedBoundaryCount -= 1
+    guard queuedBoundaryCount == 0, !suspended, let pending = idlePending else { return }
+    idlePending = nil
+    _ = enqueue(pending, reason: .idle)
   }
 
   private static func normalize(_ error: Error) -> StoreError {

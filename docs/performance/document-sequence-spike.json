@@ -1,0 +1,492 @@
+{
+  "allocationEstimate": "Node payload estimates exclude allocator overhead. Peak resident bytes include property checks and 200 retained snapshots.",
+  "results": [
+    {
+      "configuration": "Debug",
+      "edit": {
+        "p50Ms": 0.027583329938352108,
+        "p95Ms": 0.043958425521850586,
+        "p99Ms": 0.05383335519582033
+      },
+      "fanout": 0,
+      "fixtureSHA256": "1d7c44ccc37cf39f0698b1b2edb2fdf5ddace0cbfd0b4fa6125e2428a187c0b2",
+      "fixtureUTF16Units": 690000,
+      "flatten": {
+        "p50Ms": 3.9892083732411265,
+        "p95Ms": 4.108749912120402,
+        "p99Ms": 4.1172499768435955
+      },
+      "idLookup": {
+        "p50Ms": 1.064208336174488,
+        "p95Ms": 1.988666714169085,
+        "p99Ms": 2.063958323560655
+      },
+      "leafCapacity": 0,
+      "lineCount": 10000,
+      "offsetLookup": {
+        "p50Ms": 0.31258328817784786,
+        "p95Ms": 0.5989583441987634,
+        "p99Ms": 0.6229166174307466
+      },
+      "peakResidentBytes": 65191936,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 4.1676685214042664e-05,
+        "p95Ms": 0.020416686311364174,
+        "p99Ms": 0.02604164183139801
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Debug",
+      "edit": {
+        "p50Ms": 0.7474999874830246,
+        "p95Ms": 1.0082082590088248,
+        "p99Ms": 1.162583357654512
+      },
+      "fanout": 16,
+      "fixtureSHA256": "1d7c44ccc37cf39f0698b1b2edb2fdf5ddace0cbfd0b4fa6125e2428a187c0b2",
+      "fixtureUTF16Units": 690000,
+      "flatten": {
+        "p50Ms": 4.332750104367733,
+        "p95Ms": 4.955249954946339,
+        "p99Ms": 5.364083335734904
+      },
+      "height": 3,
+      "idLookup": {
+        "p50Ms": 0.00241666566580534,
+        "p95Ms": 0.005124951712787151,
+        "p99Ms": 0.011208350770175457
+      },
+      "leafCapacity": 16,
+      "lineCount": 10000,
+      "maxAllocatedNodesPerEdit": 463,
+      "maxEstimatedAllocatedBytesPerEdit": 76080,
+      "offsetLookup": {
+        "p50Ms": 0.002666609361767769,
+        "p95Ms": 0.005125068128108978,
+        "p99Ms": 0.006041605956852436
+      },
+      "peakResidentBytes": 35717120,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 0.000125030055642128,
+        "p95Ms": 0.0339999096468091,
+        "p99Ms": 0.041791703552007675
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Debug",
+      "edit": {
+        "p50Ms": 0.9147500386461616,
+        "p95Ms": 1.2279166840016842,
+        "p99Ms": 1.315374975092709
+      },
+      "fanout": 32,
+      "fixtureSHA256": "1d7c44ccc37cf39f0698b1b2edb2fdf5ddace0cbfd0b4fa6125e2428a187c0b2",
+      "fixtureUTF16Units": 690000,
+      "flatten": {
+        "p50Ms": 4.314541583880782,
+        "p95Ms": 4.658708232454956,
+        "p99Ms": 4.693708382546902
+      },
+      "height": 2,
+      "idLookup": {
+        "p50Ms": 0.0019166618585586548,
+        "p95Ms": 0.002874992787837982,
+        "p99Ms": 0.007916591130197048
+      },
+      "leafCapacity": 32,
+      "lineCount": 10000,
+      "maxAllocatedNodesPerEdit": 621,
+      "maxEstimatedAllocatedBytesPerEdit": 102848,
+      "offsetLookup": {
+        "p50Ms": 0.003249966539442539,
+        "p95Ms": 0.006083282642066479,
+        "p99Ms": 0.007874914444983006
+      },
+      "peakResidentBytes": 38174720,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 0.00016659032553434372,
+        "p95Ms": 0.04454166628420353,
+        "p99Ms": 0.06233330350369215
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Debug",
+      "edit": {
+        "p50Ms": 0.08875003550201654,
+        "p95Ms": 0.13587495777755976,
+        "p99Ms": 0.15962508041411638
+      },
+      "fanout": 0,
+      "fixtureSHA256": "764b919884b54c7065111cb3ff506580fac6bb17a175d0e17d2f69358245a301",
+      "fixtureUTF16Units": 1000000,
+      "flatten": {
+        "p50Ms": 9.822791675105691,
+        "p95Ms": 10.593583341687918,
+        "p99Ms": 11.17591664660722
+      },
+      "idLookup": {
+        "p50Ms": 2.780583337880671,
+        "p95Ms": 5.2261665696278214,
+        "p99Ms": 5.5203334195539355
+      },
+      "leafCapacity": 0,
+      "lineCount": 25000,
+      "offsetLookup": {
+        "p50Ms": 0.8157083066180348,
+        "p95Ms": 1.5670832945033908,
+        "p99Ms": 1.6726249596104026
+      },
+      "peakResidentBytes": 151863296,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 0.000250060111284256,
+        "p95Ms": 0.0560833141207695,
+        "p99Ms": 0.06554170977324247
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Debug",
+      "edit": {
+        "p50Ms": 0.8670416427776217,
+        "p95Ms": 1.0746249463409185,
+        "p99Ms": 1.1466250289231539
+      },
+      "fanout": 16,
+      "fixtureSHA256": "764b919884b54c7065111cb3ff506580fac6bb17a175d0e17d2f69358245a301",
+      "fixtureUTF16Units": 1000000,
+      "flatten": {
+        "p50Ms": 10.832250001840293,
+        "p95Ms": 12.199666700325906,
+        "p99Ms": 12.28999998420477
+      },
+      "height": 3,
+      "idLookup": {
+        "p50Ms": 0.002625049091875553,
+        "p95Ms": 0.0038750004023313522,
+        "p99Ms": 0.005083275027573109
+      },
+      "leafCapacity": 16,
+      "lineCount": 25000,
+      "maxAllocatedNodesPerEdit": 510,
+      "maxEstimatedAllocatedBytesPerEdit": 84032,
+      "offsetLookup": {
+        "p50Ms": 0.0028333161026239395,
+        "p95Ms": 0.004250090569257736,
+        "p99Ms": 0.005333335138857365
+      },
+      "peakResidentBytes": 52871168,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 0.000125030055642128,
+        "p95Ms": 0.04395830910652876,
+        "p99Ms": 0.05654164124280214
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Debug",
+      "edit": {
+        "p50Ms": 1.1196666164323688,
+        "p95Ms": 1.3244166038930416,
+        "p99Ms": 1.4651250094175339
+      },
+      "fanout": 32,
+      "fixtureSHA256": "764b919884b54c7065111cb3ff506580fac6bb17a175d0e17d2f69358245a301",
+      "fixtureUTF16Units": 1000000,
+      "flatten": {
+        "p50Ms": 10.838208254426718,
+        "p95Ms": 11.41516666393727,
+        "p99Ms": 11.849708273075521
+      },
+      "height": 3,
+      "idLookup": {
+        "p50Ms": 0.002625049091875553,
+        "p95Ms": 0.0037084100767970085,
+        "p99Ms": 0.008124974556267262
+      },
+      "leafCapacity": 32,
+      "lineCount": 25000,
+      "maxAllocatedNodesPerEdit": 690,
+      "maxEstimatedAllocatedBytesPerEdit": 114848,
+      "offsetLookup": {
+        "p50Ms": 0.0035833800211548805,
+        "p95Ms": 0.005999929271638393,
+        "p99Ms": 0.007916707545518875
+      },
+      "peakResidentBytes": 53329920,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 0.000125030055642128,
+        "p95Ms": 0.04891667049378157,
+        "p99Ms": 0.05808332934975624
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Release",
+      "edit": {
+        "p50Ms": 0.030916649848222733,
+        "p95Ms": 0.04508334677666426,
+        "p99Ms": 0.056875054724514484
+      },
+      "fanout": 0,
+      "fixtureSHA256": "1d7c44ccc37cf39f0698b1b2edb2fdf5ddace0cbfd0b4fa6125e2428a187c0b2",
+      "fixtureUTF16Units": 690000,
+      "flatten": {
+        "p50Ms": 0.6922916509211063,
+        "p95Ms": 0.742708332836628,
+        "p99Ms": 0.7849583635106683
+      },
+      "idLookup": {
+        "p50Ms": 0.48308330588042736,
+        "p95Ms": 0.9129999671131372,
+        "p99Ms": 1.0960833169519901
+      },
+      "leafCapacity": 0,
+      "lineCount": 10000,
+      "offsetLookup": {
+        "p50Ms": 0.004124944098293781,
+        "p95Ms": 0.008083414286375046,
+        "p99Ms": 0.01183338463306427
+      },
+      "peakResidentBytes": 65667072,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 4.156026989221573e-05,
+        "p95Ms": 0.015416648238897324,
+        "p99Ms": 0.016416655853390694
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Release",
+      "edit": {
+        "p50Ms": 0.12737500946968794,
+        "p95Ms": 0.16175000928342342,
+        "p99Ms": 0.18174992874264717
+      },
+      "fanout": 16,
+      "fixtureSHA256": "1d7c44ccc37cf39f0698b1b2edb2fdf5ddace0cbfd0b4fa6125e2428a187c0b2",
+      "fixtureUTF16Units": 690000,
+      "flatten": {
+        "p50Ms": 0.7164583075791597,
+        "p95Ms": 0.815916690044105,
+        "p99Ms": 0.8306250674650073
+      },
+      "height": 3,
+      "idLookup": {
+        "p50Ms": 0.0010416842997074127,
+        "p95Ms": 0.0016667181625962257,
+        "p99Ms": 0.0020833685994148254
+      },
+      "leafCapacity": 16,
+      "lineCount": 10000,
+      "maxAllocatedNodesPerEdit": 463,
+      "maxEstimatedAllocatedBytesPerEdit": 76080,
+      "offsetLookup": {
+        "p50Ms": 0.000250060111284256,
+        "p95Ms": 0.000500003807246685,
+        "p99Ms": 0.0007082708179950714
+      },
+      "peakResidentBytes": 30162944,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 4.1676685214042664e-05,
+        "p95Ms": 0.023499946109950542,
+        "p99Ms": 0.03016658592969179
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Release",
+      "edit": {
+        "p50Ms": 0.15174993313848972,
+        "p95Ms": 0.20187499467283487,
+        "p99Ms": 0.2832083264365792
+      },
+      "fanout": 32,
+      "fixtureSHA256": "1d7c44ccc37cf39f0698b1b2edb2fdf5ddace0cbfd0b4fa6125e2428a187c0b2",
+      "fixtureUTF16Units": 690000,
+      "flatten": {
+        "p50Ms": 0.6730000022798777,
+        "p95Ms": 0.8034583879634738,
+        "p99Ms": 0.933041563257575
+      },
+      "height": 2,
+      "idLookup": {
+        "p50Ms": 0.0007499475032091141,
+        "p95Ms": 0.0036249402910470963,
+        "p99Ms": 0.004500034265220165
+      },
+      "leafCapacity": 32,
+      "lineCount": 10000,
+      "maxAllocatedNodesPerEdit": 621,
+      "maxEstimatedAllocatedBytesPerEdit": 102848,
+      "offsetLookup": {
+        "p50Ms": 0.00024994369596242905,
+        "p95Ms": 0.0008749775588512421,
+        "p99Ms": 0.001249951310455799
+      },
+      "peakResidentBytes": 39419904,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 4.1676685214042664e-05,
+        "p95Ms": 0.03020837903022766,
+        "p99Ms": 0.03987504169344902
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Release",
+      "edit": {
+        "p50Ms": 0.09837502148002386,
+        "p95Ms": 0.14287489466369152,
+        "p99Ms": 0.17879169899970293
+      },
+      "fanout": 0,
+      "fixtureSHA256": "764b919884b54c7065111cb3ff506580fac6bb17a175d0e17d2f69358245a301",
+      "fixtureUTF16Units": 1000000,
+      "flatten": {
+        "p50Ms": 1.5964583726599813,
+        "p95Ms": 2.0180833525955677,
+        "p99Ms": 2.1400833502411842
+      },
+      "idLookup": {
+        "p50Ms": 1.2383334105834365,
+        "p95Ms": 2.466375008225441,
+        "p99Ms": 2.636291552335024
+      },
+      "leafCapacity": 0,
+      "lineCount": 25000,
+      "offsetLookup": {
+        "p50Ms": 0.01025001984089613,
+        "p95Ms": 0.021999934688210487,
+        "p99Ms": 0.02875004429370165
+      },
+      "peakResidentBytes": 156762112,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 4.1676685214042664e-05,
+        "p95Ms": 0.04895834717899561,
+        "p99Ms": 0.05508330650627613
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Release",
+      "edit": {
+        "p50Ms": 0.16724993474781513,
+        "p95Ms": 0.20962499547749758,
+        "p99Ms": 0.22012507542967796
+      },
+      "fanout": 16,
+      "fixtureSHA256": "764b919884b54c7065111cb3ff506580fac6bb17a175d0e17d2f69358245a301",
+      "fixtureUTF16Units": 1000000,
+      "flatten": {
+        "p50Ms": 1.854666625149548,
+        "p95Ms": 1.9909583497792482,
+        "p99Ms": 2.0237916614860296
+      },
+      "height": 3,
+      "idLookup": {
+        "p50Ms": 0.0014998950064182281,
+        "p95Ms": 0.0022082822397351265,
+        "p99Ms": 0.00583333894610405
+      },
+      "leafCapacity": 16,
+      "lineCount": 25000,
+      "maxAllocatedNodesPerEdit": 510,
+      "maxEstimatedAllocatedBytesPerEdit": 84032,
+      "offsetLookup": {
+        "p50Ms": 0.0004584435373544693,
+        "p95Ms": 0.0009166542440652847,
+        "p99Ms": 0.0019583385437726974
+      },
+      "peakResidentBytes": 50905088,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 4.1676685214042664e-05,
+        "p95Ms": 0.03341666888445616,
+        "p99Ms": 0.04512490704655647
+      },
+      "warmup": 20
+    },
+    {
+      "configuration": "Release",
+      "edit": {
+        "p50Ms": 0.19629171583801508,
+        "p95Ms": 0.2531249774619937,
+        "p99Ms": 0.31545828096568584
+      },
+      "fanout": 32,
+      "fixtureSHA256": "764b919884b54c7065111cb3ff506580fac6bb17a175d0e17d2f69358245a301",
+      "fixtureUTF16Units": 1000000,
+      "flatten": {
+        "p50Ms": 1.8056250410154462,
+        "p95Ms": 1.905375043861568,
+        "p99Ms": 2.2748333867639303
+      },
+      "height": 3,
+      "idLookup": {
+        "p50Ms": 0.0014166580513119698,
+        "p95Ms": 0.003999914042651653,
+        "p99Ms": 0.004291650839149952
+      },
+      "leafCapacity": 32,
+      "lineCount": 25000,
+      "maxAllocatedNodesPerEdit": 690,
+      "maxEstimatedAllocatedBytesPerEdit": 114848,
+      "offsetLookup": {
+        "p50Ms": 0.000500003807246685,
+        "p95Ms": 0.0008333008736371994,
+        "p99Ms": 0.0012082746252417564
+      },
+      "peakResidentBytes": 53428224,
+      "propertySeed": 42,
+      "propertySteps": 200,
+      "retainedSnapshots": 200,
+      "samples": 200,
+      "snapshot": {
+        "p50Ms": 4.1676685214042664e-05,
+        "p95Ms": 0.03404170274734497,
+        "p99Ms": 0.044041662476956844
+      },
+      "warmup": 20
+    }
+  ],
+  "schemaVersion": 1,
+  "scope": "Sequence primitives, not end-to-end document transactions. Full-width 128-bit stable test IDs and bounded UTF-16 chunk roots. Transaction metadata and native integration are not measured here.",
+  "sourceSHA256": "7816c32ac691ca3faafbb43fcc54841fd6b31a5841f92fd2b5b9fafeffdf56f2"
+}

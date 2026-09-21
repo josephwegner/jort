@@ -94,11 +94,10 @@ enum HistoryRevisionFormat {
   static func stateHash(
     _ snapshot: DocumentSnapshot, payloadVersion: Int = PersistenceFormat.payloadVersion
   ) throws -> String {
-    let state = DocumentSnapshot(
-      documentID: snapshot.documentID, text: snapshot.text,
-      revision: 0, lines: snapshot.lines, landmarks: snapshot.landmarks,
-      invocations: snapshot.invocations)
-    return PersistenceFormat.checksum(try PersistenceFormat.encode(state, version: payloadVersion))
+    return PersistenceFormat.checksum(
+      try PersistenceFormat.encode(
+        snapshot,
+        version: payloadVersion, canonicalRevision: 0))
   }
 
   static func encode(

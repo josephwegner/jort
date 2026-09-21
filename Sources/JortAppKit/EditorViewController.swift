@@ -32,7 +32,8 @@ import JortSettings
     set { storageProjection.loadedForReconciliation = newValue }
   }
   private var acceptsEditing: Bool { coordinator != nil && startupPhase != .ownershipConflict }
-  private var pendingEdit: (NSRange, Int)?
+  private var pendingEdit: (range: NSRange, text: String?, length: Int, revision: Int64)?
+  private var nativeReplacementInFlight = false
   private var ruler: LineRuler!
   let presentationCoordinator = PresentationCoordinator()
   private(set) var linePresentation: LinePresentationLayout!
@@ -130,6 +131,7 @@ import JortSettings
         "EditorViewController.your_private_plain_text_canvas_changes_save_automatically_on_this",
         fallback: "Your private plain text canvas. Changes save automatically on this Mac."))
     coordinator = try! DocumentCoordinator(snapshot: unloaded)
+    textView.acceptedRevision = unloaded.revision
     textView.delegate = self
     textView.isSelectable = true
     textView.isEditable = true
@@ -232,10 +234,6 @@ import JortSettings
     }
     textView.onPaste = { [weak self] in self?.toolPresentation.abandonCompletion() }
     textView.onCommittedSlash = { [weak self] in self?.toolPresentation.armCommittedSlash() }
-    textView.onTextChange = { [weak self] in
-      self?.commitText()
-      self?.refreshGutterAfterLayout()
-    }
     textView.onEscape = { [weak self] in
       if self?.toolPresentation.escape() == true { return true }
       guard let search = self?.documentSearch else { return false }
@@ -279,13 +277,23 @@ import JortSettings
       if result.transaction.origin != .native && result.transaction.undoPolicy == .register {
         self.recordUndo(result.before, selection: self.textView.selectedRange())
       }
-      if self.textView.string != result.after.text {
+      let requiresProjection: Bool
+      switch result.transaction.mutation {
+      case .patch: requiresProjection = true
+      case .landmark, .removeLandmark, .clearLandmarks: requiresProjection = false
+      default:
+        requiresProjection =
+          !self.nativeReplacementInFlight && self.textView.string != result.after.text
+      }
+      if requiresProjection {
         self.display(
           result, selection: self.textView.selectedRange(),
           preserveAnchors: result.transaction.origin != .startupMerge)
       }
+      self.textView.acceptedRevision = result.after.revision
+      DocumentInstrumentation.event("NativeTextVisibleState", revision: result.after.revision)
       self.linePresentation.update(lines: result.after.lines)
-      self.ruler.lines = result.after.lines
+      self.ruler.lineView = result.after.lines
       self.ruler.landmarks = result.after.landmarks
       self.updateFooter()
       self.palette?.actions = self.paletteActions()
@@ -323,15 +331,14 @@ import JortSettings
       _ = try! coordinator.apply(
         .init(
           baseRevision: snapshot.revision, origin: .startupMerge,
-          mutation: .edit(
-            text: prefix + snapshot.text,
-            range: NSRange(location: 0, length: 0), replacementLength: prefix.utf16.count)))
+          mutation: .replace(range: NSRange(location: 0, length: 0), text: prefix)))
       textView.history.setActionName(
         LocalizedCopy.text("EditorViewController.startup_typing", fallback: "Startup Typing"))
       textView.history.endUndoGrouping()
     } else {
       textView.string = snapshot.text
     }
+    textView.acceptedRevision = state.revision
     let start = min(selection.location, draft.utf16.count)
     textView.setSelectedRange(
       NSRange(
@@ -339,7 +346,7 @@ import JortSettings
         length: min(selection.length, draft.utf16.count - start)))
     scroll.contentView.scroll(to: viewport)
     linePresentation.update(lines: state.lines)
-    ruler.lines = state.lines
+    ruler.lineView = state.lines
     ruler.landmarks = state.landmarks
     updateFooter()
     startupPhase = .ready
@@ -426,10 +433,33 @@ import JortSettings
       }
       return false
     }
-    if acceptsEditing, !textView.hasMarkedText(), textView.string == state.text,
-      let replacementString
+    if acceptsEditing, let replacementString,
+      affectedCharRange.location >= 0, affectedCharRange.length >= 0,
+      let nativeLength = textView.textStorage?.length,
+      affectedCharRange.location <= nativeLength,
+      affectedCharRange.length <= nativeLength - affectedCharRange.location
     {
-      pendingEdit = (affectedCharRange, replacementString.utf16.count)
+      if let pending = pendingEdit, pending.revision == state.revision,
+        nativeLength == state.utf16Count - pending.range.length + pending.length
+      {
+        // Accumulate provisional IME replacements in the original root's coordinates.
+        let delta = pending.length - pending.range.length
+        let start = min(pending.range.location, affectedCharRange.location)
+        let end = max(NSMaxRange(pending.range), NSMaxRange(affectedCharRange) - delta)
+        pendingEdit = (
+          NSRange(location: start, length: end - start), nil,
+          end - start + delta - affectedCharRange.length + replacementString.utf16.count,
+          pending.revision
+        )
+      } else if self.textView.acceptedRevision == state.revision,
+        nativeLength == state.utf16Count
+      {
+        pendingEdit = (
+          affectedCharRange, replacementString, replacementString.utf16.count, state.revision
+        )
+      } else {
+        pendingEdit = nil
+      }
     } else {
       pendingEdit = nil
     }
@@ -447,6 +477,8 @@ import JortSettings
   }
 
   private func commitText() {
+    let measurement = DocumentInstrumentation.begin("NativeCommit", revision: -1)
+    defer { DocumentInstrumentation.end(measurement) }
     // Native input may still be closing an undo group or replacing marked text.
     // Reconcile only after that complete input operation has returned to AppKit.
     defer {
@@ -454,19 +486,42 @@ import JortSettings
         DispatchQueue.main.async { [weak self] in self?.reconcileStartupIfPossible() }
       }
     }
-    guard acceptsEditing, !textView.hasMarkedText(), textView.string != state.text else { return }
+    guard acceptsEditing, !textView.hasMarkedText() else { return }
     let edit = pendingEdit
     pendingEdit = nil
+    let mutation: DocumentMutation
+    if let edit, edit.revision == state.revision,
+      textView.textStorage?.length == state.utf16Count - edit.range.length + edit.length
+    {
+      let replacement =
+        edit.text
+        ?? textView.textStorage!.attributedSubstring(
+          from: NSRange(location: edit.range.location, length: edit.length)
+        ).string
+      guard (try? state.text(in: edit.range)) != replacement else { return }
+      mutation = .replace(range: edit.range, text: replacement)
+      nativeReplacementInFlight = true
+    } else if let fallback = boundedNativeReplacement() {
+      guard fallback.0.length != 0 || !fallback.1.isEmpty else { return }
+      mutation = .replace(range: fallback.0, text: fallback.1)
+      nativeReplacementInFlight = true
+    } else {
+      DocumentInstrumentation.event("NativeBulkReplacement", revision: state.revision)
+      guard textView.string != state.text else { return }
+      mutation = .edit(text: textView.string, range: nil, replacementLength: nil)
+    }
+    defer { nativeReplacementInFlight = false }
     let transaction = DocumentTransaction(
-      baseRevision: state.revision, origin: .native,
-      mutation: .edit(text: textView.string, range: edit?.0, replacementLength: edit?.1))
+      baseRevision: state.revision, origin: .native, mutation: mutation)
     do {
       let result = try coordinator.apply(transaction)
+      DocumentInstrumentation.event("NativeTextAccepted", revision: result.after.revision)
       recordUndo(
         result.before,
         selection: NSRange(
-          location: min(edit?.0.location ?? 0, result.before.text.utf16.count), length: 0))
+          location: min(edit?.range.location ?? 0, result.before.utf16Count), length: 0))
     } catch {
+      nativeReplacementInFlight = false
       // Preserve typed text: a range that AppKit revised during composition uses the normalized path.
       do {
         let result = try coordinator.apply(
@@ -482,11 +537,43 @@ import JortSettings
       }
     }
   }
+  /// Bound discovery work when an input service omitted shouldChangeTextIn.
+  /// Unknown changes beyond this window use the explicit full-document path.
+  private func boundedNativeReplacement() -> (NSRange, String)? {
+    guard let storage = textView.textStorage else { return nil }
+    let oldCount = state.utf16Count, newCount = storage.length
+    let commonCount = min(oldCount, newCount), budget = 4096
+    let prefixLimit = min(commonCount, budget)
+    guard let leading = try? state.utf16(in: NSRange(location: 0, length: prefixLimit)) else {
+      return nil
+    }
+    let native = storage.mutableString
+    var prefix = 0
+    while prefix < prefixLimit, leading[prefix] == native.character(at: prefix) { prefix += 1 }
+    if prefix == prefixLimit, prefix < commonCount { return nil }
+    let suffixLimit = min(commonCount - prefix, budget)
+    guard
+      let trailing = try? state.utf16(
+        in: NSRange(location: oldCount - suffixLimit, length: suffixLimit))
+    else { return nil }
+    var suffix = 0
+    while suffix < suffixLimit,
+      trailing[suffixLimit - suffix - 1] == native.character(at: newCount - suffix - 1)
+    { suffix += 1 }
+    if suffix == suffixLimit, suffix < commonCount - prefix { return nil }
+    let replaced = oldCount - prefix - suffix, inserted = newCount - prefix - suffix
+    guard max(replaced, inserted) <= 65_536 else { return nil }
+    return (
+      NSRange(location: prefix, length: replaced),
+      storage.attributedSubstring(from: NSRange(location: prefix, length: inserted)).string
+    )
+  }
   private func recordUndo(
     _ snapshot: DocumentSnapshot, selection: NSRange, viewport: NSPoint? = nil
   ) {
     let savedViewport = viewport ?? scroll.contentView.bounds.origin
-    textView.history.registerUndo(withTarget: self) { target in
+    textView.history.register(before: snapshot, after: state) { [weak self] in
+      guard let target = self else { return }
       MainActor.assumeIsolated {
         let origin: MutationOrigin = target.textView.history.isUndoing ? .undo : .redo
         let currentSelection = target.textView.selectedRange()
@@ -542,14 +629,22 @@ import JortSettings
     var topAnchor: (UUID, CGFloat)?
     if preserveAnchors {
       func mapped(_ offset: Int) -> Int {
-        if case .tools(_, let edit?, let length?) = result.transaction.mutation {
-          if offset <= edit.location { return offset }
-          if offset >= NSMaxRange(edit) { return offset + length - edit.length }
-          return edit.location + min(offset - edit.location, length)
+        if case .patch(let patch) = result.transaction.mutation {
+          var mapped = offset
+          for replacement in patch.replacements.reversed() {
+            let edit = replacement.range, length = replacement.text.utf16.count
+            if mapped <= edit.location { continue }
+            if mapped >= NSMaxRange(edit) {
+              mapped += length - edit.length
+            } else {
+              mapped = edit.location + min(mapped - edit.location, length)
+            }
+          }
+          return mapped
         }
-        guard let old = result.before.lines.last(where: { $0.location <= offset }),
-          let new = result.after.lines.first(where: { $0.id == old.id })
-        else { return min(offset, result.after.text.utf16.count) }
+        guard let old = result.before.line(containingUTF16Offset: offset),
+          let new = result.after.line(id: old.id)
+        else { return min(offset, result.after.utf16Count) }
         return new.location + min(offset - old.location, new.length)
       }
       let start = mapped(selection.location), end = mapped(NSMaxRange(selection))
@@ -557,7 +652,15 @@ import JortSettings
       topAnchor = linePresentation.viewportAnchor()
     }
     linePresentation.update(lines: result.after.lines)
-    if textView.string != result.after.text {
+    if case .patch(let patch) = result.transaction.mutation, let storage = textView.textStorage {
+      storage.beginEditing()
+      toolPresentation?.clearChangedStyles(before: result.before, after: result.after)
+      for replacement in patch.replacements.reversed() {
+        storage.replaceCharacters(in: replacement.range, with: replacement.text)
+      }
+      storage.endEditing()
+      toolPresentation?.invalidateStyles()
+    } else if textView.string != result.after.text {
       textView.string = result.after.text
       toolPresentation?.invalidateStyles()
     }
@@ -566,14 +669,14 @@ import JortSettings
     refreshToolPresentation()
     textView.setSelectedRange(
       NSRange(
-        location: min(selected.location, result.after.text.utf16.count),
-        length: min(selected.length, max(0, result.after.text.utf16.count - selected.location))))
+        location: min(selected.location, result.after.utf16Count),
+        length: min(selected.length, max(0, result.after.utf16Count - selected.location))))
     var position = viewport
     if let (id, relativeY) = topAnchor, let band = linePresentation.band(for: id) {
       position.y = band.frame.minY + relativeY
     }
     scroll.contentView.scroll(to: position)
-    ruler.lines = result.after.lines
+    ruler.lineView = result.after.lines
     refreshGutterAfterLayout()
   }
   @objc public func save() {
@@ -581,7 +684,7 @@ import JortSettings
   }
   var currentLineID: UUID? {
     guard acceptsEditing else { return nil }
-    return state.lines.last { $0.location <= textView.selectedRange().location }?.id
+    return state.line(containingUTF16Offset: textView.selectedRange().location)?.id
   }
   private var canPresent: Bool {
     acceptsEditing && historyWorkspace == nil && documentSearch == nil && !textView.hasMarkedText()

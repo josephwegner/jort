@@ -76,62 +76,19 @@ public struct Landmark: Codable, Equatable, Sendable {
     }
   }
 }
-public struct DocumentSnapshot: Equatable, Sendable {
-  public let documentID: UUID
-  public let text: String
-  public let revision: Int64
-  public let lines: [LineMeta]
-  public let landmarks: [Landmark]
-  public let invocations: [ToolInvocation]
-  public init(
-    documentID: UUID = UUID(), text: String = "", revision: Int64 = 0,
-    lines: [LineMeta] = [LineMeta(location: 0, length: 0)], landmarks: [Landmark] = [],
-    invocations: [ToolInvocation] = []
-  ) {
-    self.documentID = documentID
-    self.text = text
-    self.revision = revision
-    self.lines = lines
-    self.invocations = invocations
-    if landmarks.isEmpty {
-      self.landmarks = []
-      return
-    }
-    var order: [UUID: Int] = [:]
-    for (index, line) in lines.enumerated() { order[line.id] = index }
-    self.landmarks = landmarks.sorted {
-      let a = $0.detached ? Int.max : order[$0.lineID] ?? Int.max
-      let b = $1.detached ? Int.max : order[$1.lineID] ?? Int.max
-      return a == b ? $0.id.rawValue.uuidString < $1.id.rawValue.uuidString : a < b
-    }
-  }
-  public func validate() throws {
-    try liveState.validate()
-    guard invocations.count <= 1000, ToolInvocation.sanitized(invocations, in: self) == invocations
-    else { throw DocumentError.invalidState }
-  }
-  var liveState: DocumentState {
-    DocumentState(
-      documentID: documentID, landmarks: landmarks, invocations: invocations, text: text,
-      revision: revision, lines: lines)
-  }
-  public func isDetached(_ landmark: Landmark) -> Bool {
-    landmark.detached || !lines.contains { $0.id == landmark.lineID }
-  }
-  public var orderedLandmarks: [Landmark] { landmarks }
-}
 public enum MutationOrigin: String, Sendable {
   case native, undo, redo, metadata, restore, automation, startupMerge
 }
 public enum UndoPolicy: Sendable { case register, replay, none }
 public enum DocumentMutation: Sendable {
+  case patch(DocumentPatch)
+  case replace(range: NSRange, text: String)
   case edit(text: String, range: NSRange?, replacementLength: Int?)
   case restore(DocumentSnapshot)
   case landmark(Landmark)
   case removeLandmark(LandmarkID)
   case clearLandmarks
   case insertAfter(lineID: UUID, text: String)
-  case tools(DocumentSnapshot, edit: NSRange? = nil, replacementLength: Int? = nil)
 }
 public struct DocumentTransaction: Sendable {
   public let baseRevision: Int64
@@ -158,44 +115,179 @@ public struct TransactionResult: Sendable {
 
 /// The only mutable live document. Storage and adapters receive value snapshots.
 @MainActor public final class DocumentCoordinator {
-  private var state: DocumentState
+  private var current: DocumentSnapshot
+  #if DEBUG
+    private var validationPending: DocumentSnapshot?
+    private var validationTask: Task<Void, Never>?
+  #endif
   public private(set) var committedRevision: Int64?
   public var onTransaction: (@MainActor (TransactionResult) -> Void)?
-  public var snapshot: DocumentSnapshot {
-    DocumentSnapshot(
-      documentID: state.documentID, text: state.text, revision: state.revision, lines: state.lines,
-      landmarks: state.landmarks, invocations: state.invocations)
-  }
+  public var snapshot: DocumentSnapshot { current }
   public init(snapshot: DocumentSnapshot = DocumentSnapshot(), committed: Bool = false) throws {
     try snapshot.validate()
-    state = snapshot.liveState
+    current = snapshot
     committedRevision = committed ? snapshot.revision : nil
   }
   public func markCommitted(_ revision: Int64) {
-    guard revision >= 0, revision <= state.revision else { return }
+    guard revision >= 0, revision <= current.revision else { return }
     committedRevision = max(committedRevision ?? -1, revision)
+  }
+  /// One worker owns at most an in-flight root and the newest waiting root.
+  /// Full integrity checks never execute in an input callback.
+  private func scheduleIntegrityCheck() {
+    #if DEBUG
+      validationPending = current
+      guard validationTask == nil else { return }
+      validationTask = Task { [weak self] in
+        while !Task.isCancelled {
+          do { try await Task.sleep(for: .milliseconds(250)) } catch { break }
+          guard let snapshot = self?.validationPending else { break }
+          self?.validationPending = nil
+          let valid = await Task.detached(priority: .utility) {
+            do {
+              try snapshot.validate()
+              return true
+            } catch { return false }
+          }.value
+          if self?.current.revision == snapshot.revision,
+            self?.current.documentID == snapshot.documentID
+          {
+            precondition(valid, "Asynchronous document integrity check failed")
+          }
+        }
+        self?.validationTask = nil
+      }
+    #endif
   }
   @discardableResult public func apply(_ transaction: DocumentTransaction, at time: Date = Date())
     throws -> TransactionResult
   {
-    guard transaction.baseRevision == state.revision else {
-      throw DocumentError.staleRevision(expected: transaction.baseRevision, actual: state.revision)
+    let measurement = DocumentInstrumentation.begin(
+      "DocumentTransaction", revision: transaction.baseRevision)
+    defer { DocumentInstrumentation.end(measurement) }
+    guard transaction.baseRevision == current.revision else {
+      throw DocumentError.staleRevision(
+        expected: transaction.baseRevision, actual: current.revision)
     }
     let before = snapshot
+    if case .patch(let patch) = transaction.mutation {
+      let applied = try patch.applying(to: before)
+      current = applied.after
+      scheduleIntegrityCheck()
+      let result = TransactionResult(
+        before: before, after: applied.after, transaction: transaction,
+        removedLineIDs: applied.removed, insertedLineIDs: applied.inserted)
+      onTransaction?(result)
+      return result
+    }
+    var metadata = before.landmarks
+    let metadataOnly: Bool
+    switch transaction.mutation {
+    case .landmark(let landmark):
+      guard !landmark.detached, before.line(id: landmark.lineID) != nil else {
+        throw DocumentError.missingAnchor
+      }
+      guard Landmark.isValidEmoji(landmark.emoji),
+        !metadata.contains(where: {
+          $0.id != landmark.id && !$0.detached && $0.lineID == landmark.lineID
+        })
+      else { throw DocumentError.invalidState }
+      metadata.removeAll { $0.id == landmark.id }
+      metadata.append(landmark)
+      metadataOnly = true
+    case .removeLandmark(let id):
+      metadata.removeAll { $0.id == id }
+      metadataOnly = true
+    case .clearLandmarks:
+      metadata.removeAll()
+      metadataOnly = true
+    default: metadataOnly = false
+    }
+    if metadataOnly {
+      guard before.revision < Int64.max else { throw DocumentError.invalidState }
+      let after = DocumentSnapshot(
+        documentID: before.documentID, revision: before.revision + 1,
+        index: try before.indexed(), landmarks: metadata, invocations: before.invocations)
+      current = after
+      scheduleIntegrityCheck()
+      let result = TransactionResult(
+        before: before, after: after, transaction: transaction,
+        removedLineIDs: [], insertedLineIDs: [])
+      onTransaction?(result)
+      return result
+    }
+    if case .restore(let restored) = transaction.mutation {
+      guard before.revision < Int64.max, restored.documentID == before.documentID else {
+        throw DocumentError.invalidState
+      }
+      try restored.validate()
+      let after = DocumentSnapshot(
+        documentID: before.documentID, revision: before.revision + 1,
+        index: try restored.indexed(), landmarks: restored.landmarks,
+        invocations: restored.invocations)
+      let old = Set(before.lines.map(\.id)), new = Set(after.lines.map(\.id))
+      current = after
+      scheduleIntegrityCheck()
+      let result = TransactionResult(
+        before: before, after: after, transaction: transaction,
+        removedLineIDs: old.subtracting(new), insertedLineIDs: new.subtracting(old))
+      onTransaction?(result)
+      return result
+    }
+    let replacement: (NSRange, String)?
+    switch transaction.mutation {
+    case .replace(let range, let text): replacement = (range, text)
+    case .insertAfter(let id, let text):
+      guard let line = before.line(id: id) else { throw DocumentError.missingAnchor }
+      let offset = line.location + line.length
+      let endsWithLF =
+        try before.utf16Count > 0
+        && before.utf16(in: NSRange(location: before.utf16Count - 1, length: 1)).first == 10
+      let prefix = offset == before.utf16Count && !endsWithLF ? "\n" : ""
+      replacement = (
+        NSRange(location: offset, length: 0), prefix + text + (text.hasSuffix("\n") ? "" : "\n")
+      )
+    default: replacement = nil
+    }
+    if let (range, text) = replacement {
+      guard before.revision < Int64.max else { throw DocumentError.invalidState }
+      guard range.location >= 0, range.length >= 0, range.location <= before.utf16Count,
+        range.length <= before.utf16Count - range.location
+      else { throw DocumentError.invalidRange }
+      guard !ToolRangeEditing.intersectsLock(range, snapshot: before) else {
+        throw DocumentError.invalidRange
+      }
+      var index = try before.indexed()
+      let delta = try index.replaceText(
+        in: range, with: text, landmarks: before.landmarks, at: time)
+      let plain = DocumentSnapshot(
+        documentID: before.documentID, revision: before.revision + 1,
+        index: index, landmarks: delta.landmarks, invocations: [])
+      let invocations =
+        before.invocations.isEmpty
+        ? []
+        : ToolRangeEditing.remap(
+          before.invocations, from: before, to: plain, edit: range,
+          replacementLength: text.utf16.count)
+      let after = DocumentSnapshot(
+        documentID: before.documentID, revision: before.revision + 1,
+        index: index, landmarks: delta.landmarks, invocations: invocations)
+      guard ToolInvocation.sanitized(invocations, in: after) == invocations else {
+        throw DocumentError.invalidState
+      }
+      current = after
+      scheduleIntegrityCheck()
+      let result = TransactionResult(
+        before: before, after: after, transaction: transaction,
+        removedLineIDs: delta.removedLineIDs, insertedLineIDs: delta.insertedLineIDs)
+      onTransaction?(result)
+      return result
+    }
+    // Explicit bulk compatibility boundary. Ordinary callers submit exact replacements.
+    let state = before.liveState
     var next = state
     switch transaction.mutation {
-    case .tools(let snapshot, let edit, let replacementLength):
-      try snapshot.validate()
-      guard snapshot.documentID == state.documentID else { throw DocumentError.invalidState }
-      if let edit, let replacementLength {
-        let count = (state.text as NSString).length
-        guard edit.location >= 0, edit.location <= count, edit.length >= 0,
-          edit.length <= count - edit.location, replacementLength >= 0,
-          count - edit.length <= Int.max - replacementLength,
-          count - edit.length + replacementLength == (snapshot.text as NSString).length
-        else { throw DocumentError.invalidRange }
-      }
-      next = snapshot.liveState
+    case .replace, .patch, .insertAfter: throw DocumentError.invalidState
     case .edit(let text, let range, let length):
       if let range, let length {
         let count = state.text.utf16.count
@@ -244,32 +336,16 @@ public struct TransactionResult: Sendable {
       next.landmarks.append(landmark)
     case .removeLandmark(let id): next.landmarks.removeAll { $0.id == id }
     case .clearLandmarks: next.landmarks.removeAll()
-    case .insertAfter(let id, let text):
-      guard let line = state.lines.first(where: { $0.id == id }) else {
-        throw DocumentError.missingAnchor
-      }
-      let offset = line.location + line.length
-      let prefix = offset == state.text.utf16.count && !state.text.hasSuffix("\n") ? "\n" : ""
-      let inserted = prefix + text + (text.hasSuffix("\n") ? "" : "\n")
-      let range = NSRange(location: offset, length: 0)
-      if ToolRangeEditing.intersectsLock(range, snapshot: before) {
-        throw DocumentError.invalidRange
-      }
-      next.replaceText(
-        (state.text as NSString).replacingCharacters(in: range, with: inserted), editRange: range,
-        replacementLength: inserted.utf16.count, at: time)
-      let plain = DocumentSnapshot(
-        documentID: next.documentID, text: next.text, revision: next.revision, lines: next.lines,
-        landmarks: next.landmarks)
-      next.invocations = ToolRangeEditing.remap(
-        state.invocations, from: before, to: plain, edit: range,
-        replacementLength: inserted.utf16.count)
+
     }
     guard state.revision < Int64.max else { throw DocumentError.invalidState }
     next.revision = state.revision + 1
     try next.validate()
-    state = next
+    current = DocumentSnapshot(
+      documentID: next.documentID, text: next.text, revision: next.revision,
+      lines: next.lines, landmarks: next.landmarks, invocations: next.invocations)
     let after = snapshot
+    DocumentInstrumentation.count(.visitedLines, before.lines.count + after.lines.count)
     let old = Set(before.lines.map(\.id)), new = Set(after.lines.map(\.id))
     let result = TransactionResult(
       before: before, after: after, transaction: transaction, removedLineIDs: old.subtracting(new),

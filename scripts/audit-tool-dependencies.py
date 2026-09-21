@@ -11,7 +11,7 @@ ALLOWED = {
     'JortToolContracts': {'Foundation'},
     'JortToolRuntime': {'Foundation', 'CryptoKit', 'Security', 'Darwin', 'JortToolContracts', 'JortJavaScript'},
     'JortSettings': {'Foundation', 'CryptoKit', 'Security', 'Darwin', 'SQLite3', 'JortToolContracts'},
-    'JortDocument': {'Foundation', 'CryptoKit', 'JortToolContracts'},
+    'JortDocument': {'Foundation', 'CryptoKit', 'os', 'JortToolContracts'},
     'JortAppKit': {'Foundation', 'AppKit', 'QuartzCore', 'CoreText', 'UniformTypeIdentifiers', 'JortDocument', 'JortPersistence', 'JortSettings', 'JortToolContracts'},
 }
 

@@ -41,15 +41,15 @@ public enum PersistenceFormat {
     let liveRevision: Int64
     let lines: [LineMeta]
     let landmarks: [Landmark]
-    let invocations: [ToolInvocation]?
+    var invocations: [ToolInvocation]?
     enum CodingKeys: String, CodingKey {
       case id, content, liveRevision, lines, landmarks, invocations
     }
-    init(_ snapshot: DocumentSnapshot) {
+    init(_ snapshot: DocumentSnapshot, text: String, lines: [LineMeta], revision: Int64?) {
       id = snapshot.documentID
-      content = snapshot.text
-      liveRevision = snapshot.revision
-      lines = snapshot.lines
+      content = text
+      liveRevision = revision ?? snapshot.revision
+      self.lines = lines
       landmarks = snapshot.orderedLandmarks
       invocations = snapshot.invocations.isEmpty ? nil : snapshot.invocations
     }
@@ -89,16 +89,26 @@ public enum PersistenceFormat {
   public static func encode(_ snapshot: DocumentSnapshot, version: Int = payloadVersion) throws
     -> Data
   {
+    try encode(snapshot, version: version, canonicalRevision: nil)
+  }
+  static func encode(
+    _ snapshot: DocumentSnapshot, version: Int,
+    canonicalRevision: Int64?
+  ) throws -> Data {
+    let measurement = DocumentInstrumentation.begin(
+      "PersistenceEncode", revision: snapshot.revision)
+    defer { DocumentInstrumentation.end(measurement) }
     guard version == payloadVersion || version == 3 && snapshot.invocations.isEmpty else {
       throw StoreError.unsupportedVersion
     }
-    guard snapshot.text.utf8.count <= maximumBytes else { throw StoreError.sizeLimit }
-    try snapshot.validate()
-    let payload = Payload(snapshot)
-    let canonical = Payload(
-      DocumentSnapshot(
-        documentID: snapshot.documentID, text: snapshot.text,
-        revision: snapshot.revision, lines: snapshot.lines, landmarks: snapshot.landmarks))
+    guard snapshot.utf16Count <= maximumBytes else { throw StoreError.sizeLimit }
+    let materialized = try snapshot.validatedMaterialization()
+    guard materialized.text.utf8.count <= maximumBytes else { throw StoreError.sizeLimit }
+    let payload = Payload(
+      snapshot, text: materialized.text, lines: materialized.lines,
+      revision: canonicalRevision)
+    var canonical = payload
+    canonical.invocations = nil
     var envelope = Envelope(
       formatVersion: version, document: payload, checksum: checksum(try encoder().encode(canonical))
     )
@@ -135,30 +145,35 @@ public enum PersistenceFormat {
       case 3, 4:
         let envelope = try decoder.decode(Envelope.self, from: data)
         let value = envelope.document
-        let plain = DocumentSnapshot(
-          documentID: value.id, text: value.content, revision: value.liveRevision,
-          lines: value.lines, landmarks: value.landmarks)
-        guard envelope.checksum == checksum(try encoder().encode(Payload(plain))) else {
+        var canonical = value
+        canonical.invocations = nil
+        guard
+          envelope.checksum == checksum(try encoder().encode(canonical))
+        else {
           throw reportChecksumMismatch ? StoreError.checksumMismatch : StoreError.invalidPayload
         }
         let stored = value.invocations ?? []
         let annotationHash = checksum(try encoder().encode(stored))
         let metadataValid =
           version >= 4 && stored.count <= 1000 && envelope.annotationChecksum == annotationHash
-        let annotations: [ToolInvocation]
+        var decoded = DocumentSnapshot(
+          documentID: value.id, text: value.content, revision: value.liveRevision,
+          lines: value.lines, landmarks: value.landmarks,
+          invocations: metadataValid ? stored : [])
         if metadataValid {
-          annotations = ToolInvocation.sanitized(stored, in: plain).map { value in
+          let annotations = ToolInvocation.sanitized(stored, in: decoded).map { value in
             guard value.phase == .inputting, value.message != nil else { return value }
             var normalized = value
             normalized.message = nil
             return normalized
           }
-        } else {
-          annotations = []
+          if annotations != stored {
+            decoded = DocumentSnapshot(
+              documentID: value.id, text: value.content, revision: value.liveRevision,
+              lines: value.lines, landmarks: value.landmarks, invocations: annotations)
+          }
         }
-        snapshot = DocumentSnapshot(
-          documentID: value.id, text: value.content, revision: value.liveRevision,
-          lines: value.lines, landmarks: value.landmarks, invocations: annotations)
+        snapshot = decoded
       default: throw StoreError.invalidPayload
       }
       try snapshot.validate()

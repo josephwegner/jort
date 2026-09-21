@@ -54,10 +54,7 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     }
   }
   weak var editor: NSTextView?
-  private(set) var lines: [LineMeta] = []
-  private var byOffset: [Int: UUID] = [:]
-  private var byID: [UUID: LineMeta] = [:]
-  private var ordinalByID: [UUID: Int] = [:]
+  private(set) var lines = DocumentLineView([])
   private var geometryDirty = true
   private var pendingAnchor: (UUID, CGFloat, CGFloat)?
   private var mounted: Set<UUID> = []
@@ -67,14 +64,15 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     super.init()
     editor.textLayoutManager?.delegate = self
   }
-  func update(lines: [LineMeta]) {
+  private func lineID(at offset: Int) -> UUID? {
+    guard let line = lines.line(containing: offset), line.location == offset else { return nil }
+    return line.id
+  }
+  func update(lines: [LineMeta]) { update(lines: DocumentLineView(lines)) }
+  func update(lines: DocumentLineView) {
     geometryDirty = true
     self.lines = lines
-    ordinalByID = Dictionary(
-      uniqueKeysWithValues: lines.enumerated().map { ($0.element.id, $0.offset + 1) })
-    byOffset = Dictionary(uniqueKeysWithValues: lines.map { ($0.location, $0.id) })
-    byID = Dictionary(uniqueKeysWithValues: lines.map { ($0.id, $0) })
-    let surviving = Set(lines.map(\.id))
+    let surviving = Set(accessories.keys.filter { lines.line(id: $0) != nil })
     for id in Array(accessories.keys) where !surviving.contains(id) {
       accessories.removeValue(forKey: id)?.view.removeFromSuperview()
       mounted.remove(id)
@@ -90,12 +88,12 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     for value in accessories.values { value.view.removeFromSuperview() }
     mounted = []
     accessories = [:]
-    let surviving = Set(lines.map(\.id))
+    let surviving = Set(values.compactMap { lines.line(id: $0.lineID)?.id })
     for value in values where value.height > 0 && surviving.contains(value.lineID) {
       accessories[value.lineID] = value
     }
     for id in previous.union(accessories.keys) {
-      guard let line = byID[id] else { continue }
+      guard let line = lines.line(id: id) else { continue }
       if let start = content.location(content.documentRange.location, offsetBy: line.location),
         let end = content.location(start, offsetBy: line.length),
         let range = NSTextRange(location: start, end: end)
@@ -131,7 +129,7 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
         return 0
       }
       let offset = content.offset(from: content.documentRange.location, to: range.location)
-      guard let id = self.byOffset[offset] else { return 0 }
+      guard let id = self.lineID(at: offset) else { return 0 }
       return self.accessories[id]?.height ?? 0
     }
   }
@@ -151,6 +149,7 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
       // already visible. Stop at the visible geometry, not that stale offset.
       guard fragment.layoutFragmentFrame.minY <= visibleBottom else { return false }
       self.fragmentVisits += 1
+      DocumentInstrumentation.count(.visibleFragments)
       result.append(contentsOf: self.bands(fragment, content: content))
       return fragment.layoutFragmentFrame.maxY < visibleBottom
     }
@@ -165,14 +164,16 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
         (offset + $0.characterRange.location, $0.typographicBounds)
       })
     return PresentationGeometry.bands(in: input) { start in
-      guard let id = byOffset[start], let number = ordinalByID[id] else { return nil }
+      guard let id = lineID(at: start), let number = lines.ordinal(of: id).map({ $0 + 1 }) else {
+        return nil
+      }
       return .init(id: id, number: number, accessoryHeight: accessories[id]?.height ?? 0)
     }
   }
 
   func band(for id: UUID) -> Band? {
     if !geometryDirty, let band = snapshot.bands.first(where: { $0.id == id }) { return band }
-    guard let line = byID[id], let manager = editor?.textLayoutManager,
+    guard let line = lines.line(id: id), let manager = editor?.textLayoutManager,
       let content = manager.textContentManager,
       let location = content.location(content.documentRange.location, offsetBy: line.location)
     else { return nil }
@@ -314,7 +315,8 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     guard !accessories.isEmpty, let editor else { return nil }
     var children: [Any] = []
     for band in snapshot.bands {
-      guard let line = byID[band.id], line.location + line.length <= editor.string.utf16.count
+      guard let line = lines.line(id: band.id),
+        line.location + line.length <= editor.string.utf16.count
       else { continue }
       let text = NSAccessibilityElement()
       text.setAccessibilityRole(.staticText)

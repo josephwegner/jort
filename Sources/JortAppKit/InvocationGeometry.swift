@@ -83,26 +83,27 @@ import JortDocument
   ) -> Prepared? {
     var shapes: [(NSBezierPath, NSColor)] = []
     func rects(_ range: NSRange) -> [NSRect] { input.rects[range] ?? [] }
-    let leading = output.map { leadingActions($0, text: snapshot.text) } ?? false
-    let indented = output.map { leadingIndent($0, text: snapshot.text) } ?? false
+    let leading = output.map { leadingActions($0, snapshot: snapshot) } ?? false
+    let indented = output.map { leadingIndent($0, snapshot: snapshot) } ?? false
     let emptyAtLineStart =
-      output.map { $0.length == 0 && startsLine($0, text: snapshot.text) } ?? false
+      output.map { $0.length == 0 && startsLine($0, snapshot: snapshot) } ?? false
     let sourceEndsLine = endsLine(
-      NSMaxRange(invocation.inputMode == "contextual" ? token : scope), text: snapshot.text)
-    let outputEndsLine = output.map { endsLine(NSMaxRange($0), text: snapshot.text) } ?? false
+      NSMaxRange(invocation.inputMode == "contextual" ? token : scope), snapshot: snapshot)
+    let outputEndsLine = output.map { endsLine(NSMaxRange($0), snapshot: snapshot) } ?? false
     let inlineActions =
       !(invocation.inputMode.hasPrefix("ephemeral") && invocation.phase == .inputting)
     var paintedScope = scope
     // The newline belongs to the range, but the insertion position on
     // the following line does not. Do not paint that exclusive end.
     if invocation.inputMode == "contextual", paintedScope.length > 0,
-      (snapshot.text as NSString).character(at: NSMaxRange(paintedScope) - 1) == 10
+      (try? snapshot.utf16(in: NSRange(location: NSMaxRange(paintedScope) - 1, length: 1)).first)
+        == 10
     {
       paintedScope.length -= 1
     }
     var sourceFrames = rects(paintedScope)
     if invocation.inputMode == "contained", invocation.phase == .inputting,
-      startsLine(NSRange(location: NSMaxRange(scope), length: 0), text: snapshot.text),
+      startsLine(NSRange(location: NSMaxRange(scope), length: 0), snapshot: snapshot),
       let emptyLine = rects(NSRange(location: NSMaxRange(scope), length: 0)).first,
       !sourceFrames.contains(where: { abs($0.minY - emptyLine.minY) < 2 })
     {
@@ -125,7 +126,7 @@ import JortDocument
         output.length == 0 && !emptyAtLineStart ? 42 : leading && !indented ? 30 : 3
     }
     sourceRects = clippedBeforeFollowingGlyph(
-      sourceRects, end: NSMaxRange(scope), text: snapshot.text, glyphs: input.glyphs)
+      sourceRects, end: NSMaxRange(scope), snapshot: snapshot, glyphs: input.glyphs)
     let warning = input.warning
     let color: NSColor =
       invocation.phase == .error ? .systemRed : warning == nil ? .systemTeal : .systemOrange
@@ -135,7 +136,7 @@ import JortDocument
       var frames = connected(rects(output))
       if output.length == 0, let anchor = frames.first {
         let offset: CGFloat =
-          emptyAtLineStart ? (output.location < snapshot.text.utf16.count ? 78 : 0) : 36
+          emptyAtLineStart ? (output.location < snapshot.utf16Count ? 78 : 0) : 36
         frames = [
           NSRect(x: anchor.minX - offset, y: anchor.minY, width: 78, height: anchor.height)
         ]
@@ -160,7 +161,7 @@ import JortDocument
         frames.insert(seam, at: 0)
       }
       frames = clippedBeforeFollowingGlyph(
-        frames, end: NSMaxRange(output), text: snapshot.text, glyphs: input.glyphs)
+        frames, end: NSMaxRange(output), snapshot: snapshot, glyphs: input.glyphs)
       outputRects = frames
       shapes.append((union(frames), ToolPresentationColors.pending))
     } else {
@@ -181,24 +182,27 @@ import JortDocument
       anchor: anchor, controlFrame: controlFrame,
       sourceEndsLine: sourceEndsLine, inlineActions: inlineActions, shapes: shapes)
   }
-  private static func leadingActions(_ output: NSRange, text: String) -> Bool {
+  private static func leadingActions(_ output: NSRange, snapshot: DocumentSnapshot) -> Bool {
     // Long results keep their actions at the source/output seam rather than
     // requiring a scroll to the end. Short inline results retain trailing actions.
-    output.length > 40 || (text as NSString).substring(with: output).contains("\n")
+    output.length > 40 || (try? snapshot.text(in: output).contains("\n")) == true
   }
-  private static func leadingIndent(_ output: NSRange, text: String) -> Bool {
-    output.length > 0 && leadingActions(output, text: text) && startsLine(output, text: text)
+  private static func leadingIndent(_ output: NSRange, snapshot: DocumentSnapshot) -> Bool {
+    output.length > 0 && leadingActions(output, snapshot: snapshot)
+      && startsLine(output, snapshot: snapshot)
   }
-  private static func startsLine(_ output: NSRange, text: String) -> Bool {
-    output.location > 0
-      && [10, 13, 0x85, 0x2028, 0x2029].contains(
-        (text as NSString).character(at: output.location - 1))
+  private static func startsLine(_ output: NSRange, snapshot: DocumentSnapshot) -> Bool {
+    guard output.location > 0,
+      let unit = try? snapshot.utf16(in: NSRange(location: output.location - 1, length: 1)).first
+    else { return false }
+    return [10, 13, 0x85, 0x2028, 0x2029].contains(unit)
   }
-  private static func endsLine(_ offset: Int, text: String) -> Bool {
-    let text = text as NSString
-    return offset == text.length
-      || offset < text.length
-        && [10, 13, 0x85, 0x2028, 0x2029].contains(text.character(at: offset))
+  private static func endsLine(_ offset: Int, snapshot: DocumentSnapshot) -> Bool {
+    if offset == snapshot.utf16Count { return true }
+    guard let unit = try? snapshot.utf16(in: NSRange(location: offset, length: 1)).first else {
+      return false
+    }
+    return [10, 13, 0x85, 0x2028, 0x2029].contains(unit)
   }
   private static func connected(_ frames: [NSRect]) -> [NSRect] {
     guard frames.count > 1 else { return frames }
@@ -219,10 +223,11 @@ import JortDocument
     return result
   }
   private static func clippedBeforeFollowingGlyph(
-    _ frames: [NSRect], end: Int, text: String, glyphs: [Int: NSRect]
+    _ frames: [NSRect], end: Int, snapshot: DocumentSnapshot, glyphs: [Int: NSRect]
   ) -> [NSRect] {
-    guard end < text.utf16.count,
-      ![10, 13, 0x85, 0x2028, 0x2029].contains((text as NSString).character(at: end)),
+    guard end < snapshot.utf16Count,
+      let unit = try? snapshot.utf16(in: NSRange(location: end, length: 1)).first,
+      ![10, 13, 0x85, 0x2028, 0x2029].contains(unit),
       let next = glyphs[end]
     else { return frames }
     // Decorations may pad into whitespace inside their range, but neither

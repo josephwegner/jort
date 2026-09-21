@@ -227,7 +227,7 @@ final class HistoryWorkspaceController: NSViewController, NSTableViewDataSource,
       }
       if shownRevision != revision.metadata.id {
         snapshot.string = revision.snapshot.text
-        snapshotRuler.lines = revision.snapshot.lines
+        snapshotRuler.lineView = revision.snapshot.lines
         snapshotRuler.landmarks = revision.snapshot.landmarks
         snapshot.scrollRangeToVisible(NSRange(location: 0, length: 0))
         shownRevision = revision.metadata.id

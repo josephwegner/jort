@@ -25,13 +25,13 @@ extension ToolInvocation {
   ) throws -> ToolDocumentPlan? {
     guard effect.operation == .accept else { throw DocumentError.invalidState }
     try package.validate()
-    guard range.location >= 0, range.length >= 0, range.location <= snapshot.text.utf16.count,
-      range.length <= snapshot.text.utf16.count - range.location
+    guard range.location >= 0, range.length >= 0, range.location <= snapshot.utf16Count,
+      range.length <= snapshot.utf16Count - range.location
     else { throw DocumentError.invalidRange }
     guard snapshot.invocations.count < 1000,
       !snapshot.invocations.contains(where: { $0.id == effect.identity.invocationID }),
       !snapshot.invocations.contains(where: {
-        guard let scope = $0.scope.resolve(in: snapshot.lines) else { return true }
+        guard let scope = $0.scope.resolve(in: snapshot) else { return true }
         return NSIntersectionRange(scope, range).length > 0
       })
     else { return nil }
@@ -92,16 +92,7 @@ extension ToolInvocation {
       try builder.update(value)
     case .preserveOutput:
       guard expected.phase == .pending else { throw DocumentError.invalidState }
-      var value = expected
-      value.outputOperation = "replace-invocation"
-      let mapped = DocumentSnapshot(
-        documentID: snapshot.documentID, text: snapshot.text,
-        revision: snapshot.revision, lines: snapshot.lines, landmarks: snapshot.landmarks,
-        invocations: snapshot.invocations.map { $0.id == value.id ? value : $0 })
-      let fallback = Builder(state: mapped)
-      try fallback.merge(value.id)
-      guard let plan = fallback.plan else { throw DocumentError.invalidState }
-      return plan
+      try builder.merge(expected.id, outputOperation: "replace-invocation")
     case .merge: try builder.merge(expected.id)
     case .dismiss: try builder.dismiss(expected.id)
     case .remove: try builder.cancel(expected.id)
@@ -114,6 +105,7 @@ extension ToolInvocation {
 @MainActor private final class Builder {
   let state: DocumentSnapshot
   var plan: ToolDocumentPlan?
+  private var replacements: [DocumentPatch.Replacement] = []
   init(state: DocumentSnapshot) { self.state = state }
   func accept(_ package: ToolPackage, range: NSRange, space: Bool, identity: InvocationGeneration)
     throws
@@ -131,13 +123,20 @@ extension ToolInvocation {
       location: range.location,
       length: manifest.inputMode.isEphemeral ? command.utf16.count : replacement.utf16.count)
     if manifest.inputMode == .contextual {
-      scopeRange = (plain.text as NSString).lineRange(for: tokenRange)
-      while scopeRange.length > 0
-        && [10, 13].contains((plain.text as NSString).character(at: NSMaxRange(scopeRange) - 1))
+      guard let first = plain.line(containingUTF16Offset: tokenRange.location),
+        let last = plain.line(
+          containingUTF16Offset: max(tokenRange.location, NSMaxRange(tokenRange) - 1))
+      else { throw DocumentError.missingAnchor }
+      scopeRange = NSRange(
+        location: first.location, length: last.location + last.length - first.location)
+      while scopeRange.length > 0,
+        let unit = try plain.utf16(in: NSRange(location: NSMaxRange(scopeRange) - 1, length: 1))
+          .first,
+        [10, 13].contains(unit)
       { scopeRange.length -= 1 }
       for other in annotations {
-        guard let source = other.scope.resolve(in: plain.lines) else { continue }
-        let scope = NSUnionRange(source, other.output?.resolve(in: plain.lines) ?? source)
+        guard let source = other.scope.resolve(in: plain) else { continue }
+        let scope = NSUnionRange(source, other.output?.resolve(in: plain) ?? source)
         if NSMaxRange(scope) <= tokenRange.location && NSMaxRange(scope) > scopeRange.location {
           scopeRange.length -= NSMaxRange(scope) - scopeRange.location
           scopeRange.location = NSMaxRange(scope)
@@ -152,9 +151,9 @@ extension ToolInvocation {
       packageID: manifest.id, packageVersion: manifest.version,
       entryContract: manifest.entryContract, inputMode: manifest.inputMode.rawValue,
       outputOperation: manifest.outputOperation.rawValue, command: command,
-      token: try .init(tokenRange, lines: plain.lines),
-      scope: try .init(scopeRange, lines: plain.lines),
-      sourceHash: ToolInvocation.hash((plain.text as NSString).substring(with: scopeRange)))
+      token: try .init(tokenRange, snapshot: plain),
+      scope: try .init(scopeRange, snapshot: plain),
+      sourceHash: ToolInvocation.hash(try plain.text(in: scopeRange)))
     invocation.executor = manifest.executorType.rawValue
     invocation.id = identity.invocationID
     invocation.generation = identity.generation
@@ -164,8 +163,8 @@ extension ToolInvocation {
   }
   func publish(_ invocation: ToolInvocation, output: String) throws {
     guard invocation.validated(in: state),
-      let token = invocation.token.resolve(in: state.lines),
-      let scope = invocation.scope.resolve(in: state.lines)
+      let token = invocation.token.resolve(in: state),
+      let scope = invocation.scope.resolve(in: state)
     else { throw DocumentError.invalidState }
     let before = state
     let offset = invocation.inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token)
@@ -176,21 +175,21 @@ extension ToolInvocation {
       replacementLength: output.utf16.count)
     var pending = invocation
     pending.phase = .pending
-    pending.token = try .init(token, lines: plain.lines)
+    pending.token = try .init(token, snapshot: plain)
     pending.scope = try .init(
       NSRange(
         location: scope.location,
         length: scope.length + (invocation.inputMode == "contextual" ? output.utf16.count : 0)),
-      lines: plain.lines)
+      snapshot: plain)
     pending.output = try .init(
-      NSRange(location: offset, length: output.utf16.count), lines: plain.lines)
+      NSRange(location: offset, length: output.utf16.count), snapshot: plain)
     pending.outputHash = ToolInvocation.hash(output)
     annotations.append(pending)
     // Publication's inverse is the editable pre-submit invocation, not a dead job.
     var inputting = restored(invocation)
     let undo = DocumentSnapshot(
-      documentID: before.documentID, text: before.text, revision: before.revision,
-      lines: before.lines, landmarks: before.landmarks,
+      documentID: before.documentID, revision: before.revision,
+      index: try before.indexed(), landmarks: before.landmarks,
       invocations: before.invocations.map { $0.id == invocation.id ? inputting : $0 })
     try commit(
       plain, edit: edit, replacementLength: output.utf16.count, invocations: annotations,
@@ -211,17 +210,17 @@ extension ToolInvocation {
     }
     let restoration = invocation.restoration
     let before = state
-    if let output = invocation.output?.resolve(in: before.lines) {
+    if let output = invocation.output?.resolve(in: before) {
       let plain = try replacing(before, range: output, with: "")
-      guard let token = invocation.token.resolve(in: before.lines),
-        let scope = invocation.scope.resolve(in: before.lines)
+      guard let token = invocation.token.resolve(in: before),
+        let scope = invocation.scope.resolve(in: before)
       else { return }
-      invocation.token = try .init(token, lines: plain.lines)
+      invocation.token = try .init(token, snapshot: plain)
       invocation.scope = try .init(
         NSRange(
           location: scope.location,
           length: scope.length - (invocation.inputMode == "contextual" ? output.length : 0)),
-        lines: plain.lines)
+        snapshot: plain)
       invocation = restored(invocation, token: invocation.token, scope: invocation.scope)
       var values = ToolRangeEditing.remap(
         before.invocations.filter { $0.id != id }, from: before, to: plain, edit: output,
@@ -238,18 +237,18 @@ extension ToolInvocation {
     }
   }
 
-  func merge(_ id: UUID) throws {
+  func merge(_ id: UUID, outputOperation: String? = nil) throws {
     guard let invocation = state.invocations.first(where: { $0.id == id }),
       invocation.phase == .pending,
-      let output = invocation.output?.resolve(in: state.lines),
-      let token = invocation.token.resolve(in: state.lines),
-      let scope = invocation.scope.resolve(in: state.lines)
+      let output = invocation.output?.resolve(in: state),
+      let token = invocation.token.resolve(in: state),
+      let scope = invocation.scope.resolve(in: state)
     else { return }
     let before = state
     let range: NSRange, replacement: String
-    if invocation.outputOperation == "replace-context" {
+    if (outputOperation ?? invocation.outputOperation) == "replace-context" {
       range = scope
-      replacement = (before.text as NSString).substring(with: output)
+      replacement = try before.text(in: output)
     } else {
       range = invocation.inputMode == "contained" ? scope : token
       replacement = ""
@@ -282,18 +281,11 @@ extension ToolInvocation {
   private func replacing(_ snapshot: DocumentSnapshot, range: NSRange, with text: String) throws
     -> DocumentSnapshot
   {
-    let plain = DocumentSnapshot(
-      documentID: snapshot.documentID, text: snapshot.text, revision: snapshot.revision,
-      lines: snapshot.lines, landmarks: snapshot.landmarks)
-    let model = try DocumentCoordinator(snapshot: plain)
-    return try model.apply(
-      .init(
-        baseRevision: plain.revision, origin: .automation,
-        mutation: .edit(
-          text: (plain.text as NSString).replacingCharacters(in: range, with: text), range: range,
-          replacementLength: text.utf16.count))
-    ).after
+    let (replacement, preview) = try DocumentPatch.preview(snapshot, range: range, text: text)
+    replacements.append(replacement)
+    return preview
   }
+
   func cancel(_ id: UUID) throws {
     try commit(
       state, edit: nil, replacementLength: nil,
@@ -308,16 +300,14 @@ extension ToolInvocation {
     _ plain: DocumentSnapshot, edit: NSRange?, replacementLength: Int?,
     invocations: [ToolInvocation], undo: UndoPolicy = .register
   ) throws {
-    let snapshot = DocumentSnapshot(
-      documentID: plain.documentID, text: plain.text,
-      revision: plain.revision, lines: plain.lines, landmarks: plain.landmarks,
-      invocations: invocations)
-    try snapshot.validate()
+    let patch = DocumentPatch(
+      in: state, replacements: replacements,
+      expectedInvocations: state.invocations,
+      invocations: state.invocations.map { .remove($0.id) } + invocations.map { .upsert($0) })
     plan = ToolDocumentPlan(
       transaction: .init(
         baseRevision: state.revision, origin: .automation,
-        undoPolicy: undo,
-        mutation: .tools(snapshot, edit: edit, replacementLength: replacementLength)),
+        undoPolicy: undo, mutation: .patch(patch)),
       undoSnapshot: nil, restoration: nil)
   }
 }

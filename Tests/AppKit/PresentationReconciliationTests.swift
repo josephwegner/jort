@@ -1,5 +1,6 @@
 import AppKit
 import XCTest
+import JortDocument
 @testable import JortAppKit
 
 @MainActor final class PresentationReconciliationTests: ToolInvocationTestCase {
@@ -48,6 +49,14 @@ import XCTest
     for offset in [0, 20_000, 40_000] {
       editor.textView.scrollRangeToVisible(NSRange(location: offset, length: 0))
       await settlePresentationAsync(editor)
+      let recorder = DocumentWorkRecorder()
+      DocumentInstrumentation.$recorder.withValue(recorder) {
+        editor.toolPresentation.invalidateStyles()
+        _ = editor.toolPresentation.reconcileStyles()
+        editor.toolPresentation.reconcileControls()
+      }
+      XCTAssertNil(recorder.snapshot[.flattenCalls])
+      XCTAssertNil(recorder.snapshot[.completeValidations])
       XCTAssertEqual(editor.toolPresentation.measuredInvocationCount, 1)
       XCTAssertLessThan(editor.linePresentation.largestMeasuredRange, 1000)
       XCTAssertEqual(editor.linePresentation.targetedLayoutRequests, targeted)

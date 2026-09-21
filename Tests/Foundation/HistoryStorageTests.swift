@@ -586,3 +586,75 @@ final class HistoryStorageTests: StoreTestCase {
     try await store.close()
   }
 }
+
+private actor PausedHistoryStore: HistoryStore {
+  let store: SQLiteStore
+  var paused = true
+  var waiting: CheckedContinuation<Void, Never>?
+  init(_ store: SQLiteStore) { self.store = store }
+  func resume() {
+    paused = false
+    waiting?.resume()
+    waiting = nil
+  }
+  func retain(_ snapshot: DocumentSnapshot, reason: String, timestamp: Date, milestone: Bool)
+    async throws -> HistoryEntry
+  {
+    if paused { await withCheckedContinuation { waiting = $0 } }
+    return try await store.retain(
+      snapshot, reason: reason, timestamp: timestamp, milestone: milestone)
+  }
+  func revisions(before sequence: Int64?, limit: Int) async throws -> [HistoryEntry] {
+    try await store.revisions(before: sequence, limit: limit)
+  }
+  func revision(sequence: Int64) async throws -> HistoryRevision {
+    try await store.revision(sequence: sequence)
+  }
+  func historySettings() async throws -> HistorySettings { try await store.historySettings() }
+  func setHistorySettings(_ settings: HistorySettings) async throws {
+    try await store.setHistorySettings(settings)
+  }
+  func pruneHistory() async throws -> HistoryPruneResult { try await store.pruneHistory() }
+}
+
+extension HistoryStorageTests {
+  @MainActor func testSlowHistoryBoundsRootsAndExplicitRestoreRequiresSuccessfulRetry() async throws
+  {
+    let store = ownStore(SQLiteStore(directory: try root()))
+    let initial = try await store.load()
+    let slow = PausedHistoryStore(store)
+    let history = HistoryCoordinator(store: slow, initial: initial, maximumQueuedBoundaries: 2)
+    let owner = try DocumentCoordinator(snapshot: initial)
+    for index in 0..<2 {
+      let next = try owner.apply(
+        .init(
+          baseRevision: owner.snapshot.revision, origin: .native,
+          mutation: .replace(range: NSRange(location: 0, length: 0), text: "\(index)"))
+      ).after
+      history.changed(next, reason: .landmark)
+    }
+    XCTAssertEqual(history.queuedBoundaryCount, 2)
+    let newest = try owner.apply(
+      .init(
+        baseRevision: owner.snapshot.revision, origin: .native,
+        mutation: .replace(range: NSRange(location: 0, length: 0), text: "new"))
+    ).after
+    history.changed(newest, reason: .idle)
+    XCTAssertEqual(history.queuedBoundaryCount, 2)
+    let refused = await history.flush(reason: .beforeRestore)
+    XCTAssertFalse(refused)
+    XCTAssertEqual(owner.snapshot, newest)
+    await slow.resume()
+    for _ in 0..<1000 where history.queuedBoundaryCount > 0 {
+      try await Task.sleep(for: .milliseconds(1))
+    }
+    XCTAssertEqual(history.queuedBoundaryCount, 0)
+    let accepted = await history.flush(reason: .beforeRestore)
+    XCTAssertTrue(accepted)
+    let entries = try await store.revisions()
+    let latest = try await store.revision(sequence: XCTUnwrap(entries.first).sequence)
+    XCTAssertEqual(latest.snapshot, newest)
+    XCTAssertTrue(latest.metadata.milestone)
+    XCTAssertEqual(history.queuedBoundaryCount, 0)
+  }
+}

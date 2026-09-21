@@ -17,17 +17,15 @@ final class PerformanceTests: StoreTestCase {
     let paste = ProcessInfo.processInfo.systemUptime - pasteStart
     var edits: [Double] = [], saves: [Double] = []
     for index in 0..<100 {
-      let before = owner.snapshot, offset = (index * 7919) % before.text.utf16.count
-      let source = before.text as NSString
+      let before = owner.snapshot, offset = (index * 7919) % before.utf16Count
       // Select a known ASCII line start rather than splitting a Unicode scalar.
-      let start = before.lines.last(where: { $0.location <= offset })!.location
+      let start = before.line(containingUTF16Offset: offset)!.location
       let range = NSRange(location: start, length: 0)
-      let changed = source.replacingCharacters(in: range, with: "x")
       let begin = ProcessInfo.processInfo.systemUptime
       try owner.apply(
         .init(
           baseRevision: before.revision, origin: .native,
-          mutation: .edit(text: changed, range: range, replacementLength: 1)))
+          mutation: .replace(range: range, text: "x")))
       edits.append(ProcessInfo.processInfo.systemUptime - begin)
       if index % 10 == 0 {
         let snapshot = owner.snapshot
@@ -45,6 +43,11 @@ final class PerformanceTests: StoreTestCase {
     print(
       "PERF 10k lines: paste=\(paste * 1000)ms edit p50=\(percentile(edits, 0.5)) p95=\(percentile(edits, 0.95)) p99=\(percentile(edits, 0.99))ms serialization p95=\(percentile(saves, 0.95))ms"
     )
+
+    PerformanceDistribution.report(
+      "transaction", fixture: "canvas-10000", text: text, samples: edits, warmup: 5)
+    PerformanceDistribution.report(
+      "serialization", fixture: "canvas-10000", text: text, samples: saves, warmup: 1)
     if ProcessInfo.processInfo.environment["JORT_PERFORMANCE_ENFORCE"] == "1" {
       XCTAssertLessThan(percentile(edits, 0.95), 100)
       XCTAssertLessThan(percentile(saves, 0.95), 250)
@@ -69,6 +72,9 @@ final class PerformanceTests: StoreTestCase {
       _ = try await store.save(snapshot)
       durable.append(ProcessInfo.processInfo.systemUptime - start)
     }
+
+    PerformanceDistribution.report(
+      "save-and-recovery", fixture: "canvas-10000", text: text, samples: durable, warmup: 2)
     try await store.close()
     let files = try FileManager.default.contentsOfDirectory(
       at: root.appendingPathComponent("Store"), includingPropertiesForKeys: [.fileSizeKey])

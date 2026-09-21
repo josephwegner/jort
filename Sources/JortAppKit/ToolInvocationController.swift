@@ -53,8 +53,8 @@ import JortSettings
     guard let editor else { return nil }
     let caret = editor.textView.selectedRange()
     return editor.state.invocations.first {
-      guard let source = $0.scope.resolve(in: editor.state.lines) else { return false }
-      let range = NSUnionRange(source, $0.output?.resolve(in: editor.state.lines) ?? source)
+      guard let source = $0.scope.resolve(in: editor.state) else { return false }
+      let range = NSUnionRange(source, $0.output?.resolve(in: editor.state) ?? source)
       return caret.location >= range.location && NSMaxRange(caret) <= NSMaxRange(range)
     }
   }
@@ -188,11 +188,12 @@ import JortSettings
     let affected = ToolRangeEditing.intersectingLocks(range, snapshot: before)
     guard !affected.isEmpty, affected.allSatisfy({ $0.phase == .pending }) else { return }
     let ids = Set(affected.map(\.id))
-    let plain = try replacing(before, range: range, with: "")
-    let annotations = ToolRangeEditing.remap(
-      before.invocations.filter { !ids.contains($0.id) },
-      from: before, to: plain, edit: range, replacementLength: 0)
-    try commit(plain, edit: range, replacementLength: 0, invocations: annotations)
+    let patch = DocumentPatch(
+      in: before,
+      replacements: [try .init(range: range, text: "", in: before)],
+      expectedInvocations: affected, invocations: ids.map { .remove($0) })
+    try editor.apply(
+      .init(baseRevision: before.revision, origin: .automation, mutation: .patch(patch)))
     editor.textView.setSelectedRange(NSRange(location: range.location, length: 0))
   }
 
@@ -210,8 +211,8 @@ import JortSettings
     guard let editor, var invocation = editor.state.invocations.first(where: { $0.id == id }),
       invocation.phase == .inputting,
       invocation.inputMode == "contextual",
-      let token = invocation.token.resolve(in: editor.state.lines),
-      let scope = invocation.scope.resolve(in: editor.state.lines)
+      let token = invocation.token.resolve(in: editor.state),
+      let scope = invocation.scope.resolve(in: editor.state)
     else { return }
     var a = start ? min(token.location, max(0, requested)) : scope.location
     var b =
@@ -235,17 +236,26 @@ import JortSettings
   }
 
   private func occupied(_ invocation: ToolInvocation, in snapshot: DocumentSnapshot) -> NSRange? {
-    guard let scope = invocation.scope.resolve(in: snapshot.lines) else { return nil }
-    return NSUnionRange(scope, invocation.output?.resolve(in: snapshot.lines) ?? scope)
+    guard let scope = invocation.scope.resolve(in: snapshot) else { return nil }
+    return NSUnionRange(scope, invocation.output?.resolve(in: snapshot) ?? scope)
   }
 
   private func update(_ invocation: ToolInvocation) throws {
     guard let editor else { return }
-    try commit(
-      editor.state, edit: nil, replacementLength: nil,
-      invocations: editor.state.invocations.map { $0.id == invocation.id ? invocation : $0 },
-      undo: .none)
+    let before = editor.state
+    guard let expected = before.invocations.first(where: { $0.id == invocation.id }) else {
+      throw DocumentError.missingAnchor
+    }
+    let patch = DocumentPatch(
+      in: before, expectedInvocations: [expected],
+      invocations: [.upsert(invocation)])
+    try editor.apply(
+      .init(
+        baseRevision: before.revision, origin: .automation,
+        undoPolicy: .none, mutation: .patch(patch)))
+    editor.refreshToolPresentation()
   }
+
   func prompt(for id: UUID) -> String? { coordinator.transient.prompt(for: id) }
   func setPrompt(_ text: String?, for id: UUID) { coordinator.transient.setPrompt(text, for: id) }
   func warning(for id: UUID) -> String? { coordinator.transient.warning(for: id) }
@@ -255,34 +265,5 @@ import JortSettings
   }
   private func clearWarning(_ id: UUID) {
     coordinator.transient.setWarning(nil, content: nil, for: id)
-  }
-  private func replacing(_ snapshot: DocumentSnapshot, range: NSRange, with text: String) throws
-    -> DocumentSnapshot
-  {
-    let plain = DocumentSnapshot(
-      documentID: snapshot.documentID, text: snapshot.text, revision: snapshot.revision,
-      lines: snapshot.lines, landmarks: snapshot.landmarks)
-    let model = try DocumentCoordinator(snapshot: plain)
-    return try model.apply(
-      .init(
-        baseRevision: plain.revision, origin: .automation,
-        mutation: .edit(
-          text: (plain.text as NSString).replacingCharacters(in: range, with: text), range: range,
-          replacementLength: text.utf16.count))
-    ).after
-  }
-  private func commit(
-    _ plain: DocumentSnapshot, edit: NSRange?, replacementLength: Int?,
-    invocations: [ToolInvocation], undo: UndoPolicy = .register
-  ) throws {
-    guard let editor else { return }
-    let snapshot = DocumentSnapshot(
-      documentID: plain.documentID, text: plain.text, revision: plain.revision,
-      lines: plain.lines, landmarks: plain.landmarks, invocations: invocations)
-    try editor.apply(
-      .init(
-        baseRevision: editor.state.revision, origin: .automation, undoPolicy: undo,
-        mutation: .tools(snapshot, edit: edit, replacementLength: replacementLength)))
-    editor.refreshToolPresentation()
   }
 }

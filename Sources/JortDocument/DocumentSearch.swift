@@ -22,14 +22,16 @@ public struct SearchMatch: Equatable, Sendable {
   /// A shifted logical line is safe; a missing identity or changed match is not.
   public func resolve(in snapshot: DocumentSnapshot) -> NSRange? {
     guard snapshot.documentID == documentID, snapshot.revision >= generation,
-      let line = snapshot.lines.first(where: { $0.id == lineID }),
+      let line = snapshot.line(id: lineID),
       lineRange.location >= 0, lineRange.location <= line.length
     else { return nil }
-    let source = snapshot.text as NSString
     let start = line.location + lineRange.location
-    guard start <= source.length, lineRange.length <= source.length - start else { return nil }
+    guard start <= snapshot.utf16Count, lineRange.length <= snapshot.utf16Count - start else {
+      return nil
+    }
     let range = NSRange(location: start, length: lineRange.length)
-    guard DocumentSearch.hash(source.substring(with: range)) == matchedTextHash else { return nil }
+    guard let text = try? snapshot.text(in: range), DocumentSearch.hash(text) == matchedTextHash
+    else { return nil }
     return range
   }
 }
@@ -54,10 +56,11 @@ public enum DocumentSearch {
     let pattern = options.wholeWord ? "(?<!\(word))\(literal)(?!\(word))" : literal
     let regex = try NSRegularExpression(
       pattern: pattern, options: options.caseSensitive ? [] : [.caseInsensitive])
-    let source = snapshot.text as NSString
-    var matches: [SearchMatch] = [], lineIndex = 0, hasMore = false
+    let text = snapshot.text
+    let source = text as NSString
+    var matches: [SearchMatch] = [], hasMore = false
     regex.enumerateMatches(
-      in: snapshot.text, options: [.reportProgress],
+      in: text, options: [.reportProgress],
       range: NSRange(location: 0, length: source.length)
     ) { match, _, stop in
       if Task.isCancelled {
@@ -70,14 +73,10 @@ public enum DocumentSearch {
         stop.pointee = true
         return
       }
-      while lineIndex + 1 < snapshot.lines.count,
-        snapshot.lines[lineIndex + 1].location <= range.location
-      { lineIndex += 1 }
-      guard snapshot.lines.indices.contains(lineIndex) else {
+      guard let line = snapshot.line(containingUTF16Offset: range.location) else {
         stop.pointee = true
         return
       }
-      let line = snapshot.lines[lineIndex]
       // Bound context in UTF-16 first, then expand only to composed-character boundaries.
       let start = max(line.location, range.location - 40)
       let length = min(160, line.location + line.length - start)
@@ -98,7 +97,8 @@ public enum DocumentSearch {
         SearchMatch(
           documentID: snapshot.documentID, generation: snapshot.revision, lineID: line.id,
           lineRange: NSRange(location: range.location - line.location, length: range.length),
-          matchedTextHash: hash(source.substring(with: range)), ordinal: lineIndex + 1,
+          matchedTextHash: hash(source.substring(with: range)),
+          ordinal: snapshot.ordinal(of: line.id)! + 1,
           snippet: snippet))
     }
     try Task.checkCancellation()

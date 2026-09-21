@@ -1,7 +1,19 @@
 import AppKit
+import JortDocument
 
 @MainActor public final class JortTextView: NSTextView {
-  let history = UndoManager()
+  let history = DocumentUndoManager()
+  var acceptedRevision: Int64?
+  private var paintedRevision: Int64?
+  var onFirstPaint: ((Int64) -> Void)?
+  public override func draw(_ dirtyRect: NSRect) {
+    super.draw(dirtyRect)
+    if let acceptedRevision, acceptedRevision != paintedRevision {
+      paintedRevision = acceptedRevision
+      DocumentInstrumentation.event("NativeTextFirstPaint", revision: acceptedRevision)
+      onFirstPaint?(acceptedRevision)
+    }
+  }
   // Native text mutations must not register a second, text-only undo action.
   public override var undoManager: UndoManager? { nil }
   public override func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
@@ -43,7 +55,6 @@ import AppKit
     super.viewDidChangeBackingProperties()
     onWindowGeometry?()
   }
-  var onTextChange: (() -> Void)?
   var onEscape: (() -> Bool)?
   var onToolKey: ((NSEvent) -> Bool)?
   var onToolDraw: ((NSRect) -> Void)?
@@ -133,10 +144,6 @@ import AppKit
   public override func drawBackground(in rect: NSRect) {
     super.drawBackground(in: rect)
     onToolDraw?(rect)
-  }
-  public override func didChangeText() {
-    super.didChangeText()
-    onTextChange?()
   }
   public override func cancelOperation(_ sender: Any?) {
     if onEscape?() != true { super.cancelOperation(sender) }

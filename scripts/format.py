@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-ROOTS = ('Jort', 'Sources', 'Tests', 'Tools')
+ROOTS = ('Jort', 'Sources', 'Tests', 'Tools', 'scripts/diagnostics')
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--check', action='store_true')
 args = parser.parse_args()
@@ -20,7 +20,8 @@ paths = subprocess.check_output(
 paths = sorted({p for p in paths if p.endswith('.swift') and (ROOT / p).is_file()})
 # Fail if a new tracked Swift root is introduced without an explicit policy decision.
 all_tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
-unknown = [p for p in all_tracked if p.endswith('.swift') and p.split('/')[0] not in ROOTS
+unknown = [p for p in all_tracked if p.endswith('.swift')
+           and not any(p.startswith(root + '/') for root in ROOTS)
            and not p.startswith(('Vendor/', 'openspec/', 'build-jort-v1/'))]
 if unknown:
     sys.exit('Unclassified Swift sources: ' + ', '.join(unknown))

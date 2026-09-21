@@ -33,8 +33,11 @@ final class RunPerformanceTests: StoreTestCase {
       try owner.apply(
         .init(
           baseRevision: owner.snapshot.revision, origin: .native,
-          mutation: .edit(
-            text: baseline.text + "\nRevision \(iteration)", range: nil, replacementLength: nil)))
+          mutation: .replace(
+            range: NSRange(
+              location: baseline.utf16Count, length: owner.snapshot.utf16Count - baseline.utf16Count
+            ),
+            text: "\nRevision \(iteration)")))
       let changed = owner.snapshot
       var start = clock()
       let entry = try await store.retain(
@@ -69,6 +72,15 @@ final class RunPerformanceTests: StoreTestCase {
     print(
       "PERF Run CrawlLargeDocument ms p95: search=\(p95(search)) (+100ms debounce), retain=\(p95(creation)), list=\(p95(browse)), decode=\(p95(decode)), compare=\(p95(comparison)), restore+save=\(p95(restore)), prune=\(p95(prune))"
     )
+
+    for (name, values) in [
+      ("search", search), ("history-retain", creation), ("history-list", browse),
+      ("history-decode", decode), ("history-compare", comparison),
+      ("restore-and-save", restore), ("history-prune", prune),
+    ] {
+      PerformanceDistribution.report(
+        name, fixture: "crawl-million", text: CrawlLargeDocument.text, samples: values, warmup: 2)
+    }
     if ProcessInfo.processInfo.environment["JORT_PERFORMANCE_ENFORCE"] == "1" {
       XCTAssertLessThan(p95(search) + 100, 200)
     }

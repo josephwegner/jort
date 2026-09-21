@@ -17,8 +17,10 @@ Xcode user data, generated AppIcon.icns and Python caches. Icon staging and pack
 tests also use system temporary directories. UI snapshots use the system temporary
 `jort-shell-snapshots` directory.
 
-First-party Swift roots: `Jort/`, `Sources/`, `Tests/`, `Tools/` (68 tracked files
-at inventory). Vendor and planning/archive trees are excluded.
+First-party Swift formatting roots: `Jort/`, `Sources/`, `Tests/`, `Tools/`, and
+`scripts/diagnostics/`. Standalone diagnostic probes follow the same formatting
+policy without becoming application build targets. Vendor and planning/archive
+trees are excluded; other tracked Swift roots are rejected until classified.
 
 ## Formatting
 
@@ -98,7 +100,7 @@ installed toolchain. XcodeGen must match `.xcodegen-version`.
 
 | Command | Enforcement and purpose |
 | --- | --- |
-| `python3 scripts/format.py` | Local mechanical formatting; includes new Swift files within the four explicit roots. |
+| `python3 scripts/format.py` | Local mechanical formatting; includes new Swift files within the explicit formatting roots. |
 | `python3 scripts/format.py --check` | Blocking local/CI byte-for-byte formatting check, without writes. |
 | `python3 scripts/check-project.py` | Blocking local/CI deterministic project/plist generation. Run `xcodegen generate` after changing project.yml and review the resulting project/scheme diff. |
 | `./scripts/test.sh` | Blocking correctness checks: foundation, native and packaging. Performance is conditional as below. |
@@ -149,3 +151,8 @@ must be reported rather than reclassified as informational performance output.
 
 - Final QuickJS audit: five translation units, 59 retained diagnostics, zero added
   or removed findings, and matching source/toolchain/compiler-flag provenance.
+
+Document diagnostics may import Apple’s `os` module for content-free signposts and
+scoped thread-safe work counters. This does not permit UI, storage, network, or
+service-locator dependencies in `JortDocument`. The dependency audit retains its
+negative fixtures for those edges.

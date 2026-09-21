@@ -9,34 +9,41 @@ import JortSettings
   var suppressedCompletion = false
   var completionArmed = false
   func update(
-    text value: String, selection: NSRange, packages catalog: [ToolPackage], acceptsCompletion: Bool
+    snapshot: DocumentSnapshot, selection: NSRange, packages catalog: [ToolPackage],
+    acceptsCompletion: Bool
   ) {
     guard completionArmed, !suppressedCompletion, acceptsCompletion, selection.length == 0 else {
       completion = nil
       return
     }
-    let text = value as NSString, caret = selection.location
-    guard caret <= text.length else {
+    let caret = selection.location
+    guard caret >= 0, caret <= snapshot.utf16Count else {
       completion = nil
       return
     }
     let start = max(0, caret - 65)
-    let prefix = text.substring(with: NSRange(location: start, length: caret - start))
-    guard let slash = prefix.lastIndex(of: "/") else {
+    guard let prefix = try? snapshot.text(in: NSRange(location: start, length: caret - start)),
+      let slash = prefix.lastIndex(of: "/")
+    else {
       completion = nil
       return
     }
     let offset = start + prefix[..<slash].utf16.count
     guard
       offset == 0
-        || UnicodeScalar(text.character(at: offset - 1)).map({
-          CharacterSet.whitespacesAndNewlines.contains($0)
-        }) == true
+        || (try? snapshot.utf16(in: NSRange(location: offset - 1, length: 1)).first).flatMap({ $0 })
+          .flatMap(UnicodeScalar.init).map({
+            CharacterSet.whitespacesAndNewlines.contains($0)
+          }) == true
     else {
       completion = nil
       return
     }
-    let query = text.substring(with: NSRange(location: offset, length: caret - offset))
+    guard let query = try? snapshot.text(in: NSRange(location: offset, length: caret - offset))
+    else {
+      completion = nil
+      return
+    }
     let packages = catalog.filter { $0.manifest.command.hasPrefix(query) }
     let range = NSRange(location: offset, length: caret - offset)
     let selected = completion?.0 == range ? min(completion?.2 ?? 0, max(0, packages.count - 1)) : 0

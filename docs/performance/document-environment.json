@@ -1,0 +1,61 @@
+{
+  "existingCeilings": {
+    "largePasteMs": 2000,
+    "launchMs": 2000,
+    "nativeEditP95Ms": 100,
+    "saveAndRecoveryP95Ms": 250,
+    "searchIncludingDebounceP95Ms": 200,
+    "serializationP95Ms": 250,
+    "transactionP95Ms": 100,
+    "viewportLayoutP95Ms": 100
+  },
+  "fixtures": {
+    "canvas-10000": {
+      "sha256UTF8": "1d7c44ccc37cf39f0698b1b2edb2fdf5ddace0cbfd0b4fa6125e2428a187c0b2",
+      "utf16Units": 690000
+    },
+    "crawl-million": {
+      "sha256UTF8": "764b919884b54c7065111cb3ff506580fac6bb17a175d0e17d2f69358245a301",
+      "utf16Units": 1000000
+    }
+  },
+  "gatePolicy": {
+    "baseline": "document-before.json",
+    "existingGates": "Unchanged in XCTest and CI; this evidence collector does not enable or replace them.",
+    "postChange": "document-after-optimized.json; all 20 process runs captured on the same reference runner. See document-after-optimized.md for absolute/relative variance. Every existing absolute ceiling passes without a budget or relative-allowance change. document-after.json preserves the intermediate capture that identified redundant persistence decodes.",
+    "processes": "Five independent processes for each suite and configuration, run serially.",
+    "scope": "Separate synchronous native acceptance, first native paint, prepared presentation convergence, viewport work and background save/history/recovery/restore distributions. First-paint/convergence metrics are new and have no before-change baseline.",
+    "smallSampleLimitation": "For 9, 10 or 35 measured samples, p99 is the maximum, not a well-resolved tail estimate.",
+    "warmupSamples": {
+      "historyAndSearch": 2,
+      "native": 5,
+      "save-and-recovery": 2,
+      "serialization": 1,
+      "transaction": 5
+    }
+  },
+  "protocol": {
+    "configurations": [
+      "Debug",
+      "Release"
+    ],
+    "percentile": "nearest-rank over post-warmup samples within each process",
+    "poolProcesses": false,
+    "reason": "Evidence collection only; existing test assertions and CI budgets are unchanged.",
+    "runsPerConfigurationPerSuite": 5,
+    "testability": "ENABLE_TESTABILITY=YES; Debug default, explicit for Release; optimization unchanged",
+    "timingEnforcement": false,
+    "warmup": "Initial samples omitted only from structured distributions; original gates use all samples."
+  },
+  "referenceRunner": {
+    "architecture": "arm64",
+    "cpu": "Apple M4 Pro",
+    "hardwareModel": "Mac16,7",
+    "memoryBytes": 51539607552,
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+    "runnerClass": "local-macos-arm64-document-baseline",
+    "swift": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+    "xcode": "Xcode 26.6\nBuild version 17F113"
+  },
+  "schemaVersion": 1
+}

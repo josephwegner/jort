@@ -1,4 +1,5 @@
 import AppKit
+import JortDocument
 
 struct PresentationDirtyReasons: OptionSet, Sendable {
   let rawValue: UInt16
@@ -29,6 +30,8 @@ struct PresentationDirtyReasons: OptionSet, Sendable {
   private var scheduled = false
   private var reconciling = false
   private var passes = 0
+  private var convergenceStart: TimeInterval?
+  var onConvergence: ((TimeInterval) -> Void)?
   var prepare: ((PresentationDirtyReasons) -> (() -> Void)?)?
   var state: State {
     State(
@@ -36,6 +39,7 @@ struct PresentationDirtyReasons: OptionSet, Sendable {
       scheduled: scheduled, reconciling: reconciling, passes: passes)
   }
   func invalidate(_ reason: PresentationDirtyReasons) {
+    if convergenceStart == nil { convergenceStart = ProcessInfo.processInfo.systemUptime }
     epoch &+= 1
     reasons.formUnion(reason)
     schedule()
@@ -48,6 +52,8 @@ struct PresentationDirtyReasons: OptionSet, Sendable {
     }
   }
   private func reconcile() {
+    let measurement = DocumentInstrumentation.begin("PreparedPresentation", revision: -1)
+    defer { DocumentInstrumentation.end(measurement) }
     scheduled = false
     guard !reconciling, !reasons.isEmpty else { return }
     reconciling = true
@@ -58,10 +64,17 @@ struct PresentationDirtyReasons: OptionSet, Sendable {
     if capturedEpoch == epoch, let commit {
       commit()
       committedEpoch = capturedEpoch
+      DocumentInstrumentation.event(
+        "PreparedPresentationCommitted", revision: Int64(clamping: capturedEpoch))
     } else if capturedEpoch != epoch {
       reasons.formUnion(capturedReasons)
     }
     reconciling = false
-    if !reasons.isEmpty { schedule() }
+    if !reasons.isEmpty {
+      schedule()
+    } else if committedEpoch == epoch, let start = convergenceStart {
+      convergenceStart = nil
+      onConvergence?(ProcessInfo.processInfo.systemUptime - start)
+    }
   }
 }

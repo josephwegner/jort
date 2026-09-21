@@ -356,11 +356,11 @@ import JortSettings
     mixed[1].phase = .processing
     mixed[1].output = nil
     mixed[1].outputHash = nil
-    let snapshot = DocumentSnapshot(
-      documentID: editor.state.documentID, text: editor.state.text, revision: editor.state.revision,
-      lines: editor.state.lines, landmarks: editor.state.landmarks, invocations: mixed)
+    let patch = DocumentPatch(
+      in: editor.state, expectedInvocations: editor.state.invocations,
+      invocations: mixed.map { .upsert($0) })
     try editor.apply(
-      .init(baseRevision: editor.state.revision, origin: .automation, mutation: .tools(snapshot)))
+      .init(baseRevision: editor.state.revision, origin: .automation, mutation: .patch(patch)))
     let locked = editor.state
     try editor.toolController.deletePending(in: all, expectedRevision: locked.revision)
     XCTAssertEqual(editor.state, locked)

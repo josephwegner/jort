@@ -6,6 +6,81 @@ import JortPersistence
 @testable import JortAppKit
 
 @MainActor final class EditorTests: EditorTestCase {
+  func testUndoBudgetEvictsWholeGroupsAndKeepsNewestOversizedGroup() throws {
+    let (controller, window) = try editor()
+    defer { window.orderOut(nil) }
+    let history = controller.textView.history
+    history.groupLimit = 3
+    for _ in 0..<5 {
+      insert(
+        "x", range: NSRange(location: controller.state.utf16Count, length: 0), into: controller)
+    }
+    XCTAssertEqual(history.retainedGroupCount, 3)
+    history.undo()
+    XCTAssertEqual(controller.state.text, "xxxx")
+    history.redo()
+    XCTAssertEqual(controller.state.text, "xxxxx")
+    history.payloadLimit = 1
+    history.beginUndoGrouping()
+    controller.textView.insertText("a", replacementRange: NSRange(location: 5, length: 0))
+    controller.textView.insertText("b", replacementRange: NSRange(location: 6, length: 0))
+    history.endUndoGrouping()
+    XCTAssertEqual(history.retainedGroupCount, 1)
+    XCTAssertGreaterThan(history.retainedPayloadBytes, history.payloadLimit)
+    history.undo()
+    XCTAssertEqual(controller.state.text, "xxxxx")
+    XCTAssertFalse(history.canUndo)
+    history.redo()
+    XCTAssertEqual(controller.state.text, "xxxxxab")
+    history.removeAllActions()
+    XCTAssertEqual(history.retainedPayloadBytes, 0)
+    XCTAssertEqual(history.retainedGroupCount, 0)
+  }
+
+  func testUntrackedServiceReplacementUsesBoundedDiff() throws {
+    let (controller, window) = try editor()
+    defer { window.orderOut(nil) }
+    insert("first\n日本語\nlast", range: NSRange(location: 0, length: 0), into: controller)
+    let revision = controller.state.revision
+    let recorder = DocumentWorkRecorder()
+    controller.textView.history.beginUndoGrouping()
+    DocumentInstrumentation.$recorder.withValue(recorder) {
+      controller.textView.textStorage?.replaceCharacters(
+        in: NSRange(location: 6, length: 3), with: "🦊")
+      controller.textView.didChangeText()
+    }
+    controller.textView.history.endUndoGrouping()
+    XCTAssertEqual(controller.state.text, "first\n🦊\nlast")
+    XCTAssertEqual(controller.state.revision, revision + 1)
+    XCTAssertNil(recorder.snapshot[.flattenCalls])
+    XCTAssertNil(recorder.snapshot[.completeValidations])
+    controller.textView.undo(nil)
+    XCTAssertEqual(controller.state.text, "first\n日本語\nlast")
+  }
+
+  func testOrdinaryNativeCommitDoesNotFlattenDocument() throws {
+    let (controller, window) = try editor()
+    defer { window.orderOut(nil) }
+    var work: [Int] = []
+    for count in [1000, 10_000] {
+      insert(
+        String(repeating: "short line\n", count: count),
+        range: NSRange(location: 0, length: controller.state.utf16Count), into: controller)
+      let revision = controller.state.revision
+      let recorder = DocumentWorkRecorder()
+      DocumentInstrumentation.$recorder.withValue(recorder) {
+        insert("x", range: NSRange(location: 1, length: 0), into: controller)
+      }
+      XCTAssertEqual(controller.state.revision, revision + 1)
+      XCTAssertNil(recorder.snapshot[.flattenCalls])
+      XCTAssertNil(recorder.snapshot[.completeValidations])
+      work.append(recorder.snapshot[.visitedLines, default: 0])
+    }
+    // Native layout is included; ten times more offscreen lines may add index-path
+    // work but must not add a scan proportional to the document's line count.
+    XCTAssertLessThanOrEqual(work[1], work[0] + 256)
+  }
+
   func testNativeRandomUndoRedoUsesCoordinator() throws {
     let (controller, window) = try editor()
     defer { window.orderOut(nil) }
@@ -128,6 +203,13 @@ import JortPersistence
         .landmark(Landmark(lineID: controller.state.lines[position].id, emoji: "🌲")))
     }
     var times: [Double] = [], layout: [Double] = [], navigation: [Double] = []
+    var paint: [Double] = [], convergence: [Double] = [], acceptance: [Int64: TimeInterval] = [:]
+    controller.textView.onFirstPaint = { revision in
+      if let start = acceptance.removeValue(forKey: revision) {
+        paint.append(ProcessInfo.processInfo.systemUptime - start)
+      }
+    }
+    controller.presentationCoordinator.onConvergence = { convergence.append($0) }
     for index in 0..<40 {
       let line = controller.state.lines[(index * 97) % 10000]
       let navigationStart = ProcessInfo.processInfo.systemUptime
@@ -138,6 +220,7 @@ import JortPersistence
       let begin = ProcessInfo.processInfo.systemUptime
       insert("x", range: NSRange(location: line.location, length: 0), into: controller)
       times.append(ProcessInfo.processInfo.systemUptime - begin)
+      acceptance[controller.state.revision] = begin
       let layoutStart = ProcessInfo.processInfo.systemUptime
       controller.scroll.contentView.scroll(to: NSPoint(x: 0, y: CGFloat(index * 48)))
       controller.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
@@ -145,6 +228,8 @@ import JortPersistence
       layout.append(ProcessInfo.processInfo.systemUptime - layoutStart)
       try await Task.sleep(for: .milliseconds(20))
     }
+    controller.textView.onFirstPaint = nil
+    controller.presentationCoordinator.onConvergence = nil
     XCTAssertGreaterThan(controller.coordinator.committedRevision ?? 0, 0)
     let afterEdits = controller.state
     for _ in 0..<40 { controller.textView.undo(nil) }
@@ -163,6 +248,18 @@ import JortPersistence
     print(
       "PERF native: launch=\(launch * 1000)ms edit p95=\(p95(times))ms navigation p95=\(p95(navigation))ms scroll/gutter p95=\(p95(layout))ms undoGroups=\(controller.textView.history.levelsOfUndo)"
     )
+
+    for (name, values) in [
+      ("native-edit", times), ("native-navigation", navigation), ("viewport-layout", layout),
+      ("native-first-paint", paint), ("prepared-convergence", convergence),
+    ] {
+      guard values.count > 5 else {
+        XCTFail("Insufficient samples for \(name): \(values.count)")
+        continue
+      }
+      PerformanceDistribution.report(
+        name, fixture: "canvas-10000", text: content, samples: values, warmup: 5)
+    }
     if ProcessInfo.processInfo.environment["JORT_PERFORMANCE_ENFORCE"] == "1" {
       XCTAssertLessThan(launch, 2)
       XCTAssertLessThan(p95(times), 100)
