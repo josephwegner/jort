@@ -32,4 +32,22 @@ import AppKit
       mounted.removeValue(forKey: key)?.removeFromSuperview()
     }
   }
+  func remove(for invocationIDs: Set<UUID>) -> [NSView] {
+    let keys = mounted.keys.filter { key in
+      invocationIDs.contains { key.hasPrefix($0.uuidString + ".") }
+    }
+    let removed = keys.compactMap { key -> NSView? in
+      guard let view = mounted.removeValue(forKey: key) else { return nil }
+      if let spinner = view as? NSProgressIndicator { spinner.stopAnimation(nil) }
+      view.removeFromSuperview()
+      return view
+    }
+    let identities = Set(removed.map(ObjectIdentifier.init))
+    desired.subtract(keys)
+    ordered.removeAll { identities.contains(ObjectIdentifier($0)) }
+    snapshot.removeAll { control in
+      invocationIDs.contains { control.identity.hasPrefix($0.uuidString + ".") }
+    }
+    return removed
+  }
 }

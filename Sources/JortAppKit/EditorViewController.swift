@@ -274,6 +274,20 @@ import JortSettings
   private func observeTransactions() {
     coordinator.onTransaction = { [weak self] result in
       guard let self else { return }
+      if !result.before.invocations.isEmpty {
+        let beforeInvocationIDs = Set(result.before.invocations.map(\.id))
+        let survivingInvocationIDs = Set(result.after.invocations.map(\.id))
+        let removedInvocationIDs = beforeInvocationIDs.subtracting(survivingInvocationIDs)
+        if !removedInvocationIDs.isEmpty {
+          // Geometry for surviving calls can shift when the removed call changes text.
+          // Retire their old paths now; the scheduled pass rebuilds them after layout.
+          let affectedSurvivorIDs =
+            result.before.text == result.after.text
+            ? Set<UUID>() : beforeInvocationIDs.intersection(survivingInvocationIDs)
+          self.toolPresentation?.removePresentation(
+            for: removedInvocationIDs, affectedSurvivorIDs: affectedSurvivorIDs)
+        }
+      }
       if result.transaction.origin != .native && result.transaction.undoPolicy == .register {
         self.recordUndo(result.before, selection: self.textView.selectedRange())
       }

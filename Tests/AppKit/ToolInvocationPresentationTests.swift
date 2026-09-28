@@ -182,20 +182,130 @@ import JortSettings
     let frame = try XCTUnwrap(editor.toolPresentation.geometry(for: output).first)
     let point = NSPoint(x: frame.minX + 5, y: frame.midY)
     XCTAssertTrue(editor.toolPresentation.containsDecoration(at: point, pending: true))
+    let mergeButton = try XCTUnwrap(
+      editor.textView.subviews.compactMap { $0 as? NSButton }.first {
+        $0.accessibilityLabel() == "Merge"
+      })
+    XCTAssertTrue(window.makeFirstResponder(mergeButton))
 
-    try editor.toolController.merge(id)
-    await settlePresentationAsync(editor)
-    XCTAssertTrue(editor.state.invocations.isEmpty)
-
-    // Flush the merge redraw before observing the fast path itself. The final
-    // reconciliation must request a new text-view draw to replace old pixels.
     editor.textView.displayIfNeeded()
     var draws = 0
     editor.textView.onToolDraw = { _ in draws += 1 }
-    editor.toolPresentation.reconcileControls()
+    let passesBeforeMerge = editor.presentationCoordinator.state.passes
+    try editor.toolController.merge(id)
+    XCTAssertTrue(editor.state.invocations.isEmpty)
+    XCTAssertFalse(editor.toolPresentation.containsDecoration(at: point, pending: true))
+    XCTAssertNil(mergeButton.superview)
+    XCTAssertTrue(window.firstResponder === editor.textView)
+    XCTAssertEqual(editor.presentationCoordinator.state.passes, passesBeforeMerge)
+
+    // Merging the final invocation clears presentation data and must replace
+    // the previously drawn decoration immediately.
     editor.textView.displayIfNeeded()
     XCTAssertGreaterThan(draws, 0)
-    XCTAssertFalse(editor.toolPresentation.containsDecoration(at: point, pending: true))
+    await settlePresentationAsync(editor)
+  }
+
+  func testUndoRemovesInvocationDecorationImmediately() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    let tool = package("calc")
+    editor.toolPackages = [tool]
+    editor.textView.insertText("/calc", replacementRange: NSRange(location: 0, length: 0))
+    editor.textView.history.removeAllActions()
+    try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
+    let token = try XCTUnwrap(editor.state.invocations.first?.token.resolve(in: editor.state))
+    let frame = try XCTUnwrap(editor.toolPresentation.geometry(for: token).first)
+    let point = NSPoint(x: frame.minX + 5, y: frame.midY)
+    XCTAssertTrue(editor.toolPresentation.containsDecoration(at: point, pending: false))
+
+    let passesBeforeUndo = editor.presentationCoordinator.state.passes
+    editor.textView.history.undo()
+    XCTAssertTrue(editor.state.invocations.isEmpty)
+    XCTAssertFalse(editor.toolPresentation.containsDecoration(at: point, pending: false))
+    XCTAssertEqual(editor.presentationCoordinator.state.passes, passesBeforeUndo)
+  }
+
+  func testDeletingOneInvocationRetiresShiftedDecorationUntilRebuild() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    let tool = package("calc")
+    editor.toolPackages = [tool]
+    editor.textView.insertText("/calc and /calc", replacementRange: NSRange(location: 0, length: 0))
+    try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
+    let firstID = try XCTUnwrap(editor.state.invocations.first?.id)
+    editor.toolController.submit(firstID)
+    try await pending(editor, id: firstID)
+    let secondToken = (editor.state.text as NSString).range(of: "/calc", options: .backwards)
+    try editor.toolController.accept(tool, token: secondToken, space: false)
+    await settlePresentationAsync(editor)
+    let secondID = try XCTUnwrap(editor.state.invocations.last?.id)
+    editor.toolController.submit(secondID)
+    try await pending(editor, id: secondID)
+
+    func point(for id: UUID) throws -> NSPoint {
+      let invocation = try XCTUnwrap(editor.state.invocations.first { $0.id == id })
+      let output = try XCTUnwrap(invocation.output?.resolve(in: editor.state))
+      let frame = try XCTUnwrap(editor.toolPresentation.geometry(for: output).first)
+      return NSPoint(x: frame.minX + 5, y: frame.midY)
+    }
+    let firstPoint = try point(for: firstID), secondPoint = try point(for: secondID)
+    XCTAssertTrue(editor.toolPresentation.containsDecoration(at: firstPoint, pending: true))
+    XCTAssertTrue(editor.toolPresentation.containsDecoration(at: secondPoint, pending: true))
+
+    let passesBeforeDelete = editor.presentationCoordinator.state.passes
+    try editor.toolController.deletePending(
+      in: NSRange(location: 1, length: 1), expectedRevision: editor.state.revision)
+    XCTAssertEqual(editor.state.invocations.map(\.id), [secondID])
+    XCTAssertFalse(editor.toolPresentation.containsDecoration(at: firstPoint, pending: true))
+    XCTAssertFalse(editor.toolPresentation.containsDecoration(at: secondPoint, pending: true))
+    XCTAssertEqual(editor.presentationCoordinator.state.passes, passesBeforeDelete)
+    await settlePresentationAsync(editor)
+    XCTAssertTrue(
+      editor.toolPresentation.containsDecoration(at: try point(for: secondID), pending: true))
+  }
+
+  func testConfirmedDeleteRemovesDecorationInsideTransactionCallback() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    let tool = package("calc")
+    editor.toolPackages = [tool]
+    editor.textView.insertText("/calc", replacementRange: NSRange(location: 0, length: 0))
+    try editor.toolController.accept(tool, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
+    let id = try XCTUnwrap(editor.state.invocations.first?.id)
+    editor.toolController.submit(id)
+    try await pending(editor, id: id)
+    let output = try XCTUnwrap(editor.state.invocations[0].output?.resolve(in: editor.state))
+    let frame = try XCTUnwrap(editor.toolPresentation.geometry(for: output).first)
+    let point = NSPoint(x: frame.minX + 5, y: frame.midY)
+    XCTAssertTrue(editor.toolPresentation.containsDecoration(at: point, pending: true))
+
+    let previousOnTransaction = editor.coordinator.onTransaction
+    defer { editor.coordinator.onTransaction = previousOnTransaction }
+    var observedRemoval = false
+    let passesBeforeDelete = editor.presentationCoordinator.state.passes
+    editor.coordinator.onTransaction = { result in
+      previousOnTransaction?(result)
+      guard result.before.invocations.contains(where: { $0.id == id }),
+        result.after.invocations.isEmpty
+      else { return }
+      observedRemoval = true
+      XCTAssertFalse(editor.toolPresentation.containsDecoration(at: point, pending: true))
+      XCTAssertEqual(editor.presentationCoordinator.state.passes, passesBeforeDelete)
+    }
+
+    editor.textView.setSelectedRange(NSRange(location: 1, length: 1))
+    editor.textView.deleteBackward(nil)
+    let sheet = try XCTUnwrap(window.attachedSheet)
+    window.endSheet(sheet, returnCode: .alertFirstButtonReturn)
+    for _ in 0..<100 where !observedRemoval {
+      try await Task.sleep(for: .milliseconds(2))
+    }
+    XCTAssertTrue(observedRemoval)
+    XCTAssertTrue(editor.state.invocations.isEmpty)
   }
 
   func testEmptyPresentationDoesNotRequestRedraw() async throws {

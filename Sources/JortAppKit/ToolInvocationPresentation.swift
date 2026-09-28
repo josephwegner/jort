@@ -70,6 +70,27 @@ import JortSettings
     completionController.suppressedCompletion = true
   }
   func accessibilityChildren() -> [Any] { accessibilityViews.filter { !$0.isHidden } }
+  func removePresentation(
+    for removedIDs: Set<UUID>, affectedSurvivorIDs: Set<UUID> = []
+  ) {
+    let retiredIDs = removedIDs.union(affectedSurvivorIDs)
+    guard !retiredIDs.isEmpty, let editor else { return }
+    let firstResponder = editor.view.window?.firstResponder
+    paintSnapshot = paintSnapshot.removing(retiredIDs)
+    let removed = mounts.remove(for: retiredIDs) + overlays.remove(for: retiredIDs)
+    let identities = Set(removed.map(ObjectIdentifier.init))
+    controls.removeAll { identities.contains(ObjectIdentifier($0)) }
+    accessibilityViews.removeAll { identities.contains(ObjectIdentifier($0)) }
+    nextAccessibilityViews.removeAll { identities.contains(ObjectIdentifier($0)) }
+    if removed.contains(where: { view in
+      firstResponder === view || (firstResponder as? NSView)?.isDescendant(of: view) == true
+    }) {
+      editor.view.window?.makeFirstResponder(editor.textView)
+    }
+    if let focusedBoundary, retiredIDs.contains(focusedBoundary.0) { self.focusedBoundary = nil }
+    editor.textView.window?.invalidateCursorRects(for: editor.textView)
+    editor.textView.setNeedsDisplay(editor.textView.visibleRect)
+  }
   func armCommittedSlash() {
     completionController.completionArmed = editor?.toolController.focused() == nil
     completionController.suppressedCompletion = false
@@ -194,7 +215,7 @@ import JortSettings
     let snapshot = editor.state
     let hadPresentation = !paintSnapshot.shapes.isEmpty || !controls.isEmpty
     var refreshDisplay = invalidateDisplay
-    var shapes: [(NSBezierPath, NSColor)] = []
+    var shapes: [InvocationPaintSnapshot.Shape] = []
     mounts.begin()
     controls = []
     nextAccessibilityViews = []
@@ -258,7 +279,9 @@ import JortSettings
       else { continue }
       let anchor = prepared.anchor, controlFrame = prepared.controlFrame
       let sourceEndsLine = prepared.sourceEndsLine, inlineActions = prepared.inlineActions
-      shapes += prepared.shapes
+      shapes += prepared.shapes.map {
+        .init(invocationID: invocation.id, path: $0.0, color: $0.1)
+      }
       switch invocation.phase {
       case .inputting:
         if inlineActions {
@@ -335,7 +358,9 @@ import JortSettings
         promptValue: editor.toolController.prompt(for: invocation.id), isCurrent: controlIsCurrent)
       nextAccessibilityViews += overlay.views
       if !overlay.connectors.isEmpty {
-        shapes.append((Self.union(overlay.connectors), .systemTeal))
+        shapes.append(
+          .init(
+            invocationID: invocation.id, path: Self.union(overlay.connectors), color: .systemTeal))
       }
     }
     nextAccessibilityViews += overlays.finish(snapshot: snapshot)

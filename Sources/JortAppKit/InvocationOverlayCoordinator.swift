@@ -156,4 +156,27 @@ enum InvocationOverlayAction {
     }
     return retainedFocus
   }
+  func remove(for invocationIDs: Set<UUID>) -> [NSView] {
+    var removed: [NSView] = []
+    for id in invocationIDs {
+      knownPrompts.remove(id)
+      visiblePrompts.remove(id)
+      guard let prompt = prompts.removeValue(forKey: id) else { continue }
+      if parent?.window?.firstResponder === prompt.input {
+        parent?.window?.makeFirstResponder(textView)
+      }
+      prompt.removeFromSuperview()
+      removed.append(prompt)
+    }
+    for key in handles.keys.filter({ key in
+      invocationIDs.contains { key.hasPrefix($0.uuidString + ".") }
+    }) {
+      guard let handle = handles.removeValue(forKey: key) else { continue }
+      visibleHandles.remove(key)
+      if parent?.window?.firstResponder === handle { parent?.window?.makeFirstResponder(textView) }
+      handle.removeFromSuperview()
+      removed.append(handle)
+    }
+    return removed
+  }
 }
