@@ -27,6 +27,10 @@ import JortToolContracts
     warning: @escaping @MainActor (String) -> Void
   ) {
     guard jobs[identity.invocationID] == nil, runs.count < 1000 else { return }
+    guard package.manifest.inputMode != .contextual || !input.content.isEmpty else {
+      warning("Enter content within the tool’s input limit.")
+      return
+    }
     let request: ToolExecutionRequest
     do {
       request = try ToolExecutionRequest(identity: identity, package: package, input: input)
@@ -61,7 +65,12 @@ import JortToolContracts
       case .validate:
         let executor = executor, request = run.request
         jobs[id] = Task { [weak self] in
-          let result = await executor.validate(request.package, input: request.input)
+          let result: ToolExecutionResult
+          if let generationAware = executor as? any GenerationAwareToolExecuting {
+            result = await generationAware.validate(request)
+          } else {
+            result = await executor.validate(request.package, input: request.input)
+          }
           guard !Task.isCancelled else { return }
           self?.jobs.removeValue(forKey: id)
           self?.send(identity, .validation(identity, error: result.error))
@@ -74,8 +83,13 @@ import JortToolContracts
             guard !Task.isCancelled else { return }
             self?.send(identity, .processing(identity))
           }
-          let result = request.bounded(
-            await executor.execute(request.package, input: request.input))
+          let raw: ToolExecutionResult
+          if let generationAware = executor as? any GenerationAwareToolExecuting {
+            raw = await generationAware.execute(request)
+          } else {
+            raw = await executor.execute(request.package, input: request.input)
+          }
+          let result = request.bounded(raw)
           indicator.cancel()
           guard !Task.isCancelled else { return }
           self?.jobs.removeValue(forKey: id)

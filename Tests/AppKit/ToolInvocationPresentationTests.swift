@@ -167,4 +167,48 @@ import JortSettings
     XCTAssertEqual(editor.state.text, "prefix before /calc  after")
   }
 
+  func testRemovingFinalInvocationRequestsRedraw() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    let package = package("calc")
+    editor.toolPackages = [package]
+    editor.textView.insertText("/calc", replacementRange: NSRange(location: 0, length: 0))
+    try editor.toolController.accept(package, token: NSRange(location: 0, length: 5), space: false)
+    await settlePresentationAsync(editor)
+    let id = try XCTUnwrap(editor.state.invocations.first?.id)
+    editor.toolController.submit(id)
+    try await pending(editor, id: id)
+    let output = try XCTUnwrap(editor.state.invocations[0].output?.resolve(in: editor.state))
+    let frame = try XCTUnwrap(editor.toolPresentation.geometry(for: output).first)
+    let point = NSPoint(x: frame.minX + 5, y: frame.midY)
+    XCTAssertTrue(editor.toolPresentation.containsDecoration(at: point, pending: true))
+
+    try editor.toolController.merge(id)
+    await settlePresentationAsync(editor)
+    XCTAssertTrue(editor.state.invocations.isEmpty)
+
+    // Flush the merge redraw before observing the fast path itself. The final
+    // reconciliation must request a new text-view draw to replace old pixels.
+    editor.textView.displayIfNeeded()
+    var draws = 0
+    editor.textView.onToolDraw = { _ in draws += 1 }
+    editor.toolPresentation.reconcileControls()
+    editor.textView.displayIfNeeded()
+    XCTAssertGreaterThan(draws, 0)
+    XCTAssertFalse(editor.toolPresentation.containsDecoration(at: point, pending: true))
+  }
+
+  func testEmptyPresentationDoesNotRequestRedraw() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    editor.textView.displayIfNeeded()
+    var draws = 0
+    editor.textView.onToolDraw = { _ in draws += 1 }
+
+    editor.toolPresentation.reconcileControls()
+    editor.textView.displayIfNeeded()
+
+    XCTAssertEqual(draws, 0)
+  }
+
 }

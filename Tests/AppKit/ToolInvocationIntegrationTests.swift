@@ -7,7 +7,97 @@ import JortPersistence
 import JortSettings
 @testable import JortAppKit
 
+private actor SuspendedToolExecutor: ToolExecuting {
+  private var validations: [CheckedContinuation<ToolExecutionResult, Never>] = []
+  private var executions: [CheckedContinuation<ToolExecutionResult, Never>] = []
+
+  func validate(_: ToolPackage, input _: ToolExecutionInput) async -> ToolExecutionResult {
+    await withCheckedContinuation { validations.append($0) }
+  }
+
+  func execute(_: ToolPackage, input _: ToolExecutionInput) async -> ToolExecutionResult {
+    await withCheckedContinuation { executions.append($0) }
+  }
+
+  var validating: Bool { !validations.isEmpty }
+  var executing: Bool { !executions.isEmpty }
+  func validation(_ result: ToolExecutionResult) {
+    validations.removeFirst().resume(returning: result)
+  }
+  func result(_ result: ToolExecutionResult) { executions.removeFirst().resume(returning: result) }
+}
+
 @MainActor final class ToolInvocationIntegrationTests: ToolInvocationTestCase {
+  func testTerminalFailurePreservesCanonicalTextAndEditingRemainsResponsive() async throws {
+    let terminalBrokerFailures: [ToolFailureCode] = [
+      .unavailable, .busy, .launch, .sandboxBootstrap, .cpuLimit, .engineLimit, .crash,
+      .timeout, .cancelled, .outputLimit, .protocolError, .malformedResponse, .internalError,
+    ]
+
+    for code in terminalBrokerFailures {
+      let (editor, window) = try await editor()
+      defer { window.orderOut(nil) }
+      let executor = SuspendedToolExecutor()
+      editor.toolInvocationCoordinator = ToolInvocationCoordinator(executor: executor)
+      let tool = package("failure", output: "MUST NOT PUBLISH")
+      editor.toolPackages = [tool]
+      editor.textView.insertText("/failure", replacementRange: NSRange(location: 0, length: 0))
+      try editor.toolController.accept(tool, token: NSRange(location: 0, length: 8), space: true)
+      let id = try XCTUnwrap(editor.state.invocations.first?.id)
+      let canonical = editor.state.text
+      let original = try XCTUnwrap(editor.state.invocations.first)
+
+      editor.toolController.submit(id)
+      try await completeValidationAndWaitForExecution(executor)
+      let message = "JavaScript broker \(code.rawValue) failure."
+      await executor.result(.init(failure: .init(code, message: message)))
+      try await error(editor, id: id)
+
+      let failed = try XCTUnwrap(editor.state.invocations.first)
+      XCTAssertEqual(editor.state.text, canonical, "code: \(code)")
+      XCTAssertEqual(failed.id, original.id, "code: \(code)")
+      XCTAssertEqual(failed.token, original.token, "code: \(code)")
+      XCTAssertEqual(failed.scope, original.scope, "code: \(code)")
+      XCTAssertEqual(failed.sourceHash, original.sourceHash, "code: \(code)")
+      XCTAssertNil(failed.output, "code: \(code)")
+      XCTAssertEqual(failed.message, message, "code: \(code)")
+      XCTAssertFalse(editor.state.text.contains("MUST NOT PUBLISH"), "code: \(code)")
+
+      editor.textView.insertText("unrelated", replacementRange: editor.textView.selectedRange())
+      XCTAssertEqual(editor.state.text, canonical + "unrelated", "code: \(code)")
+
+      let healthyToken = NSRange(location: editor.state.text.utf16.count, length: 0)
+      editor.textView.insertText("/failure", replacementRange: healthyToken)
+      try editor.toolController.accept(
+        tool, token: NSRange(location: healthyToken.location, length: 8), space: false)
+      let healthyID = try XCTUnwrap(editor.state.invocations.last?.id)
+      editor.toolController.submit(healthyID)
+      try await completeValidationAndWaitForExecution(executor)
+      await executor.result(.init(output: "HEALTHY"))
+      try await pending(editor, id: healthyID)
+      XCTAssertNotNil(
+        editor.state.invocations.first(where: { $0.id == healthyID })?.output, "code: \(code)")
+      XCTAssertEqual(editor.state.text, canonical + "unrelated/failureHEALTHY", "code: \(code)")
+    }
+  }
+
+  private func completeValidationAndWaitForExecution(_ executor: SuspendedToolExecutor) async throws
+  {
+    for _ in 0..<500 {
+      if await executor.validating { break }
+      try await Task.sleep(for: .milliseconds(2))
+    }
+    let isValidating = await executor.validating
+    XCTAssertTrue(isValidating)
+    await executor.validation(.init(output: ""))
+    for _ in 0..<500 {
+      if await executor.executing { break }
+      try await Task.sleep(for: .milliseconds(2))
+    }
+    let isExecuting = await executor.executing
+    XCTAssertTrue(isExecuting)
+  }
+
   func testCompletedGenerationRejectsRepeatSubmitAndPreservesDismissUndo() async throws {
     let (editor, window) = try await editor()
     defer { window.orderOut(nil) }

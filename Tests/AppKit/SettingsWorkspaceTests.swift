@@ -115,7 +115,7 @@ import JortPersistence
     _ = NSApplication.shared
     let directory = try root()
     let registry = ToolPackageRegistry(
-      validator: RuntimePackageValidator(),
+      validator: RuntimePackageValidator(client: .testWorker),
       bundledDirectory: directory.appendingPathComponent("Bundled"),
       installedDirectory: directory.appendingPathComponent("Tools"))
     let store = ownStore(
@@ -154,7 +154,7 @@ import JortPersistence
       to: URL(fileURLWithPath: "/private/tmp/jort-feedback2-settings.png"))
     let catalog = try await registry.inspect()
     let package = try XCTUnwrap(catalog.executable.first { $0.manifest.command == "/echo" })
-    let result = await ToolRuntime.execute(package, input: .init(content: "hello"))
+    let result = await ToolRuntime.testExecute(package, input: .init(content: "hello"))
     XCTAssertEqual(result.output, "hello")
     let editor = EditorViewController(
       persistence: ownPersistence(directory: directory.appendingPathComponent("Document")))
@@ -208,7 +208,7 @@ extension SettingsWorkspaceTests {
     _ = NSApplication.shared
     let directory = try root(),
       registry = ToolPackageRegistry(
-        validator: RuntimePackageValidator(),
+        validator: RuntimePackageValidator(client: .testWorker),
         bundledDirectory: directory.appendingPathComponent("empty"),
         installedDirectory: directory.appendingPathComponent("tools"))
     let store = ownStore(

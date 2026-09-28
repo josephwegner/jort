@@ -201,6 +201,11 @@ if args.lane == "quickjs":
                     stream.write(summary)
             sys.exit(0)
 sdk = subprocess.check_output(["xcrun", "--show-sdk-path"], env=env, text=True).strip()
+first_party_flags = (
+    ["-I", "Sources/JortJavaScriptProtocol", "-fblocks"]
+    if args.lane == "first-party"
+    else []
+)
 
 
 def analyze_source(item):
@@ -214,6 +219,7 @@ def analyze_source(item):
         "-isysroot",
         sdk,
         *compiler_flags,
+        *first_party_flags,
         "-Xanalyzer",
         "-analyzer-output=plist",
         source,

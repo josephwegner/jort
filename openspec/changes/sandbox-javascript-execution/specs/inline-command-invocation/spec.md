@@ -9,7 +9,7 @@ Jort SHALL map each broker/worker result, validation failure, busy/unavailable s
 - **AND** broker/worker code never writes document text or invocation metadata directly
 
 #### Scenario: Worker fails before publication
-- **WHEN** validation, launch, sandbox bootstrap, timeout, CPU/memory limit, crash, cancellation, protocol, or output-bound failure occurs
+- **WHEN** validation, launch, sandbox bootstrap, timeout, CPU or engine limit, crash, cancellation, protocol, or output-bound failure occurs
 - **THEN** the reducer enters the applicable invocation-local actionable state with no partial output publication
 - **AND** unrelated editing and invocations remain available
 

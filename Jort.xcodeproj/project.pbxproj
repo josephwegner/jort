@@ -8,69 +8,94 @@
 
 /* Begin PBXBuildFile section */
 		007987721E9DC348256E3E06 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
-		00DF8CF4B9867B9164CCE99C /* quickjs-atom.h in Headers */ = {isa = PBXBuildFile; fileRef = FDFBEC650856CCBC9A17EB4B /* quickjs-atom.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		0125E4528B8CA75FE1BE52F6 /* JortBrokerEnvelopeTests.m in Sources */ = {isa = PBXBuildFile; fileRef = BE189ED18D9C4EA58DA5FB89 /* JortBrokerEnvelopeTests.m */; };
 		0127C3F439CC5E18C1D53134 /* BoundedRecoveryReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7989F43F0E7C8A77F64A9A73 /* BoundedRecoveryReader.swift */; };
+		01B5CA24E55AA32866C09292 /* WorkerProcessJavaScriptTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2787E228BA8767FA83E78714 /* WorkerProcessJavaScriptTransport.swift */; };
 		01BF871E54FD37F0704A5882 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
+		02268323F00137679C93DB7C /* JortJavaScriptClient.c in Sources */ = {isa = PBXBuildFile; fileRef = 033756C1C1C156E291C71692 /* JortJavaScriptClient.c */; };
 		03463D18696D9274609B3306 /* ModelCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC8335D3047ECDA83D5400D6 /* ModelCredentials.swift */; };
 		037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF8341534A77B39BFA2904E /* PerformanceTests.swift */; };
 		04DFE6B5D74DD7D82466B457 /* HistoryWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */; };
 		070D3989A0D3CBC220564869 /* ToolExecution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C856D6CE50FFC9A1F3F8FB /* ToolExecution.swift */; };
 		0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACEB5981A7D1291606F22F4 /* EditorTests.swift */; };
 		0AED284D86765A6BCF56004B /* RecoveryControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081DE0F1FB086C45F71F5744 /* RecoveryControlsTests.swift */; };
+		0B7299E83DAD1D69739F855F /* SandboxHarness.c in Sources */ = {isa = PBXBuildFile; fileRef = 7967E916C4F60BEEA892365B /* SandboxHarness.c */; };
 		0C2A38D159A769C4AF52B67A /* PresentationReconciliationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AC318C0FF25C12E5211E4E /* PresentationReconciliationTests.swift */; };
 		0C314F158147AB6B69DDAC5D /* ToolModelIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79EFEA337F5FD223D6F30419 /* ToolModelIntegrationTests.swift */; };
+		0C5A81EABC8E20CE7B6BB43E /* quickjs.c in Sources */ = {isa = PBXBuildFile; fileRef = 164CE786366A1FEF95DB8755 /* quickjs.c */; };
 		0DF5333382446AA5347C77A0 /* FakeModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */; };
+		0E5B09CBE4B8B25B83E5AD93 /* XPCJavaScriptBrokerTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D1FD694B8CD47CE68F6A16 /* XPCJavaScriptBrokerTransport.swift */; };
 		0ED27379C59E37FD345796D7 /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
 		0FCDA2CFF825108ED21595B4 /* InvocationOverlayCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 835FDD3D96B286D62F697154 /* InvocationOverlayCoordinator.swift */; };
 		105252729BE95E5A1F10E17D /* Transactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B872610ED836A61E96ED8DA /* Transactions.swift */; };
 		10873CE5BA391F680781471A /* PresentationGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2245DA376322A597F5E21C41 /* PresentationGeometry.swift */; };
 		10958F2E0818D271D9BA9229 /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		10AE41BF4276269B32611549 /* JortJavaScript.c in Sources */ = {isa = PBXBuildFile; fileRef = 3BCF6DF374DEC19C364B724A /* JortJavaScript.c */; };
 		10C248870C4B604A068C3CD6 /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD024A9EEA12F030339D9451 /* SettingsModels.swift */; };
 		10C9612014CE9BD8DBE6A2E5 /* PresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D832102816479BC3634258FF /* PresentationPolicyTests.swift */; };
 		12545FCDDE669EA9FAB9629A /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */; };
-		12581E91DCF1F45FDDE8C168 /* JortJavaScript.c in Sources */ = {isa = PBXBuildFile; fileRef = 3BCF6DF374DEC19C364B724A /* JortJavaScript.c */; };
 		1286CF6E109CB2FD5F286879 /* IncrementalLineEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8D85F010506E805B0F878B /* IncrementalLineEditingTests.swift */; };
+		12BACC03133F4A2E12B216A4 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 932C7EFEF2A53817E00DF43E /* AppKit.framework */; };
 		15A3DCE18F9D356AA1B222FF /* ToolInvocationTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBBF842F60CECB9FD3E61D9 /* ToolInvocationTestCase.swift */; };
+		167A23FD8294278FA7931FD2 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4119796F7EF864716DF246A7 /* Security.framework */; };
+		1734712EEC2D106BA45CD90B /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 254C83A0E2F357BC3819BE64 /* ApplicationServices.framework */; };
+		19166F4CE25D9EAFA53BCEA6 /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
 		1A09CA9ECC3559363DC07201 /* PersistentText.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BDAC7CA1A2AF0B0AEA9816 /* PersistentText.swift */; };
 		1A736DE2BCB6C8C5DD70E169 /* FakeModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */; };
 		1C0509752112B23B7CFE6FD5 /* DocumentInstrumentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B27809CEF0DE90894CC277 /* DocumentInstrumentation.swift */; };
 		1D1A9E90F304A9C8687B5B34 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
 		2058382807ACB2462F719EF7 /* DocumentUndoManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB95A9C0C9700E91D96BA4E0 /* DocumentUndoManager.swift */; };
+		2089A18DADAEF23357755E4E /* JortJavaScriptProtocolTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8B0F0E3380D083A2E9A14F7C /* JortJavaScriptProtocolTests.m */; };
 		240CD90C57FF86496999F525 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		250FECA8177DBEF43F010E49 /* PresentationCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C19A20B859AE5D10BC35836 /* PresentationCoordinatorTests.swift */; };
 		26AE86B0CFE00DD969CC0126 /* PresentationTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64DFDE720E22CCC00769337 /* PresentationTestSupport.swift */; };
+		272B69D0F37D5D9CB4E90451 /* libregexp.c in Sources */ = {isa = PBXBuildFile; fileRef = E08C38A6AD7E93755E054182 /* libregexp.c */; };
 		2831200E41E8F68BDC00FBB8 /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		29DA7EEA031FFA85EC502AB4 /* quickjs.h in Headers */ = {isa = PBXBuildFile; fileRef = 7FC3251F01489CDDAC49D2B1 /* quickjs.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		293B46101FE77D6C2B96C626 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 04B9D9D1C565758729BB07C3 /* main.c */; };
 		2BF9F24FBDE74986FC311F5E /* DocumentSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2D6E9F2978A8E4005A1CCA9 /* DocumentSnapshot.swift */; };
 		2C112D69F9DB3923BDD9E1CA /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		2C2F8BEA893A2616C40E6E2A /* AppleEventProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = BEAE9C094E244AAB2AF2D0CB /* AppleEventProbe.m */; };
+		2CB957CCCE69C02BA4C6363A /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 932C7EFEF2A53817E00DF43E /* AppKit.framework */; };
 		2E3E2A12FB7E0DAE13A04A9A /* SQLiteHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0D62A6EE87AF55951103E0 /* SQLiteHistory.swift */; };
 		2E47DEDE2F0980061D4F8FAD /* OpenRouterConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6105F42B72B3516B63AD9B9E /* OpenRouterConnection.swift */; };
 		2EBB12C3C60CC1901765106C /* HistoryRevision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6853014BEFCE356E061ADFE6 /* HistoryRevision.swift */; };
 		2F522E1FB8C86CB9DDF88CB4 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2FF7F79150A10933EDFDA5A0 /* v2.json in Resources */ = {isa = PBXBuildFile; fileRef = 160370B1CD4C448EA0BEF96F /* v2.json */; };
+		3069174FB7CC60BD80A86B32 /* cutils.c in Sources */ = {isa = PBXBuildFile; fileRef = B570FEDC0F8FB06F0B196121 /* cutils.c */; };
 		30A239DD8D85894FE05316A4 /* InvocationControlMounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52297679632622EBCD01AD78 /* InvocationControlMounts.swift */; };
 		31A782CBBFEAE5E00915ADCF /* DocumentSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B02EBC133D052919F85BFB1A /* DocumentSearchModel.swift */; };
 		326DA487B403FA6E4B990AFA /* RecoveryCheckpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */; };
+		343D091DEF2D89EDBB3F2BD0 /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
 		34D1807CFEBEC7FAAFF36CB1 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		35D5B51814219F27DB484458 /* EditorStorageProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2523AFE6AB4F177ED645FCA1 /* EditorStorageProjection.swift */; };
+		36153876AD4B0851DF186551 /* JortJavaScriptClient.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D20D9C51A250BEC2C3511917 /* JortJavaScriptClient.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3719E1FCB30A684B366E033B /* JortAppKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		38FC7173DFE49F415414EE78 /* JortJavaScriptClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D20D9C51A250BEC2C3511917 /* JortJavaScriptClient.framework */; };
 		3A41109B6288C7BF2491D257 /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3A90E17B187ABBF6F07E4A55 /* InvocationLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3E7A77FA34F99BB64C8D81 /* InvocationLifecycle.swift */; };
+		3C15A4A7EA304CD2B4B9FA2D /* JortJavaScriptClient.h in Headers */ = {isa = PBXBuildFile; fileRef = F318E20295C254857229D0F3 /* JortJavaScriptClient.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3DFBCA670CE27C5E1B83C558 /* BrokerEnvelope.c in Sources */ = {isa = PBXBuildFile; fileRef = 2BB7FA7E469D23EEC0F0337A /* BrokerEnvelope.c */; };
 		3E8F09EAA51C3A0DB92B3C89 /* InvocationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563778674EE96B37148D252B /* InvocationViews.swift */; };
 		3F1D8773EB88BF5E84AE1EC0 /* HistoryRetention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EA408834ABD32E691793CF /* HistoryRetention.swift */; };
+		3F93F6D5B36FFE746A476F22 /* WorkerProcessJavaScriptTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2787E228BA8767FA83E78714 /* WorkerProcessJavaScriptTransport.swift */; };
 		3FA80A9F512936368237DDE2 /* StorageCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED3E59A5748F52849CF4134D /* StorageCommandTests.swift */; };
 		3FDD4469CC5198FFFD26BBA4 /* LocalizedCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BB97FD91540FF122E6AD5A6 /* LocalizedCopy.swift */; };
 		401338A92E9A783E573AF6FC /* ToolPackageStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */; };
 		4168D9833F7B605F92C1F9D9 /* ToolInvocationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D83AEEDFD45147CFE6AE4AD2 /* ToolInvocationController.swift */; };
 		41A7004AF59FCD863A26B003 /* SettingsWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D344138FB05A5EA019B7C8B7 /* SettingsWorkspaceTests.swift */; };
+		423F71F1D574EF0F2258129F /* BrokerIdentity.c in Sources */ = {isa = PBXBuildFile; fileRef = 1D3AF4DDD5D623AA5A737F5E /* BrokerIdentity.c */; };
 		43B9CC41FB64E27E0135D251 /* JortUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73F5C254EE12140FB60EB69 /* JortUITests.swift */; };
 		43F5B75595385C4D02CC4CF8 /* ToolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3C635626F2EA72B23EDA46 /* ToolCatalog.swift */; };
 		44A382E1159D0FD45E33BA6E /* CommandPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */; };
 		4555B8C246BC3ADBB34A526D /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECC95805D3B99275307225B /* EditorViewController.swift */; };
+		45DCFBAB8DF63C68C1EC3F65 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 04B9D9D1C565758729BB07C3 /* main.c */; };
+		464CDE434B300D5C7F2C0FEB /* cutils.c in Sources */ = {isa = PBXBuildFile; fileRef = B570FEDC0F8FB06F0B196121 /* cutils.c */; };
 		4691B3AA6E12FA7E4E6A3DE6 /* ToolExecutorDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 237A9DA54FC18BE76B8D119F /* ToolExecutorDispatcher.swift */; };
 		4752E2497BC9D04104446526 /* RulerControlMounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10F48CC8A1186F707751315 /* RulerControlMounts.swift */; };
 		479B4F593604AFEDAE57E528 /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
+		47B1DB17FA52D785E36284ED /* JORT.patch in Resources */ = {isa = PBXBuildFile; fileRef = 86A4A6BF0D5DA6B14CB6FC66 /* JORT.patch */; };
 		48911BE844E93D8F17BD98FA /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		48A0E84D75AF18CC1438B77D /* quickjs.c in Sources */ = {isa = PBXBuildFile; fileRef = 164CE786366A1FEF95DB8755 /* quickjs.c */; };
 		493C119A6FE22D0E2EEA75CE /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		496247B7A8D3632656BE8C43 /* ModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2819C2AD2B9853EA43F79B3 /* ModelProvider.swift */; };
 		49DF326928DE0CAC23C1597D /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
@@ -78,53 +103,59 @@
 		4B8B663D3C060E790F4FE4A7 /* EmojiPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49680FE93D310BAFEC1043AE /* EmojiPicker.swift */; };
 		4BAD867A86DE5F1475F04C1E /* EditorWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DC0CFC4E321E0B9BF384139 /* EditorWorkspaceTests.swift */; };
 		4C309059AE341BA97E7C4807 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
+		4D8D08CEA736F6900447B180 /* BrokerEnvelope.c in Sources */ = {isa = PBXBuildFile; fileRef = 2BB7FA7E469D23EEC0F0337A /* BrokerEnvelope.c */; };
 		4ED4BD8F15370F11E2B1A0FD /* ToolPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C53C2C4801693C876B0305A /* ToolPackage.swift */; };
+		4F43AFA603B184D2043409DB /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F11DB9851BBCD9FBA9BF383A /* Foundation.framework */; };
 		51DC3EFCC8EF3DCE28AED453 /* StartupLoadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */; };
+		51EC12A94EBB6BCF49B33FB7 /* JortJavaScript.c in Sources */ = {isa = PBXBuildFile; fileRef = 3BCF6DF374DEC19C364B724A /* JortJavaScript.c */; };
+		53C3080D054E063FC4388223 /* JortJavaScriptClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D20D9C51A250BEC2C3511917 /* JortJavaScriptClient.framework */; };
 		54AAB0DA891C19A2851C2773 /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
 		568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C12E6711A1CA54BA5ACE49 /* MigrationTests.swift */; };
+		56B93F8357092B7C81FE2807 /* dtoa.c in Sources */ = {isa = PBXBuildFile; fileRef = 0FE68EC19961835A5F9F8E86 /* dtoa.c */; };
 		582DEF48013D0CAE12A81B5D /* ToolInvocationInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A12D3369FE17046B45C5B0 /* ToolInvocationInput.swift */; };
 		590F42E5FF20AF24622B1141 /* ToolRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A5D3D13F745C39022D7F443 /* ToolRuntime.swift */; };
 		593A3CA36C8F99C7B958A13D /* DocumentSearchWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEAD877F9100ECB9E95895A /* DocumentSearchWorkspaceTests.swift */; };
+		5A13DF6E2E3E6A91FE5361BF /* JORT.patch in Resources */ = {isa = PBXBuildFile; fileRef = 86A4A6BF0D5DA6B14CB6FC66 /* JORT.patch */; };
 		5A19D68DEBB0E7B34ABDE688 /* ToolPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D1D80CC0A9BC989917816B /* ToolPackage.swift */; };
 		5A70D997F62EADDE23FEDD0B /* StoreLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D58BDC7B59E9928134887E3 /* StoreLock.swift */; };
 		5B719156F1047C142B9281D6 /* InvocationPresentationIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BB4A5C8B15CE7972C9DFDFB /* InvocationPresentationIndex.swift */; };
+		5E17E5ABF213131EEE559581 /* libregexp.c in Sources */ = {isa = PBXBuildFile; fileRef = E08C38A6AD7E93755E054182 /* libregexp.c */; };
 		5E3DFA1D635EF60B2101A9F9 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5E7D11CF8C1CC0BDA47DF41B /* HistoryBrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9CBCC80A19ACDDBA76BDD0 /* HistoryBrowserModel.swift */; };
 		5F8B550C89C09C1EB9FAD149 /* StartupLoadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */; };
 		600C6F8A46EB2273FEBBE5C4 /* ToolInvocationPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB5415DF73F241C4E9ACF6F /* ToolInvocationPresentation.swift */; };
 		60F8DEC8B89DE852B7BF7040 /* ToolDocumentEffectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042AA99745D4CB41FEC2531D /* ToolDocumentEffectTests.swift */; };
-		61512E5B507194325AF3374C /* dtoa.h in Headers */ = {isa = PBXBuildFile; fileRef = 9CAC6653C4C60493EC41193C /* dtoa.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		618D1863F81534FFAC3D7F41 /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		618E573CE9F1EAAA4005650B /* WorkerProcessJavaScriptTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2787E228BA8767FA83E78714 /* WorkerProcessJavaScriptTransport.swift */; };
+		62C936BAEEBF2432CFD60723 /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
 		650D164E9E271701141E1740 /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
 		65134277F082F872C61E1E2B /* InvocationDecorationPainter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FB00F148B93DB1049797BA /* InvocationDecorationPainter.swift */; };
 		651FF7BF1DD91D38CAF28443 /* ManagedCopies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC206F03C70D57196F1A7AE /* ManagedCopies.swift */; };
 		65347537D8DEA2A549C84F4F /* ToolInputNormalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = C92B0A8E0CD47781F5D63DB5 /* ToolInputNormalization.swift */; };
 		683882B51A6E510561C70742 /* ApplicationTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4FEF09FA85DCA3CD62B25 /* ApplicationTheme.swift */; };
+		6B2D9FA1C665862E26EB0E0F /* BrokerEnvelope.c in Sources */ = {isa = PBXBuildFile; fileRef = 2BB7FA7E469D23EEC0F0337A /* BrokerEnvelope.c */; };
 		6B61C12EF1097CD68EA35E5E /* jort-white.svg in Resources */ = {isa = PBXBuildFile; fileRef = 07D77C5D4902A6B038E693AC /* jort-white.svg */; };
 		6BE23B46B8F346EF7C58868D /* DocumentSearchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D87A80477F84AD407D8C4E18 /* DocumentSearchController.swift */; };
 		6BEDC7DDDA0FB496F4640CE9 /* PerformanceDistribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4964D6C51C4D095A9DEDEF10 /* PerformanceDistribution.swift */; };
 		6E6F7D4E49C6527B543C455F /* ModelConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 884842D60EAFA66DAFF38C22 /* ModelConnection.swift */; };
 		6E8405DA167DD7C4E7446C67 /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
-		6F42CFC6EC6300DC49528707 /* quickjs.c in Sources */ = {isa = PBXBuildFile; fileRef = 164CE786366A1FEF95DB8755 /* quickjs.c */; };
 		6F447E4A39FB23AEC076AE71 /* InvocationStyleReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CBEF6E754A77CDA61C43F4B /* InvocationStyleReconciler.swift */; };
 		7067AF5F234BB546DE3F3BB3 /* EditorTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72802DD142F26F8C6F82D9A7 /* EditorTestCase.swift */; };
-		70ED579722395600CB09E683 /* quickjs-opcode.h in Headers */ = {isa = PBXBuildFile; fileRef = C5CD91B362E719B8498965D1 /* quickjs-opcode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		720BBF309E537664299F17BD /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
 		72B7EF35C41BF2CF8696D605 /* SuspendedPackageValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */; };
 		738EFFEA93B139D4C2EB00BD /* RunPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FBF44A835C49844B6902A16 /* RunPerformanceTests.swift */; };
 		75B055F69312102767399FD4 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7630238FB57057423175113F /* v1.json in Resources */ = {isa = PBXBuildFile; fileRef = 857FDC8BC95B6835BA5D1921 /* v1.json */; };
 		767AA7E42DFF196601EC1FBD /* StorageCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 680F9EDE4233998D1DC50502 /* StorageCommands.swift */; };
-		77046616EF102B2392944226 /* JortJavaScript.h in Headers */ = {isa = PBXBuildFile; fileRef = 5E6574876DDE4AA7D758D186 /* JortJavaScript.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		77DF2F99A367159528FAF8FE /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		79B717601414FF7180172417 /* EditorShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3468DC421F7F54BE19537C /* EditorShell.swift */; };
 		7A10F7FF937F94C7450D06FC /* ToolInvocationIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0DD430C698A8277F6F8831A /* ToolInvocationIntegrationTests.swift */; };
 		7B3227EAD01B845DB0D88802 /* JortApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD9032EA20B653B9CE85D00 /* JortApp.swift */; };
 		7C3BE10E55FCABBCBEBCA596 /* InvocationLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDA4E0988A64BCA45C6ADB6 /* InvocationLifecycleTests.swift */; };
 		7DC43B39325D909F02BBAAE7 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = C59A81FA08DE900862EE282A /* Localizable.strings */; };
-		7DD2F3C8570956D480E4EF97 /* libunicode.h in Headers */ = {isa = PBXBuildFile; fileRef = 956D7EEB582CB228242A99A3 /* libunicode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		7DF4DC883D373D646B640A6D /* dtoa.c in Sources */ = {isa = PBXBuildFile; fileRef = 0FE68EC19961835A5F9F8E86 /* dtoa.c */; };
 		7E9EC478181E19848A20CBBA /* emoji.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E4A736D729EC93F968914D1 /* emoji.json */; };
-		80329B39F2612A04DE273338 /* libunicode.c in Sources */ = {isa = PBXBuildFile; fileRef = C680C97D91E66688DAD477B2 /* libunicode.c */; };
+		80213C3439FF2A6C101E44EA /* JortJavaScriptBroker.xpc in CopyFiles */ = {isa = PBXBuildFile; fileRef = CDF537CB4F17C92B348F8027 /* JortJavaScriptBroker.xpc */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		80A67FCBECD9DBCD43CEF421 /* StoreTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */; };
 		81441D90E3E254368424329B /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9136C288B97547D76167A45 /* DocumentState.swift */; };
@@ -140,48 +171,56 @@
 		8601FC33B4A4E967CED06057 /* RulerGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F771F08E8CBE13366AD213 /* RulerGeometryTests.swift */; };
 		861B79D5849BD363DEC36A79 /* DocumentLineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47485DBD07542A7EA47032CC /* DocumentLineView.swift */; };
 		8669BB27B9A8D2366D67BDCF /* InjectedValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCD7B1742A804E238FDF1641 /* InjectedValidatorTests.swift */; };
+		895CF1D5D4FDB6DDEBEB25A7 /* NativeProbe.c in Sources */ = {isa = PBXBuildFile; fileRef = 117894FCCEBF573133B07050 /* NativeProbe.c */; };
 		8C24806BE06A07370A75143A /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8D05C49A54E62BC172167A02 /* ToolsSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 158C8BBB3F18BEE1BF1400F0 /* ToolsSettingsViewController.swift */; };
-		8DA06960B038D886D27EA322 /* libregexp-opcode.h in Headers */ = {isa = PBXBuildFile; fileRef = B55D1016B0D99A8BC5313F63 /* libregexp-opcode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8DD3107BE20B4BF9D668006B /* SettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1937DA4FC494E2310FFBCD /* SettingsTests.swift */; };
 		8DF7F64CEDE9869F7C59F7AE /* OpenRouterTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33127349987FC988BB882FD /* OpenRouterTransport.swift */; };
 		8E5CA75A64D48C6D1D90909C /* PrivateDataControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCC54E5EE4E025FE4290CFAB /* PrivateDataControlsTests.swift */; };
+		8EB855D74BAE7DFA6879EFE6 /* cutils.c in Sources */ = {isa = PBXBuildFile; fileRef = B570FEDC0F8FB06F0B196121 /* cutils.c */; };
 		8F36CF2DD3DBB3F6CBF38AC3 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		907957EB590C7CEB4C166584 /* JavaScriptSourceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53AB05C7BD3940CEEC2EFF77 /* JavaScriptSourceEditor.swift */; };
 		90D2280F98544D2284B975DC /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 836D2480566399F33F4D0E4B /* libsqlite3.tbd */; };
 		925915390CDCF61920E906D5 /* PrivateDataPurge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376DE26FB0645A0EB96E6C3B /* PrivateDataPurge.swift */; };
-		9433177CAA4E2B4B287BE93C /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 810CA298F20730E03D0223BD /* LICENSE */; };
+		92A86F2B3991702929F9868F /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 2C27B0FECD0124B88FEEB768 /* main.c */; };
 		94B3B86036DAE6C8AB9BE8ED /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7CAE479DACAAE1E87A1B412E /* AppIcon.icns */; };
 		94E49DD4CF0CE654613B2CB4 /* ModelCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037F170C9E7560F06B7DEE46 /* ModelCredentials.swift */; };
 		94F0BC3DA14064D9EC35D10D /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		95F48DB804596457D97BBEE5 /* JortJavaScript.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */; };
 		963EF4108F717821D8675420 /* DocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 890A3B619F758EFE88D70C05 /* DocumentTests.swift */; };
+		96CD6AE7ADED57CC83D771CE /* libunicode.c in Sources */ = {isa = PBXBuildFile; fileRef = C680C97D91E66688DAD477B2 /* libunicode.c */; };
 		96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		972678B42FF182B84D43E6EB /* StartupEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDB01661C1ACC0EB29F1C177 /* StartupEditorTests.swift */; };
 		973B33E315529F5247DAFAAE /* DocumentInstrumentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE075D71E1C05F96611A5B6 /* DocumentInstrumentationTests.swift */; };
+		98E5DBB8E5D8F4715114B75B /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 932C7EFEF2A53817E00DF43E /* AppKit.framework */; };
 		98F3E81A3CF8F09A93D73442 /* IncrementalLineEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAEE4365987E5C4CEA0F73C8 /* IncrementalLineEditing.swift */; };
 		99C0E0B15DD6B97AC6EEC34D /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9A70CCF21EAB787D223C6E4A /* InvocationCompletionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565009FEEAAC0E2977EF79B1 /* InvocationCompletionController.swift */; };
 		9A94772F3E4F68A2ACBE9327 /* InvocationAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4961DB5476F6F2F966DB503 /* InvocationAccessibilityTests.swift */; };
-		9BCDB5D2342D9139AB82E3EA /* JortJavaScript.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9D6F7A0C0EF1D8B350CE65CD /* ModelToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA59492C31450C9F988EA91 /* ModelToolTests.swift */; };
 		9DA384B6D7DE55EA2CF69E3B /* ToolRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F8BE73707D77A84B75F48B /* ToolRuntimeTests.swift */; };
 		9DA9A391B4C08CA58AAC9191 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8CF4DBF8442B91591C85C2 /* SettingsWindowController.swift */; };
 		9E38800E0A10A074F4B01726 /* JortAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B90F41BD2015B26B477581A /* JortAppKit.framework */; };
+		9E9C037F1BD3E8E3F9BDC439 /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
+		9F99795F9D1D04C4DF42CB34 /* dtoa.c in Sources */ = {isa = PBXBuildFile; fileRef = 0FE68EC19961835A5F9F8E86 /* dtoa.c */; };
+		9FB30D26DA25BC4F7127DDB3 /* JortBrokerFaultTests.m in Sources */ = {isa = PBXBuildFile; fileRef = A1583135128286AC1157C6B1 /* JortBrokerFaultTests.m */; };
 		A020A276F50DFAC0CA7ACC27 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		A05159A2D4C3EABCE7FDE7D7 /* AppleEventProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = BEAE9C094E244AAB2AF2D0CB /* AppleEventProbe.m */; };
 		A1F8D7ABEAC627BDB9EB4F29 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		A267BC6563E7029ECB191BCB /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
-		A29A3F99577135F6B2465AAC /* cutils.c in Sources */ = {isa = PBXBuildFile; fileRef = B570FEDC0F8FB06F0B196121 /* cutils.c */; };
-		A2EB2059DDC544FA7E124507 /* libregexp.h in Headers */ = {isa = PBXBuildFile; fileRef = 80ADA75890D91DBEC769FE5A /* libregexp.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		A5A0395325F13CB5AE249E9C /* libunicode.c in Sources */ = {isa = PBXBuildFile; fileRef = C680C97D91E66688DAD477B2 /* libunicode.c */; };
 		A86E69A0E7D85AA789CDBC93 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AB298C7887950D6C7D4C5A2A /* PerformanceDistribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4964D6C51C4D095A9DEDEF10 /* PerformanceDistribution.swift */; };
 		ABB6E56F50FC5458516F5CC2 /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AC7063A1F953D56D1002F25C /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		ACD8467586A937E04390A13E /* JortJavaScriptProtocol.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A9FE0D086D1C6D46B389BBE /* JortJavaScriptProtocol.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		ACDD4BF4E884A860D6DFA097 /* SuspendedPackageValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */; };
 		AD95D9F09C2E53FC289D544F /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		AE1C004D7833884FE17E495D /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
+		AE290D380BC6D0397EA9F2A8 /* JortJavaScript.c in Sources */ = {isa = PBXBuildFile; fileRef = 3BCF6DF374DEC19C364B724A /* JortJavaScript.c */; };
+		AEED127FD09653289BEF41AA /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
 		B02791609B7E9B5EF61C0C51 /* ToolDocumentEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D93F18718BF6E63A9D6C405 /* ToolDocumentEffects.swift */; };
 		B10D7DBC3666E9972E1F75A9 /* CoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8997BE6442E1F78BFCBA363D /* CoordinatorTests.swift */; };
+		B22688BD24A5C89E09FC57D5 /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
 		B30364529865AEAAACCBAADD /* LineRuler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0752BD8EA489584AD98003F8 /* LineRuler.swift */; };
 		B33473589644221C9014EDD8 /* ModelsSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C05CEC0BC29B3CD86F60A27 /* ModelsSettingsViewController.swift */; };
 		B48B832DFE25265465459231 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -197,18 +236,23 @@
 		C11DE1F0CD37F3A010129E69 /* StoreTeardownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F815CC485603BE306454BA /* StoreTeardownTests.swift */; };
 		C1EC2CF63ACED57AB060F91F /* PackageSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732029BF590EEC65BB931250 /* PackageSettingsStore.swift */; };
 		C1ECE1FC7156A5BFD014F7F9 /* ToolPackageOrigin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E89D2823CD5C05C21437F6EA /* ToolPackageOrigin.swift */; };
-		C3D8F523F9245CFC2A620AF8 /* JortJavaScript.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */; };
+		C3750039A956D1AE8D0EBE84 /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C450D0050E55BC7ACE2D6B04 /* ToolInvocationPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D209ECDBC9F716C933AC4166 /* ToolInvocationPresentationTests.swift */; };
-		C5FFBE1989792F015E80BE60 /* libunicode-table.h in Headers */ = {isa = PBXBuildFile; fileRef = FF28C35AD3183F51813E36AC /* libunicode-table.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		CAD9559F32357FABB46510EF /* dtoa.c in Sources */ = {isa = PBXBuildFile; fileRef = 0FE68EC19961835A5F9F8E86 /* dtoa.c */; };
+		C4A2936B2A56B21B452DFBB7 /* JortAppleEventProbeTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2FCCB8AF31754CD0D5124D03 /* JortAppleEventProbeTests.m */; };
+		C4C2D7C78135A9FD435E9D61 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 254C83A0E2F357BC3819BE64 /* ApplicationServices.framework */; };
+		C5EA7E14540753619F55F7E4 /* JortSignedNativeProbeTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 999E9A44EA9816681DFF46FE /* JortSignedNativeProbeTests.m */; };
+		C736371A0FEC3D14D9613553 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 436A66BF175F3AC334111381 /* CoreFoundation.framework */; };
+		C878B42A38B417DAF27BF2AB /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
 		CB5FE13005BECD82BDEC2FB2 /* ModelPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EAD02C8B2CADD434BED5753 /* ModelPicker.swift */; };
 		CB9392CE9AC09100BF688759 /* tool-invocations-pre-extraction.json in Resources */ = {isa = PBXBuildFile; fileRef = 5EAEA9AD8AA44366C9B3D2C2 /* tool-invocations-pre-extraction.json */; };
 		CDD19338990DA4F6F840FA4B /* DocumentSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */; };
 		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
+		CF7B101AF807C76607E0652D /* libregexp.c in Sources */ = {isa = PBXBuildFile; fileRef = E08C38A6AD7E93755E054182 /* libregexp.c */; };
+		D1BC17702D943089BECBDA36 /* BrokerEnvelope.c in Sources */ = {isa = PBXBuildFile; fileRef = 2BB7FA7E469D23EEC0F0337A /* BrokerEnvelope.c */; };
 		D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		D20F42C78D68A8616DDF6FD7 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
-		D2327DD1469F0D7EF3DE3CDA /* libregexp.c in Sources */ = {isa = PBXBuildFile; fileRef = E08C38A6AD7E93755E054182 /* libregexp.c */; };
 		D32F25240A7053CD4C2C4D9E /* LinePresentationLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */; };
+		D33DDE269ADFC5D57AD5D27D /* BrokerIdentity.c in Sources */ = {isa = PBXBuildFile; fileRef = 1D3AF4DDD5D623AA5A737F5E /* BrokerIdentity.c */; };
 		D34F779E8D8B35F0BA7F7597 /* InvocationPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63F209F6E81624ABFBE0CA1 /* InvocationPackage.swift */; };
 		D3DA28845FD1F8947FEA1408 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		D44FA92A7CD9BBD646779A84 /* Tools in Resources */ = {isa = PBXBuildFile; fileRef = 925521D5605C40F2F00E8BB6 /* Tools */; };
@@ -218,28 +262,34 @@
 		D9818677E98F0BDE0C2EDB8B /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */; };
 		DA43E152FBA890BA7EFC9945 /* JortSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; };
 		DA78A33F7BEF6FB088516FDC /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		DAA9AA62A0636108A6780D17 /* libunicode.c in Sources */ = {isa = PBXBuildFile; fileRef = C680C97D91E66688DAD477B2 /* libunicode.c */; };
 		DAC2132EED3BD883F21B901E /* ToolInvocationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 044BB572F6EB659E0AEB9B45 /* ToolInvocationCoordinator.swift */; };
 		DAE66CB4A84D440CB376DC32 /* JortToolContracts.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		DB820B5B336EB87EC56F457A /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		DB8A4FCD9426994D22AA3BA3 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
-		DBA64D8DB274477FF9CCC03C /* cutils.h in Headers */ = {isa = PBXBuildFile; fileRef = 523D6F370304803C2FB2770F /* cutils.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		DBD86C5DD1B157FDF9CF4CBD /* ToolExecutionRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE03B6092BC2533385D7F026 /* ToolExecutionRequest.swift */; };
 		DC7C687E7A7F30B581B8660F /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		DD17E182D1521C23004B6015 /* PresentationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFC5FA3F02C840BB5377A256 /* PresentationCoordinator.swift */; };
 		DD7AE91B690C6AEF939C5E42 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
+		DDEA84A9AF3D555E2A8BF0E9 /* JORT.patch in Resources */ = {isa = PBXBuildFile; fileRef = 86A4A6BF0D5DA6B14CB6FC66 /* JORT.patch */; };
 		DE856EC350DB8B448762F3FE /* StartupPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58322D9A4AC03F5968882D89 /* StartupPersistenceTests.swift */; };
 		DE88C97D395ECF2B3F3B7D55 /* StoreTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */; };
+		DF498D2B73EB679356DD6269 /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
+		E1512774B52BCEDEFBF55772 /* quickjs.c in Sources */ = {isa = PBXBuildFile; fileRef = 164CE786366A1FEF95DB8755 /* quickjs.c */; };
 		E1B2AF06ED7F95AE96C63138 /* HistoryComparisonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072791E6103E642613A62D3E /* HistoryComparisonTests.swift */; };
 		E219FBD771623EDF86274C86 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		E38D06D9C2D04AFC31E3FF76 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
 		E3D1075EEEDD685A920E967F /* ToolInvocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED20588982DBF09C32C820C4 /* ToolInvocation.swift */; };
 		E4A82FE55F5542D0A143D919 /* PersistentLineIndexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C33B0C5FD78CBF5B49599A /* PersistentLineIndexTests.swift */; };
 		E52AEB2D233A54A47B408564 /* HistoryStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B711F6E42B2DE037E8A58651 /* HistoryStorageTests.swift */; };
+		E70DBF5FD977D04256790750 /* JortJavaScriptWorker in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = F127F7DCE1F2B0D613B49126 /* JortJavaScriptWorker */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EA87B07265FD7FFA525FB16C /* ToolPackageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D181702092209A56A895DBF0 /* ToolPackageTests.swift */; };
 		EAF611328974918CB820FC05 /* HistoryComparison.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56950F58BF8920CC14ABD7E4 /* HistoryComparison.swift */; };
 		EC0EAF95E4210FD093CCF06A /* PerformanceDistribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4964D6C51C4D095A9DEDEF10 /* PerformanceDistribution.swift */; };
 		EC13E8BED74C00C1AAD200DB /* PresentationDrawingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CB51F39C3A9D2F746A1AD2 /* PresentationDrawingTests.swift */; };
 		EC1702FA2D080F0E9A3E706B /* InvocationTransientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF07D49D04C1C5072287C267 /* InvocationTransientState.swift */; };
+		EEC03C4B465C2C7917DA55B1 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 254C83A0E2F357BC3819BE64 /* ApplicationServices.framework */; };
+		EEFB38B710959AE4151D8AE7 /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
 		EF5628B16F824A83A9A00909 /* v1.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = AD6759F2DA71568CAF61B1BA /* v1.sqlite */; };
 		EF614B9FB20A1C3ABF0B7AB7 /* JortTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A30AF80AF54CEFDC4A66D4 /* JortTextView.swift */; };
 		EFB8951403BBF97604C87C68 /* StorageOutcomes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B1E9145518E8EAD21B49432 /* StorageOutcomes.swift */; };
@@ -249,12 +299,15 @@
 		F34B6D9D67A884FF7D957809 /* SQLiteSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113BE412FBAD974882331970 /* SQLiteSettingsStore.swift */; };
 		F44723ED2328B2722B670F86 /* ProcessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F66085B030452677C1BF9B8 /* ProcessTests.swift */; };
 		F67A84D29E8023BD49F137B5 /* HistoryWorkspaceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B8EF4F5FC1F5A8A7D6AE13F /* HistoryWorkspaceController.swift */; };
+		F737DEE22FDB488E243906F5 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4119796F7EF864716DF246A7 /* Security.framework */; };
+		F7A971850872CA7CB4AB0ED5 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4119796F7EF864716DF246A7 /* Security.framework */; };
+		F834BA5D186C76DD499F6CC3 /* BrokerFaultHarness.c in Sources */ = {isa = PBXBuildFile; fileRef = 9E4F221D1FE441E9E57931CE /* BrokerFaultHarness.c */; };
 		F83F62F8E4816AE72B9C0704 /* DocumentRetainedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3B88D2290DD11775CA459A /* DocumentRetainedStorage.swift */; };
+		F8CBBCB38EA6E783A7902BD0 /* BrokerIdentity.c in Sources */ = {isa = PBXBuildFile; fileRef = 1D3AF4DDD5D623AA5A737F5E /* BrokerIdentity.c */; };
 		FA13C11805153B8A11FFB907 /* HistoryCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21039D88B48BA0259A6EF860 /* HistoryCoordinator.swift */; };
 		FA4CE256F336EB45A316A40A /* PrivateDataMaintenance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55134416F63CD793CA6F5001 /* PrivateDataMaintenance.swift */; };
 		FC0DDB280C162ED0849A3821 /* StartupLoadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */; };
 		FC77F3B2800F620DE4881398 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
-		FE6F5D3D8C8696B2F368B618 /* list.h in Headers */ = {isa = PBXBuildFile; fileRef = 3987A26318419A8BEEC55422 /* list.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FE8279535EA11ADAE468D3F0 /* DocumentSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 817DD0BD61508DA25EEC854D /* DocumentSearchTests.swift */; };
 		FF37B0DE9AA742722B31827F /* SchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2D11DCF7E5AB1CCAD36F4 /* SchedulerTests.swift */; };
 /* End PBXBuildFile section */
@@ -281,6 +334,13 @@
 			remoteGlobalIDString = C32E76A665123E52BD3970CF;
 			remoteInfo = JortToolContracts;
 		};
+		17F78AF29274BF541F73E89A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9AD54A9C747E98D8CFE3122B;
+			remoteInfo = JortJavaScriptTestOracle;
+		};
 		1C9ACF9D4A11A4139BA7CF82 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
@@ -302,12 +362,12 @@
 			remoteGlobalIDString = C95C707E2A3214B5F7E60416;
 			remoteInfo = JortSettings;
 		};
-		3AC35F4ED6E29BDF39ABEB83 /* PBXContainerItemProxy */ = {
+		2ECF52F2C4F440C91CBCA0E6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 9B6298D78A634AC3CF42FC03;
-			remoteInfo = JortJavaScript;
+			remoteGlobalIDString = 9AD54A9C747E98D8CFE3122B;
+			remoteInfo = JortJavaScriptTestOracle;
 		};
 		3C18BBE99A8370F3285440E7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -322,6 +382,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = 3A16B52213E188C51D5FF571;
 			remoteInfo = JortToolRuntime;
+		};
+		41E2C2F9FEA8395C76E1AEB6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D883E7AFD9CC9D1BB2CE5220;
+			remoteInfo = JortJavaScriptBroker;
+		};
+		491E614152DAFAFEED84E840 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E6F2F901488E738074BA7265;
+			remoteInfo = JortJavaScriptClient;
 		};
 		4C182629A17D23B0B96C22A6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -358,7 +432,21 @@
 			remoteGlobalIDString = C32E76A665123E52BD3970CF;
 			remoteInfo = JortToolContracts;
 		};
+		67F84308EC362C45FEE86A2C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C9F655F3B6C5E921EA335A5A;
+			remoteInfo = JortJavaScriptWorker;
+		};
 		683D15B9F84CBC0C873F3746 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A16B52213E188C51D5FF571;
+			remoteInfo = JortToolRuntime;
+		};
+		7C4BCDC2C07DD6D7D1804938 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
@@ -371,6 +459,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 4996422CDDDC50EC7CF340C1;
 			remoteInfo = JortPersistence;
+		};
+		80214DBE4F42EDA4480B6C26 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C9F655F3B6C5E921EA335A5A;
+			remoteInfo = JortJavaScriptWorker;
 		};
 		83B7C58201E077836D7C08B2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -407,6 +502,13 @@
 			remoteGlobalIDString = C95C707E2A3214B5F7E60416;
 			remoteInfo = JortSettings;
 		};
+		910AF98FC9CDD0A0F1C4A05D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 30C4E0C146ECB98598FAC528;
+			remoteInfo = JortAppleEventProbe;
+		};
 		98DEFE7BBFE9968BDE86F2E0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
@@ -435,6 +537,13 @@
 			remoteGlobalIDString = B386A86BE2EBA3E88CBB0142;
 			remoteInfo = JortAppKit;
 		};
+		A504AE75BF814F8810E643E6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E6F2F901488E738074BA7265;
+			remoteInfo = JortJavaScriptClient;
+		};
 		A638D3038CB7B10FE629EF27 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
@@ -449,12 +558,26 @@
 			remoteGlobalIDString = C32E76A665123E52BD3970CF;
 			remoteInfo = JortToolContracts;
 		};
-		B44D59BD06E0B5BA6F01C1D5 /* PBXContainerItemProxy */ = {
+		B8FCAAFB12E435AD8729E18A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 9B6298D78A634AC3CF42FC03;
-			remoteInfo = JortJavaScript;
+			remoteGlobalIDString = 3739FB93A007E7219848329A;
+			remoteInfo = JortJavaScriptSandboxHarness;
+		};
+		BA7789CF5DABE55D18A6FDEB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1258AAF20B245B71F2019493;
+			remoteInfo = JortJavaScriptNativeProbe;
+		};
+		BCA8D27213F90DA6FDB75C5F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9AD54A9C747E98D8CFE3122B;
+			remoteInfo = JortJavaScriptTestOracle;
 		};
 		C6040687D115CFB718E0B010 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -476,6 +599,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 07E5453287B9F8C62DA2C8CB;
 			remoteInfo = JortDocument;
+		};
+		F719549022B1A4C829A9401F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0D26DD125668581EF7021F63;
+			remoteInfo = JortJavaScriptBrokerFaultHarness;
 		};
 		F855D8F45E8EC5F89C0AA1B9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -512,9 +642,27 @@
 			remoteGlobalIDString = B386A86BE2EBA3E88CBB0142;
 			remoteInfo = JortAppKit;
 		};
+		FF541EA779E0303BEA6AEF8B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8F339BE48AC542A95567BE86 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E6F2F901488E738074BA7265;
+			remoteInfo = JortJavaScriptClient;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		1057F7DAACE7180741E2D909 /* Embed Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				E70DBF5FD977D04256790750 /* JortJavaScriptWorker in Embed Dependencies */,
+			);
+			name = "Embed Dependencies";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3DCF60ACEAAE23624E1E42DA /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -537,7 +685,7 @@
 				10958F2E0818D271D9BA9229 /* JortAppKit.framework in Embed Frameworks */,
 				ABB6E56F50FC5458516F5CC2 /* JortSettings.framework in Embed Frameworks */,
 				75B055F69312102767399FD4 /* JortToolContracts.framework in Embed Frameworks */,
-				9BCDB5D2342D9139AB82E3EA /* JortJavaScript.framework in Embed Frameworks */,
+				36153876AD4B0851DF186551 /* JortJavaScriptClient.framework in Embed Frameworks */,
 				2C112D69F9DB3923BDD9E1CA /* JortToolRuntime.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -568,6 +716,7 @@
 				BF5FD9882DAB6C60E38313A0 /* JortPersistence.framework in Embed Frameworks */,
 				3A41109B6288C7BF2491D257 /* JortSettings.framework in Embed Frameworks */,
 				B48B832DFE25265465459231 /* JortToolContracts.framework in Embed Frameworks */,
+				C3750039A956D1AE8D0EBE84 /* JortToolRuntime.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -588,14 +737,26 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C6FD480FB97D8EBFCCCFD1BA /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/XPCServices";
+			dstSubfolderSpec = 16;
+			files = (
+				80213C3439FF2A6C101E44EA /* JortJavaScriptBroker.xpc in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		02A0A8926B0C7313854C181A /* JortPersistence.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortPersistence.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		02E5275ABCFB5A2AAF429488 /* PersistenceFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceFormat.swift; sourceTree = "<group>"; };
+		033756C1C1C156E291C71692 /* JortJavaScriptClient.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = JortJavaScriptClient.c; sourceTree = "<group>"; };
 		037F170C9E7560F06B7DEE46 /* ModelCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCredentials.swift; sourceTree = "<group>"; };
 		042AA99745D4CB41FEC2531D /* ToolDocumentEffectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDocumentEffectTests.swift; sourceTree = "<group>"; };
 		044BB572F6EB659E0AEB9B45 /* ToolInvocationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationCoordinator.swift; sourceTree = "<group>"; };
+		04B9D9D1C565758729BB07C3 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		05EF2C69C738581C5CFA5743 /* JortToolRuntimeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortToolRuntimeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		072791E6103E642613A62D3E /* HistoryComparisonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryComparisonTests.swift; sourceTree = "<group>"; };
 		0752BD8EA489584AD98003F8 /* LineRuler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineRuler.swift; sourceTree = "<group>"; };
@@ -603,11 +764,13 @@
 		081DE0F1FB086C45F71F5744 /* RecoveryControlsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryControlsTests.swift; sourceTree = "<group>"; };
 		0B1E9145518E8EAD21B49432 /* StorageOutcomes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageOutcomes.swift; sourceTree = "<group>"; };
 		0B872610ED836A61E96ED8DA /* Transactions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transactions.swift; sourceTree = "<group>"; };
+		0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = JortJavaScriptProtocol.c; sourceTree = "<group>"; };
 		0C05CEC0BC29B3CD86F60A27 /* ModelsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsViewController.swift; sourceTree = "<group>"; };
 		0D1D18D3AB73A7298134C532 /* FakeModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeModelProvider.swift; sourceTree = "<group>"; };
 		0F66085B030452677C1BF9B8 /* ProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessTests.swift; sourceTree = "<group>"; };
 		0FE68EC19961835A5F9F8E86 /* dtoa.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dtoa.c; sourceTree = "<group>"; };
 		113BE412FBAD974882331970 /* SQLiteSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteSettingsStore.swift; sourceTree = "<group>"; };
+		117894FCCEBF573133B07050 /* NativeProbe.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = NativeProbe.c; sourceTree = "<group>"; };
 		158C8BBB3F18BEE1BF1400F0 /* ToolsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolsSettingsViewController.swift; sourceTree = "<group>"; };
 		160370B1CD4C448EA0BEF96F /* v2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v2.json; sourceTree = "<group>"; };
 		164CE786366A1FEF95DB8755 /* quickjs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = quickjs.c; sourceTree = "<group>"; };
@@ -616,17 +779,26 @@
 		1A5D3D13F745C39022D7F443 /* ToolRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRuntime.swift; sourceTree = "<group>"; };
 		1BB97FD91540FF122E6AD5A6 /* LocalizedCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizedCopy.swift; sourceTree = "<group>"; };
 		1C0E4CDB5A73394A9D7BD7DC /* RecoveryCheckpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCheckpoints.swift; sourceTree = "<group>"; };
+		1D3AF4DDD5D623AA5A737F5E /* BrokerIdentity.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = BrokerIdentity.c; sourceTree = "<group>"; };
 		1DD8D1FF4B356BF663A94828 /* InvocationGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationGeometryTests.swift; sourceTree = "<group>"; };
 		1E13D309AB98C025B767AFD0 /* ToolTemplates.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ToolTemplates.json; sourceTree = "<group>"; };
 		1ECC95805D3B99275307225B /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
+		202A7E31CCE8CF2BB97C904D /* JortAppleEventProbe */ = {isa = PBXFileReference; includeInIndex = 0; path = JortAppleEventProbe; sourceTree = BUILT_PRODUCTS_DIR; };
 		21039D88B48BA0259A6EF860 /* HistoryCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCoordinator.swift; sourceTree = "<group>"; };
 		21C4FEEBAEAB1D4D21E23EE6 /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
 		2245DA376322A597F5E21C41 /* PresentationGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationGeometry.swift; sourceTree = "<group>"; };
 		237A9DA54FC18BE76B8D119F /* ToolExecutorDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolExecutorDispatcher.swift; sourceTree = "<group>"; };
 		2523AFE6AB4F177ED645FCA1 /* EditorStorageProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorStorageProjection.swift; sourceTree = "<group>"; };
+		254C83A0E2F357BC3819BE64 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
+		2787E228BA8767FA83E78714 /* WorkerProcessJavaScriptTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkerProcessJavaScriptTransport.swift; sourceTree = "<group>"; };
+		2BB7FA7E469D23EEC0F0337A /* BrokerEnvelope.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = BrokerEnvelope.c; sourceTree = "<group>"; };
 		2C19A20B859AE5D10BC35836 /* PresentationCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationCoordinatorTests.swift; sourceTree = "<group>"; };
+		2C27B0FECD0124B88FEEB768 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		2D93F18718BF6E63A9D6C405 /* ToolDocumentEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDocumentEffects.swift; sourceTree = "<group>"; };
+		2FCCB8AF31754CD0D5124D03 /* JortAppleEventProbeTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JortAppleEventProbeTests.m; sourceTree = "<group>"; };
+		3030D936C458595887F07D4C /* JortAppleEventReceiver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JortAppleEventReceiver.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupLoadStore.swift; sourceTree = "<group>"; };
+		334EA42BEEBB4FC6CFF36C99 /* JortJavaScriptContainmentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortJavaScriptContainmentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		335385258FC5FA67C76B92A6 /* ToolGoldenCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolGoldenCompatibilityTests.swift; sourceTree = "<group>"; };
 		376DE26FB0645A0EB96E6C3B /* PrivateDataPurge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateDataPurge.swift; sourceTree = "<group>"; };
 		382B6626673D4E9ECF7208D3 /* ToolPackageRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageRegistry.swift; sourceTree = "<group>"; };
@@ -635,18 +807,21 @@
 		3BCF6DF374DEC19C364B724A /* JortJavaScript.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = JortJavaScript.c; sourceTree = "<group>"; };
 		3C53C2C4801693C876B0305A /* ToolPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackage.swift; sourceTree = "<group>"; };
 		3D58BDC7B59E9928134887E3 /* StoreLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreLock.swift; sourceTree = "<group>"; };
+		4119796F7EF864716DF246A7 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		436A66BF175F3AC334111381 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		47485DBD07542A7EA47032CC /* DocumentLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentLineView.swift; sourceTree = "<group>"; };
 		4751705F98D5DB511669A430 /* tool-manifest-pre-extraction.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tool-manifest-pre-extraction.json"; sourceTree = "<group>"; };
 		4964D6C51C4D095A9DEDEF10 /* PerformanceDistribution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceDistribution.swift; sourceTree = "<group>"; };
 		49680FE93D310BAFEC1043AE /* EmojiPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiPicker.swift; sourceTree = "<group>"; };
+		4C1D730B8089019FA34285BF /* BrokerIdentity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrokerIdentity.h; sourceTree = "<group>"; };
 		4CE4FEF09FA85DCA3CD62B25 /* ApplicationTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationTheme.swift; sourceTree = "<group>"; };
 		4EBD819547F38AB24B0FD19F /* v2.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = v2.sqlite; sourceTree = "<group>"; };
+		51B7A4831CE469E82215FF2F /* JortJavaScriptTestOracle */ = {isa = PBXFileReference; includeInIndex = 0; path = JortJavaScriptTestOracle; sourceTree = BUILT_PRODUCTS_DIR; };
 		51C856D6CE50FFC9A1F3F8FB /* ToolExecution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolExecution.swift; sourceTree = "<group>"; };
 		52297679632622EBCD01AD78 /* InvocationControlMounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationControlMounts.swift; sourceTree = "<group>"; };
 		523D6F370304803C2FB2770F /* cutils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cutils.h; sourceTree = "<group>"; };
 		52A30AF80AF54CEFDC4A66D4 /* JortTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JortTextView.swift; sourceTree = "<group>"; };
 		53AB05C7BD3940CEEC2EFF77 /* JavaScriptSourceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptSourceEditor.swift; sourceTree = "<group>"; };
-		54BD024322D7CE95970E48D0 /* JortJavaScript.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortJavaScript.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		55134416F63CD793CA6F5001 /* PrivateDataMaintenance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateDataMaintenance.swift; sourceTree = "<group>"; };
 		563778674EE96B37148D252B /* InvocationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationViews.swift; sourceTree = "<group>"; };
 		565009FEEAAC0E2977EF79B1 /* InvocationCompletionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationCompletionController.swift; sourceTree = "<group>"; };
@@ -659,7 +834,6 @@
 		5DC0CFC4E321E0B9BF384139 /* EditorWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorWorkspaceTests.swift; sourceTree = "<group>"; };
 		5E3B88D2290DD11775CA459A /* DocumentRetainedStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentRetainedStorage.swift; sourceTree = "<group>"; };
 		5E3C635626F2EA72B23EDA46 /* ToolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCatalog.swift; sourceTree = "<group>"; };
-		5E6574876DDE4AA7D758D186 /* JortJavaScript.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JortJavaScript.h; sourceTree = "<group>"; };
 		5EAEA9AD8AA44366C9B3D2C2 /* tool-invocations-pre-extraction.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tool-invocations-pre-extraction.json"; sourceTree = "<group>"; };
 		5EBF7CA0931124DB116AE610 /* JortUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5FF8341534A77B39BFA2904E /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
@@ -668,6 +842,7 @@
 		6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortToolContracts.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		680F9EDE4233998D1DC50502 /* StorageCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageCommands.swift; sourceTree = "<group>"; };
 		6853014BEFCE356E061ADFE6 /* HistoryRevision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryRevision.swift; sourceTree = "<group>"; };
+		69F4AFEC07321CEBC83FF50F /* BrokerEnvelope.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrokerEnvelope.h; sourceTree = "<group>"; };
 		6B8EF4F5FC1F5A8A7D6AE13F /* HistoryWorkspaceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWorkspaceController.swift; sourceTree = "<group>"; };
 		6BD742A9E09AD22E1174BECA /* LockProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockProbe.swift; sourceTree = "<group>"; };
 		6C3E7A77FA34F99BB64C8D81 /* InvocationLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationLifecycle.swift; sourceTree = "<group>"; };
@@ -680,6 +855,7 @@
 		73EA408834ABD32E691793CF /* HistoryRetention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryRetention.swift; sourceTree = "<group>"; };
 		74F771F08E8CBE13366AD213 /* RulerGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulerGeometryTests.swift; sourceTree = "<group>"; };
 		78AC318C0FF25C12E5211E4E /* PresentationReconciliationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationReconciliationTests.swift; sourceTree = "<group>"; };
+		7967E916C4F60BEEA892365B /* SandboxHarness.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SandboxHarness.c; sourceTree = "<group>"; };
 		7989F43F0E7C8A77F64A9A73 /* BoundedRecoveryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedRecoveryReader.swift; sourceTree = "<group>"; };
 		79EFEA337F5FD223D6F30419 /* ToolModelIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModelIntegrationTests.swift; sourceTree = "<group>"; };
 		7B13A1E275C9292115821584 /* StoreLockProbe */ = {isa = PBXFileReference; includeInIndex = 0; path = StoreLockProbe; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -695,31 +871,40 @@
 		808340BE4E4978638FFDC99F /* PreparedLineGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreparedLineGeometryTests.swift; sourceTree = "<group>"; };
 		809C38FDD3D288967AB4AE2A /* PersistentLineIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentLineIndex.swift; sourceTree = "<group>"; };
 		80ADA75890D91DBEC769FE5A /* libregexp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libregexp.h; sourceTree = "<group>"; };
-		810CA298F20730E03D0223BD /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
 		817DD0BD61508DA25EEC854D /* DocumentSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchTests.swift; sourceTree = "<group>"; };
 		835FDD3D96B286D62F697154 /* InvocationOverlayCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationOverlayCoordinator.swift; sourceTree = "<group>"; };
 		836D2480566399F33F4D0E4B /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		857FDC8BC95B6835BA5D1921 /* v1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = v1.json; sourceTree = "<group>"; };
+		86A4A6BF0D5DA6B14CB6FC66 /* JORT.patch */ = {isa = PBXFileReference; path = JORT.patch; sourceTree = "<group>"; };
+		87E3E134248E7B20B0EAB349 /* JortJavaScriptBrokerFaultHarness */ = {isa = PBXFileReference; includeInIndex = 0; path = JortJavaScriptBrokerFaultHarness; sourceTree = BUILT_PRODUCTS_DIR; };
 		884842D60EAFA66DAFF38C22 /* ModelConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelConnection.swift; sourceTree = "<group>"; };
 		890A3B619F758EFE88D70C05 /* DocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTests.swift; sourceTree = "<group>"; };
 		8997BE6442E1F78BFCBA363D /* CoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatorTests.swift; sourceTree = "<group>"; };
+		8B0F0E3380D083A2E9A14F7C /* JortJavaScriptProtocolTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JortJavaScriptProtocolTests.m; sourceTree = "<group>"; };
 		8B90F41BD2015B26B477581A /* JortAppKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortAppKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8C2DD987B781BE5C6DFF5BFB /* DocumentPatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPatch.swift; sourceTree = "<group>"; };
 		8E614086D89E52EFCC7DCED6 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
 		8EAD02C8B2CADD434BED5753 /* ModelPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelPicker.swift; sourceTree = "<group>"; };
 		9069F39A81E388BB6AB7A24B /* HistoryDiffCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryDiffCell.swift; sourceTree = "<group>"; };
+		90D1FD694B8CD47CE68F6A16 /* XPCJavaScriptBrokerTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCJavaScriptBrokerTransport.swift; sourceTree = "<group>"; };
 		925521D5605C40F2F00E8BB6 /* Tools */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tools; path = Jort/Resources/Tools; sourceTree = SOURCE_ROOT; };
 		92AE5B524A0A913C5257E842 /* ToolPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPersistenceTests.swift; sourceTree = "<group>"; };
+		932C7EFEF2A53817E00DF43E /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		956D7EEB582CB228242A99A3 /* libunicode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libunicode.h; sourceTree = "<group>"; };
+		999E9A44EA9816681DFF46FE /* JortSignedNativeProbeTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JortSignedNativeProbeTests.m; sourceTree = "<group>"; };
 		99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageStorage.swift; sourceTree = "<group>"; };
+		9A9FE0D086D1C6D46B389BBE /* JortJavaScriptProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JortJavaScriptProtocol.h; sourceTree = "<group>"; };
 		9B4624B7C7A9ED13BD5ACFA6 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortFoundationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortSettings.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9CAC6653C4C60493EC41193C /* dtoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dtoa.h; sourceTree = "<group>"; };
 		9CC206F03C70D57196F1A7AE /* ManagedCopies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedCopies.swift; sourceTree = "<group>"; };
+		9E4F221D1FE441E9E57931CE /* BrokerFaultHarness.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = BrokerFaultHarness.c; sourceTree = "<group>"; };
 		9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWorkspaceTests.swift; sourceTree = "<group>"; };
 		9F4448EA2A682199B4390618 /* JortDocument.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortDocument.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0DD430C698A8277F6F8831A /* ToolInvocationIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationIntegrationTests.swift; sourceTree = "<group>"; };
+		A1583135128286AC1157C6B1 /* JortBrokerFaultTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JortBrokerFaultTests.m; sourceTree = "<group>"; };
+		A56082C0514844F3DB6C7CBA /* JortJavaScriptNativeProbe */ = {isa = PBXFileReference; includeInIndex = 0; path = JortJavaScriptNativeProbe; sourceTree = BUILT_PRODUCTS_DIR; };
 		A64DFDE720E22CCC00769337 /* PresentationTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationTestSupport.swift; sourceTree = "<group>"; };
 		A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrawlLargeDocument.swift; sourceTree = "<group>"; };
 		AC8D85F010506E805B0F878B /* IncrementalLineEditingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncrementalLineEditingTests.swift; sourceTree = "<group>"; };
@@ -737,6 +922,8 @@
 		BA1937DA4FC494E2310FFBCD /* SettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTests.swift; sourceTree = "<group>"; };
 		BACEB5981A7D1291606F22F4 /* EditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTests.swift; sourceTree = "<group>"; };
 		BD024A9EEA12F030339D9451 /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
+		BE189ED18D9C4EA58DA5FB89 /* JortBrokerEnvelopeTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JortBrokerEnvelopeTests.m; sourceTree = "<group>"; };
+		BEAE9C094E244AAB2AF2D0CB /* AppleEventProbe.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppleEventProbe.m; sourceTree = "<group>"; };
 		BEE101502A9D6F7BE36D1D37 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTestCase.swift; sourceTree = "<group>"; };
 		C10F48CC8A1186F707751315 /* RulerControlMounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulerControlMounts.swift; sourceTree = "<group>"; };
@@ -752,9 +939,11 @@
 		C9D1D80CC0A9BC989917816B /* ToolPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackage.swift; sourceTree = "<group>"; };
 		CB95A9C0C9700E91D96BA4E0 /* DocumentUndoManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentUndoManager.swift; sourceTree = "<group>"; };
 		CBB5415DF73F241C4E9ACF6F /* ToolInvocationPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationPresentation.swift; sourceTree = "<group>"; };
+		CDF537CB4F17C92B348F8027 /* JortJavaScriptBroker.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = JortJavaScriptBroker.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE8E020ED4FE49726D75B8CA /* CommandPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPalette.swift; sourceTree = "<group>"; };
 		D181702092209A56A895DBF0 /* ToolPackageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageTests.swift; sourceTree = "<group>"; };
 		D209ECDBC9F716C933AC4166 /* ToolInvocationPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationPresentationTests.swift; sourceTree = "<group>"; };
+		D20D9C51A250BEC2C3511917 /* JortJavaScriptClient.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortJavaScriptClient.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2819C2AD2B9853EA43F79B3 /* ModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelProvider.swift; sourceTree = "<group>"; };
 		D344138FB05A5EA019B7C8B7 /* SettingsWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWorkspaceTests.swift; sourceTree = "<group>"; };
 		D5A12D3369FE17046B45C5B0 /* ToolInvocationInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationInput.swift; sourceTree = "<group>"; };
@@ -776,8 +965,12 @@
 		ED3E59A5748F52849CF4134D /* StorageCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageCommandTests.swift; sourceTree = "<group>"; };
 		EE03B6092BC2533385D7F026 /* ToolExecutionRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolExecutionRequest.swift; sourceTree = "<group>"; };
 		EF07D49D04C1C5072287C267 /* InvocationTransientState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationTransientState.swift; sourceTree = "<group>"; };
+		EF2EDC109EF783B8261B274E /* JortJavaScriptSandboxHarness */ = {isa = PBXFileReference; includeInIndex = 0; path = JortJavaScriptSandboxHarness; sourceTree = BUILT_PRODUCTS_DIR; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F11DB9851BBCD9FBA9BF383A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		F127F7DCE1F2B0D613B49126 /* JortJavaScriptWorker */ = {isa = PBXFileReference; includeInIndex = 0; path = JortJavaScriptWorker; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2D6E9F2978A8E4005A1CCA9 /* DocumentSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSnapshot.swift; sourceTree = "<group>"; };
+		F318E20295C254857229D0F3 /* JortJavaScriptClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JortJavaScriptClient.h; sourceTree = "<group>"; };
 		FAEE4365987E5C4CEA0F73C8 /* IncrementalLineEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncrementalLineEditing.swift; sourceTree = "<group>"; };
 		FDB01661C1ACC0EB29F1C177 /* StartupEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupEditorTests.swift; sourceTree = "<group>"; };
 		FDFBEC650856CCBC9A17EB4B /* quickjs-atom.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "quickjs-atom.h"; sourceTree = "<group>"; };
@@ -800,6 +993,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		360A7CA230CBBAAF7F8E01C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4F43AFA603B184D2043409DB /* Foundation.framework in Frameworks */,
+				F7A971850872CA7CB4AB0ED5 /* Security.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		643E91B30EEB386E563E7DC7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F737DEE22FDB488E243906F5 /* Security.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		65C421AA0B6F177A4814987A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -809,6 +1019,15 @@
 				DA43E152FBA890BA7EFC9945 /* JortSettings.framework in Frameworks */,
 				DB820B5B336EB87EC56F457A /* JortDocument.framework in Frameworks */,
 				FC77F3B2800F620DE4881398 /* JortPersistence.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8AAF31F9CFBF8AAA4499B1B0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C736371A0FEC3D14D9613553 /* CoreFoundation.framework in Frameworks */,
+				167A23FD8294278FA7931FD2 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -828,6 +1047,25 @@
 				96D5A11010C9F472D3C3430C /* JortPersistence.framework in Frameworks */,
 				54AAB0DA891C19A2851C2773 /* JortSettings.framework in Frameworks */,
 				E219FBD771623EDF86274C86 /* JortToolContracts.framework in Frameworks */,
+				B22688BD24A5C89E09FC57D5 /* JortToolRuntime.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9F2266FA44BB75BE4DACE55C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2CB957CCCE69C02BA4C6363A /* AppKit.framework in Frameworks */,
+				C4C2D7C78135A9FD435E9D61 /* ApplicationServices.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A4A617CEA6A463CB89EB69E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98E5DBB8E5D8F4715114B75B /* AppKit.framework in Frameworks */,
+				EEC03C4B465C2C7917DA55B1 /* ApplicationServices.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -845,7 +1083,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D20F42C78D68A8616DDF6FD7 /* JortToolContracts.framework in Frameworks */,
-				C3D8F523F9245CFC2A620AF8 /* JortJavaScript.framework in Frameworks */,
+				53C3080D054E063FC4388223 /* JortJavaScriptClient.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -867,8 +1105,17 @@
 				D5B54E117344BB1BF24E3C9F /* JortAppKit.framework in Frameworks */,
 				49DF326928DE0CAC23C1597D /* JortSettings.framework in Frameworks */,
 				77DF2F99A367159528FAF8FE /* JortToolContracts.framework in Frameworks */,
-				95F48DB804596457D97BBEE5 /* JortJavaScript.framework in Frameworks */,
+				38FC7173DFE49F415414EE78 /* JortJavaScriptClient.framework in Frameworks */,
 				0ED27379C59E37FD345796D7 /* JortToolRuntime.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2C39D9D431FF29121BBB3BE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				12BACC03133F4A2E12B216A4 /* AppKit.framework in Frameworks */,
+				1734712EEC2D106BA45CD90B /* ApplicationServices.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -910,6 +1157,15 @@
 			);
 			name = StoreLockProbe;
 			path = Tools/StoreLockProbe;
+			sourceTree = "<group>";
+		};
+		0688C519567E6CAF764D9247 /* JortJavaScriptWorker */ = {
+			isa = PBXGroup;
+			children = (
+				04B9D9D1C565758729BB07C3 /* main.c */,
+			);
+			name = JortJavaScriptWorker;
+			path = Sources/JortJavaScriptWorker;
 			sourceTree = "<group>";
 		};
 		077CC5D41C73177AB191E9E0 /* ToolContracts */ = {
@@ -972,6 +1228,16 @@
 			path = Tests/ToolRuntime;
 			sourceTree = "<group>";
 		};
+		35EF2E8107186DA6199D2113 /* JortJavaScriptProtocol */ = {
+			isa = PBXGroup;
+			children = (
+				0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */,
+				9A9FE0D086D1C6D46B389BBE /* JortJavaScriptProtocol.h */,
+			);
+			name = JortJavaScriptProtocol;
+			path = Sources/JortJavaScriptProtocol;
+			sourceTree = "<group>";
+		};
 		3FD294B8730BAA78938AA17C /* JortToolRuntime */ = {
 			isa = PBXGroup;
 			children = (
@@ -980,6 +1246,7 @@
 				237A9DA54FC18BE76B8D119F /* ToolExecutorDispatcher.swift */,
 				044BB572F6EB659E0AEB9B45 /* ToolInvocationCoordinator.swift */,
 				1A5D3D13F745C39022D7F443 /* ToolRuntime.swift */,
+				90D1FD694B8CD47CE68F6A16 /* XPCJavaScriptBrokerTransport.swift */,
 			);
 			name = JortToolRuntime;
 			path = Sources/JortToolRuntime;
@@ -994,6 +1261,7 @@
 				30643E32B6EAC1F1FCC4C3DA /* StartupLoadStore.swift */,
 				BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */,
 				5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */,
+				2787E228BA8767FA83E78714 /* WorkerProcessJavaScriptTransport.swift */,
 			);
 			name = Support;
 			path = Tests/Support;
@@ -1022,7 +1290,12 @@
 		552DF7F9ADC8FC1AEF127A86 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				932C7EFEF2A53817E00DF43E /* AppKit.framework */,
+				254C83A0E2F357BC3819BE64 /* ApplicationServices.framework */,
+				436A66BF175F3AC334111381 /* CoreFoundation.framework */,
+				F11DB9851BBCD9FBA9BF383A /* Foundation.framework */,
 				836D2480566399F33F4D0E4B /* libsqlite3.tbd */,
+				4119796F7EF864716DF246A7 /* Security.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -1037,6 +1310,18 @@
 			);
 			name = Resources;
 			path = Jort/Resources;
+			sourceTree = "<group>";
+		};
+		7150A07E64F5DE0F4F745A04 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				BEAE9C094E244AAB2AF2D0CB /* AppleEventProbe.m */,
+				9E4F221D1FE441E9E57931CE /* BrokerFaultHarness.c */,
+				117894FCCEBF573133B07050 /* NativeProbe.c */,
+				7967E916C4F60BEEA892365B /* SandboxHarness.c */,
+			);
+			name = Fixtures;
+			path = Tests/JavaScriptContainment/Fixtures;
 			sourceTree = "<group>";
 		};
 		7269BD467E1B32166BACFEA2 /* Foundation */ = {
@@ -1073,10 +1358,19 @@
 			children = (
 				1978353FEB464E98985FE522 /* Jort.app */,
 				8B90F41BD2015B26B477581A /* JortAppKit.framework */,
+				202A7E31CCE8CF2BB97C904D /* JortAppleEventProbe */,
+				3030D936C458595887F07D4C /* JortAppleEventReceiver.app */,
 				EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */,
 				9F4448EA2A682199B4390618 /* JortDocument.framework */,
 				9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */,
-				54BD024322D7CE95970E48D0 /* JortJavaScript.framework */,
+				CDF537CB4F17C92B348F8027 /* JortJavaScriptBroker.xpc */,
+				87E3E134248E7B20B0EAB349 /* JortJavaScriptBrokerFaultHarness */,
+				D20D9C51A250BEC2C3511917 /* JortJavaScriptClient.framework */,
+				334EA42BEEBB4FC6CFF36C99 /* JortJavaScriptContainmentTests.xctest */,
+				A56082C0514844F3DB6C7CBA /* JortJavaScriptNativeProbe */,
+				EF2EDC109EF783B8261B274E /* JortJavaScriptSandboxHarness */,
+				51B7A4831CE469E82215FF2F /* JortJavaScriptTestOracle */,
+				F127F7DCE1F2B0D613B49126 /* JortJavaScriptWorker */,
 				02A0A8926B0C7313854C181A /* JortPersistence.framework */,
 				9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */,
 				6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */,
@@ -1104,17 +1398,33 @@
 			path = Tests/Fixtures;
 			sourceTree = "<group>";
 		};
+		9BB9C3EEB694D95EFA1862E2 /* JortJavaScriptClient */ = {
+			isa = PBXGroup;
+			children = (
+				033756C1C1C156E291C71692 /* JortJavaScriptClient.c */,
+				F318E20295C254857229D0F3 /* JortJavaScriptClient.h */,
+			);
+			name = JortJavaScriptClient;
+			path = Sources/JortJavaScriptClient;
+			sourceTree = "<group>";
+		};
 		9ED0A085387A3E2DA1499273 = {
 			isa = PBXGroup;
 			children = (
 				925521D5605C40F2F00E8BB6 /* Tools */,
 				2855EA06D4096653BA9FB7A2 /* AppKit */,
 				8FFEC407BEF526ED62B68E4A /* Fixtures */,
+				7150A07E64F5DE0F4F745A04 /* Fixtures */,
 				7269BD467E1B32166BACFEA2 /* Foundation */,
+				B1C9787CFE5B20D8AAE1578D /* JavaScriptContainment */,
 				FEAA316E6D536F80DC64942E /* Jort */,
 				FA9CC54BF590A437452C488B /* JortAppKit */,
 				C77123F6C474CA61648A68C2 /* JortDocument */,
 				E3A17EE5491A39C2A44EA5ED /* JortJavaScript */,
+				B5AD61825BBF2CCE2B2A4F5B /* JortJavaScriptBroker */,
+				9BB9C3EEB694D95EFA1862E2 /* JortJavaScriptClient */,
+				35EF2E8107186DA6199D2113 /* JortJavaScriptProtocol */,
+				0688C519567E6CAF764D9247 /* JortJavaScriptWorker */,
 				A7038EEFC224A9473B106BF9 /* JortPersistence */,
 				9F7406EDAEF7DE1090322A21 /* JortSettings */,
 				514E0A82ECDCB66198EB6175 /* JortToolContracts */,
@@ -1170,6 +1480,32 @@
 			path = Sources/JortPersistence;
 			sourceTree = "<group>";
 		};
+		B1C9787CFE5B20D8AAE1578D /* JavaScriptContainment */ = {
+			isa = PBXGroup;
+			children = (
+				2FCCB8AF31754CD0D5124D03 /* JortAppleEventProbeTests.m */,
+				BE189ED18D9C4EA58DA5FB89 /* JortBrokerEnvelopeTests.m */,
+				A1583135128286AC1157C6B1 /* JortBrokerFaultTests.m */,
+				8B0F0E3380D083A2E9A14F7C /* JortJavaScriptProtocolTests.m */,
+				999E9A44EA9816681DFF46FE /* JortSignedNativeProbeTests.m */,
+			);
+			name = JavaScriptContainment;
+			path = Tests/JavaScriptContainment;
+			sourceTree = "<group>";
+		};
+		B5AD61825BBF2CCE2B2A4F5B /* JortJavaScriptBroker */ = {
+			isa = PBXGroup;
+			children = (
+				2BB7FA7E469D23EEC0F0337A /* BrokerEnvelope.c */,
+				69F4AFEC07321CEBC83FF50F /* BrokerEnvelope.h */,
+				1D3AF4DDD5D623AA5A737F5E /* BrokerIdentity.c */,
+				4C1D730B8089019FA34285BF /* BrokerIdentity.h */,
+				2C27B0FECD0124B88FEEB768 /* main.c */,
+			);
+			name = JortJavaScriptBroker;
+			path = Sources/JortJavaScriptBroker;
+			sourceTree = "<group>";
+		};
 		C0739F8BBF436EF217A2FB76 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -1216,13 +1552,13 @@
 				523D6F370304803C2FB2770F /* cutils.h */,
 				0FE68EC19961835A5F9F8E86 /* dtoa.c */,
 				9CAC6653C4C60493EC41193C /* dtoa.h */,
+				86A4A6BF0D5DA6B14CB6FC66 /* JORT.patch */,
 				B55D1016B0D99A8BC5313F63 /* libregexp-opcode.h */,
 				E08C38A6AD7E93755E054182 /* libregexp.c */,
 				80ADA75890D91DBEC769FE5A /* libregexp.h */,
 				FF28C35AD3183F51813E36AC /* libunicode-table.h */,
 				C680C97D91E66688DAD477B2 /* libunicode.c */,
 				956D7EEB582CB228242A99A3 /* libunicode.h */,
-				810CA298F20730E03D0223BD /* LICENSE */,
 				3987A26318419A8BEEC55422 /* list.h */,
 				FDFBEC650856CCBC9A17EB4B /* quickjs-atom.h */,
 				C5CD91B362E719B8498965D1 /* quickjs-opcode.h */,
@@ -1237,7 +1573,6 @@
 			isa = PBXGroup;
 			children = (
 				3BCF6DF374DEC19C364B724A /* JortJavaScript.c */,
-				5E6574876DDE4AA7D758D186 /* JortJavaScript.h */,
 			);
 			name = JortJavaScript;
 			path = Sources/JortJavaScript;
@@ -1307,21 +1642,12 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		66B9B3A4E752D57A0DD92B7C /* Headers */ = {
+		7D3AAE8B5DEE83FF5B9A757E /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				77046616EF102B2392944226 /* JortJavaScript.h in Headers */,
-				DBA64D8DB274477FF9CCC03C /* cutils.h in Headers */,
-				61512E5B507194325AF3374C /* dtoa.h in Headers */,
-				8DA06960B038D886D27EA322 /* libregexp-opcode.h in Headers */,
-				A2EB2059DDC544FA7E124507 /* libregexp.h in Headers */,
-				C5FFBE1989792F015E80BE60 /* libunicode-table.h in Headers */,
-				7DD2F3C8570956D480E4EF97 /* libunicode.h in Headers */,
-				FE6F5D3D8C8696B2F368B618 /* list.h in Headers */,
-				00DF8CF4B9867B9164CCE99C /* quickjs-atom.h in Headers */,
-				70ED579722395600CB09E683 /* quickjs-opcode.h in Headers */,
-				29DA7EEA031FFA85EC502AB4 /* quickjs.h in Headers */,
+				3C15A4A7EA304CD2B4B9FA2D /* JortJavaScriptClient.h in Headers */,
+				ACD8467586A937E04390A13E /* JortJavaScriptProtocol.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1347,6 +1673,43 @@
 			productReference = 9F4448EA2A682199B4390618 /* JortDocument.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		0D26DD125668581EF7021F63 /* JortJavaScriptBrokerFaultHarness */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EAB73A21C63BB31BC2EF7A69 /* Build configuration list for PBXNativeTarget "JortJavaScriptBrokerFaultHarness" */;
+			buildPhases = (
+				BFE97C1274598705A87699C6 /* Sources */,
+				643E91B30EEB386E563E7DC7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				85F38150284E5084B5587134 /* PBXTargetDependency */,
+			);
+			name = JortJavaScriptBrokerFaultHarness;
+			packageProductDependencies = (
+			);
+			productName = JortJavaScriptBrokerFaultHarness;
+			productReference = 87E3E134248E7B20B0EAB349 /* JortJavaScriptBrokerFaultHarness */;
+			productType = "com.apple.product-type.tool";
+		};
+		1258AAF20B245B71F2019493 /* JortJavaScriptNativeProbe */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3AF51D8CA1746D5AC4AEE3F1 /* Build configuration list for PBXNativeTarget "JortJavaScriptNativeProbe" */;
+			buildPhases = (
+				1D5ECEE633377C1BA8CA5216 /* Sources */,
+				A759960B1C3BE5FA8DB51CF3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortJavaScriptNativeProbe;
+			packageProductDependencies = (
+			);
+			productName = JortJavaScriptNativeProbe;
+			productReference = A56082C0514844F3DB6C7CBA /* JortJavaScriptNativeProbe */;
+			productType = "com.apple.product-type.tool";
+		};
 		1682C285DB657FDFCDFE3720 /* JortFoundationTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 281C731AB828477D429AEB0E /* Build configuration list for PBXNativeTarget "JortFoundationTests" */;
@@ -1363,7 +1726,9 @@
 				178B15D7E6C44E714C2584A9 /* PBXTargetDependency */,
 				FFBA7075146F7C9568D6DA8A /* PBXTargetDependency */,
 				28734AAFC7062AF63B00D701 /* PBXTargetDependency */,
+				1F4F4FB843F9036BAFD971D1 /* PBXTargetDependency */,
 				1B0C225A4DA616C088D779B1 /* PBXTargetDependency */,
+				A9A93066F58A9F0AFA609AB5 /* PBXTargetDependency */,
 			);
 			name = JortFoundationTests;
 			packageProductDependencies = (
@@ -1371,6 +1736,42 @@
 			productName = JortFoundationTests;
 			productReference = 9B53D3832B77A390A9731632 /* JortFoundationTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		30C4E0C146ECB98598FAC528 /* JortAppleEventProbe */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BBC8DAA2B68608154D4EE368 /* Build configuration list for PBXNativeTarget "JortAppleEventProbe" */;
+			buildPhases = (
+				B4B9423F59FE18DC86822AB0 /* Sources */,
+				9F2266FA44BB75BE4DACE55C /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortAppleEventProbe;
+			packageProductDependencies = (
+			);
+			productName = JortAppleEventProbe;
+			productReference = 202A7E31CCE8CF2BB97C904D /* JortAppleEventProbe */;
+			productType = "com.apple.product-type.tool";
+		};
+		3739FB93A007E7219848329A /* JortJavaScriptSandboxHarness */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F50E8E65CB81B88B5B8F5181 /* Build configuration list for PBXNativeTarget "JortJavaScriptSandboxHarness" */;
+			buildPhases = (
+				559167EBB1829C1E7E792E8F /* Sources */,
+				360A7CA230CBBAAF7F8E01C0 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortJavaScriptSandboxHarness;
+			packageProductDependencies = (
+			);
+			productName = JortJavaScriptSandboxHarness;
+			productReference = EF2EDC109EF783B8261B274E /* JortJavaScriptSandboxHarness */;
+			productType = "com.apple.product-type.tool";
 		};
 		3A16B52213E188C51D5FF571 /* JortToolRuntime */ = {
 			isa = PBXNativeTarget;
@@ -1383,7 +1784,7 @@
 			);
 			dependencies = (
 				77DDED0259C3B20D897B2923 /* PBXTargetDependency */,
-				209F3958CD7C207E9E556F12 /* PBXTargetDependency */,
+				7983CCF8019339965EF7CF07 /* PBXTargetDependency */,
 			);
 			name = JortToolRuntime;
 			packageProductDependencies = (
@@ -1418,8 +1819,10 @@
 				196C5AE130B2744EEB6A409D /* Generate application icon */,
 				4470161D7B7662FAB4F6ED1B /* Sources */,
 				D74EC58DF90F03A6BBCB39D1 /* Resources */,
+				C6FD480FB97D8EBFCCCFD1BA /* CopyFiles */,
 				D131C9BA955FF2A9654B0A68 /* Frameworks */,
 				7C38278F71C9E4457CAA1977 /* Embed Frameworks */,
+				17C83C82FDDBEC08F9AE381B /* Seal JavaScript broker entitlements */,
 			);
 			buildRules = (
 			);
@@ -1429,7 +1832,8 @@
 				A00B56163EF247574386A3A5 /* PBXTargetDependency */,
 				7ADFBF35FD4BD6B5A6B82D26 /* PBXTargetDependency */,
 				EE6AD0042388BB5748625ACD /* PBXTargetDependency */,
-				D74537E2B4CFCDE3BC9A7358 /* PBXTargetDependency */,
+				CE32880BA81C949A5FEFC647 /* PBXTargetDependency */,
+				A0101207BE7F8FAD54B6477F /* PBXTargetDependency */,
 				E7DAE3CE0BA6F60082354071 /* PBXTargetDependency */,
 			);
 			name = Jort;
@@ -1439,24 +1843,23 @@
 			productReference = 1978353FEB464E98985FE522 /* Jort.app */;
 			productType = "com.apple.product-type.application";
 		};
-		9B6298D78A634AC3CF42FC03 /* JortJavaScript */ = {
+		9AD54A9C747E98D8CFE3122B /* JortJavaScriptTestOracle */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 389A730E371B318A103A3064 /* Build configuration list for PBXNativeTarget "JortJavaScript" */;
+			buildConfigurationList = 9A6F1A9E1C02488705F71753 /* Build configuration list for PBXNativeTarget "JortJavaScriptTestOracle" */;
 			buildPhases = (
-				66B9B3A4E752D57A0DD92B7C /* Headers */,
-				63DCA1A95D33B6B5CC340FF4 /* Sources */,
-				CCFA30469A9FBA3136AB9C17 /* Resources */,
+				A8DC6D3C6FE7B9E7390F6B3F /* Sources */,
+				414725B19963D7FE443AE146 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = JortJavaScript;
+			name = JortJavaScriptTestOracle;
 			packageProductDependencies = (
 			);
-			productName = JortJavaScript;
-			productReference = 54BD024322D7CE95970E48D0 /* JortJavaScript.framework */;
-			productType = "com.apple.product-type.framework";
+			productName = JortJavaScriptTestOracle;
+			productReference = 51B7A4831CE469E82215FF2F /* JortJavaScriptTestOracle */;
+			productType = "com.apple.product-type.tool";
 		};
 		A03A46CE7D8CC8FA10D000EE /* JortCoreTests */ = {
 			isa = PBXNativeTarget;
@@ -1476,12 +1879,36 @@
 				95D3537D20C64980E99254B2 /* PBXTargetDependency */,
 				DAA02E66218E9C5BB198722C /* PBXTargetDependency */,
 				72384697BB6EE889A9A7F32A /* PBXTargetDependency */,
+				4EDB56D2E1AFBA0FC6175D55 /* PBXTargetDependency */,
 			);
 			name = JortCoreTests;
 			packageProductDependencies = (
 			);
 			productName = JortCoreTests;
 			productReference = EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		AAD41B0B72A435E416EC1596 /* JortJavaScriptContainmentTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6084DA38BEB111E86B1EDCBB /* Build configuration list for PBXNativeTarget "JortJavaScriptContainmentTests" */;
+			buildPhases = (
+				8AFEE6F95C6BBDE98E9B5224 /* Sources */,
+				A4A617CEA6A463CB89EB69E7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4A63A2FDC7632D5D738425A4 /* PBXTargetDependency */,
+				7DDE10F5D2192ED060B9ADD1 /* PBXTargetDependency */,
+				149ADC6C3CB482A254F7A501 /* PBXTargetDependency */,
+				0DBD6CB049E2EF35D8633AD3 /* PBXTargetDependency */,
+				EA32BC457C751FEBB231A353 /* PBXTargetDependency */,
+			);
+			name = JortJavaScriptContainmentTests;
+			packageProductDependencies = (
+			);
+			productName = JortJavaScriptContainmentTests;
+			productReference = 334EA42BEEBB4FC6CFF36C99 /* JortJavaScriptContainmentTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		B386A86BE2EBA3E88CBB0142 /* JortAppKit */ = {
@@ -1561,6 +1988,24 @@
 			productReference = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		C9F655F3B6C5E921EA335A5A /* JortJavaScriptWorker */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6FC13DF0ECE10322BF729B1B /* Build configuration list for PBXNativeTarget "JortJavaScriptWorker" */;
+			buildPhases = (
+				2CC0BD5D90CE6D02B5297EBB /* Sources */,
+				5EECDF34390E63767306F7FA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortJavaScriptWorker;
+			packageProductDependencies = (
+			);
+			productName = JortJavaScriptWorker;
+			productReference = F127F7DCE1F2B0D613B49126 /* JortJavaScriptWorker */;
+			productType = "com.apple.product-type.tool";
+		};
 		D7119C245676A4F069D25D44 /* StoreLockProbe */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DB912028270E94BFF8149F90 /* Build configuration list for PBXNativeTarget "StoreLockProbe" */;
@@ -1580,6 +2025,26 @@
 			productName = StoreLockProbe;
 			productReference = 7B13A1E275C9292115821584 /* StoreLockProbe */;
 			productType = "com.apple.product-type.tool";
+		};
+		D883E7AFD9CC9D1BB2CE5220 /* JortJavaScriptBroker */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0A643136531F592E707DF2BB /* Build configuration list for PBXNativeTarget "JortJavaScriptBroker" */;
+			buildPhases = (
+				780757D025859B01DC427549 /* Sources */,
+				1057F7DAACE7180741E2D909 /* Embed Dependencies */,
+				24098D2368D89EB86F12D190 /* Seal JavaScript worker entitlements */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2C398BB0D4FDE3493F176BA3 /* PBXTargetDependency */,
+			);
+			name = JortJavaScriptBroker;
+			packageProductDependencies = (
+			);
+			productName = JortJavaScriptBroker;
+			productReference = CDF537CB4F17C92B348F8027 /* JortJavaScriptBroker.xpc */;
+			productType = "com.apple.product-type.xpc-service";
 		};
 		DA498A2F774A2F97F713D864 /* JortToolContractsTests */ = {
 			isa = PBXNativeTarget;
@@ -1601,6 +2066,43 @@
 			productReference = 3AF52A5D136B7BFCB3769647 /* JortToolContractsTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		E6F2F901488E738074BA7265 /* JortJavaScriptClient */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BE99AE89415FCA1209C506EE /* Build configuration list for PBXNativeTarget "JortJavaScriptClient" */;
+			buildPhases = (
+				7D3AAE8B5DEE83FF5B9A757E /* Headers */,
+				F0364CF3112194C24CF9D039 /* Sources */,
+				8AAF31F9CFBF8AAA4499B1B0 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortJavaScriptClient;
+			packageProductDependencies = (
+			);
+			productName = JortJavaScriptClient;
+			productReference = D20D9C51A250BEC2C3511917 /* JortJavaScriptClient.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		F2DE992B8FBCCEA0DD19414D /* JortAppleEventReceiver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EABCBE027F1CB4B71DA68DF1 /* Build configuration list for PBXNativeTarget "JortAppleEventReceiver" */;
+			buildPhases = (
+				A00671315B7103AB7F4F0AAE /* Sources */,
+				D2C39D9D431FF29121BBB3BE /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JortAppleEventReceiver;
+			packageProductDependencies = (
+			);
+			productName = JortAppleEventReceiver;
+			productReference = 3030D936C458595887F07D4C /* JortAppleEventReceiver.app */;
+			productType = "com.apple.product-type.application";
+		};
 		F9D6C7E3E754E4D1741A4577 /* JortToolRuntimeTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6F3B1C50360919027B18F677 /* Build configuration list for PBXNativeTarget "JortToolRuntimeTests" */;
@@ -1617,6 +2119,7 @@
 				F0079966D27FF6D46A3CCCB9 /* PBXTargetDependency */,
 				CDC970164D8E76EA2AB6B805 /* PBXTargetDependency */,
 				08100A2C75BFFEC5688C7E52 /* PBXTargetDependency */,
+				0B13040380FB9C794D9DE539 /* PBXTargetDependency */,
 			);
 			name = JortToolRuntimeTests;
 			packageProductDependencies = (
@@ -1634,8 +2137,75 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					07E5453287B9F8C62DA2C8CB = {
+						ProvisioningStyle = Manual;
+					};
+					0D26DD125668581EF7021F63 = {
+						ProvisioningStyle = Manual;
+					};
+					1258AAF20B245B71F2019493 = {
+						ProvisioningStyle = Manual;
+					};
+					1682C285DB657FDFCDFE3720 = {
+						ProvisioningStyle = Manual;
+					};
+					30C4E0C146ECB98598FAC528 = {
+						ProvisioningStyle = Manual;
+					};
+					3739FB93A007E7219848329A = {
+						ProvisioningStyle = Manual;
+					};
+					3A16B52213E188C51D5FF571 = {
+						ProvisioningStyle = Manual;
+					};
+					4996422CDDDC50EC7CF340C1 = {
+						ProvisioningStyle = Manual;
+					};
+					594DC212921BACAC61D70ED9 = {
+						ProvisioningStyle = Manual;
+					};
+					9AD54A9C747E98D8CFE3122B = {
+						ProvisioningStyle = Manual;
+					};
+					A03A46CE7D8CC8FA10D000EE = {
+						ProvisioningStyle = Manual;
+					};
+					AAD41B0B72A435E416EC1596 = {
+						ProvisioningStyle = Manual;
+					};
+					B386A86BE2EBA3E88CBB0142 = {
+						ProvisioningStyle = Manual;
+					};
 					BA58B83CB23F64711B793776 = {
+						ProvisioningStyle = Manual;
 						TestTargetID = 594DC212921BACAC61D70ED9;
+					};
+					C32E76A665123E52BD3970CF = {
+						ProvisioningStyle = Manual;
+					};
+					C95C707E2A3214B5F7E60416 = {
+						ProvisioningStyle = Manual;
+					};
+					C9F655F3B6C5E921EA335A5A = {
+						ProvisioningStyle = Manual;
+					};
+					D7119C245676A4F069D25D44 = {
+						ProvisioningStyle = Manual;
+					};
+					D883E7AFD9CC9D1BB2CE5220 = {
+						ProvisioningStyle = Manual;
+					};
+					DA498A2F774A2F97F713D864 = {
+						ProvisioningStyle = Manual;
+					};
+					E6F2F901488E738074BA7265 = {
+						ProvisioningStyle = Manual;
+					};
+					F2DE992B8FBCCEA0DD19414D = {
+						ProvisioningStyle = Manual;
+					};
+					F9D6C7E3E754E4D1741A4577 = {
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
@@ -1656,8 +2226,17 @@
 				C32E76A665123E52BD3970CF /* JortToolContracts */,
 				DA498A2F774A2F97F713D864 /* JortToolContractsTests */,
 				3A16B52213E188C51D5FF571 /* JortToolRuntime */,
+				E6F2F901488E738074BA7265 /* JortJavaScriptClient */,
 				F9D6C7E3E754E4D1741A4577 /* JortToolRuntimeTests */,
-				9B6298D78A634AC3CF42FC03 /* JortJavaScript */,
+				D883E7AFD9CC9D1BB2CE5220 /* JortJavaScriptBroker */,
+				C9F655F3B6C5E921EA335A5A /* JortJavaScriptWorker */,
+				9AD54A9C747E98D8CFE3122B /* JortJavaScriptTestOracle */,
+				1258AAF20B245B71F2019493 /* JortJavaScriptNativeProbe */,
+				3739FB93A007E7219848329A /* JortJavaScriptSandboxHarness */,
+				0D26DD125668581EF7021F63 /* JortJavaScriptBrokerFaultHarness */,
+				F2DE992B8FBCCEA0DD19414D /* JortAppleEventReceiver */,
+				30C4E0C146ECB98598FAC528 /* JortAppleEventProbe */,
+				AAD41B0B72A435E416EC1596 /* JortJavaScriptContainmentTests */,
 				C95C707E2A3214B5F7E60416 /* JortSettings */,
 				07E5453287B9F8C62DA2C8CB /* JortDocument */,
 				4996422CDDDC50EC7CF340C1 /* JortPersistence */,
@@ -1680,6 +2259,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		414725B19963D7FE443AE146 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47B1DB17FA52D785E36284ED /* JORT.patch in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5EECDF34390E63767306F7FA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A13DF6E2E3E6A91FE5361BF /* JORT.patch in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8F7DBBFB8C5088E8FEA680C7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1688,11 +2283,11 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		CCFA30469A9FBA3136AB9C17 /* Resources */ = {
+		A759960B1C3BE5FA8DB51CF3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9433177CAA4E2B4B287BE93C /* LICENSE in Resources */,
+				DDEA84A9AF3D555E2A8BF0E9 /* JORT.patch in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1725,6 +2320,29 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		17C83C82FDDBEC08F9AE381B /* Seal JavaScript broker entitlements */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/sign-javascript-broker.sh",
+				"$(SRCROOT)/Configuration/JortJavaScriptBroker.entitlements",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/XPCServices/JortJavaScriptBroker.xpc",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker",
+			);
+			name = "Seal JavaScript broker entitlements";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/JortJavaScriptBroker-signature.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"$SRCROOT/scripts/sign-javascript-broker.sh\"";
+		};
 		196C5AE130B2744EEB6A409D /* Generate application icon */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1746,6 +2364,28 @@
 			shellPath = /bin/sh;
 			shellScript = "bash \"$SRCROOT/scripts/generate-icon.sh\"";
 		};
+		24098D2368D89EB86F12D190 /* Seal JavaScript worker entitlements */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/sign-javascript-worker.sh",
+				"$(SRCROOT)/Configuration/JortJavaScriptWorker.entitlements",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/JortJavaScriptWorker",
+			);
+			name = "Seal JavaScript worker entitlements";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/JortJavaScriptWorker-signature.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"$SRCROOT/scripts/sign-javascript-worker.sh\"";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1754,6 +2394,21 @@
 			buildActionMask = 2147483647;
 			files = (
 				7C3BE10E55FCABBCBEBCA596 /* InvocationLifecycleTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D5ECEE633377C1BA8CA5216 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AE290D380BC6D0397EA9F2A8 /* JortJavaScript.c in Sources */,
+				9E9C037F1BD3E8E3F9BDC439 /* JortJavaScriptProtocol.c in Sources */,
+				895CF1D5D4FDB6DDEBEB25A7 /* NativeProbe.c in Sources */,
+				3069174FB7CC60BD80A86B32 /* cutils.c in Sources */,
+				9F99795F9D1D04C4DF42CB34 /* dtoa.c in Sources */,
+				CF7B101AF807C76607E0652D /* libregexp.c in Sources */,
+				96CD6AE7ADED57CC83D771CE /* libunicode.c in Sources */,
+				48A0E84D75AF18CC1438B77D /* quickjs.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1788,6 +2443,21 @@
 				5A19D68DEBB0E7B34ABDE688 /* ToolPackage.swift in Sources */,
 				8316CC5DCDA7F882F313D229 /* ToolPackageRegistry.swift in Sources */,
 				401338A92E9A783E573AF6FC /* ToolPackageStorage.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2CC0BD5D90CE6D02B5297EBB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				51EC12A94EBB6BCF49B33FB7 /* JortJavaScript.c in Sources */,
+				C878B42A38B417DAF27BF2AB /* JortJavaScriptProtocol.c in Sources */,
+				8EB855D74BAE7DFA6879EFE6 /* cutils.c in Sources */,
+				56B93F8357092B7C81FE2807 /* dtoa.c in Sources */,
+				272B69D0F37D5D9CB4E90451 /* libregexp.c in Sources */,
+				DAA9AA62A0636108A6780D17 /* libunicode.c in Sources */,
+				293B46101FE77D6C2B96C626 /* main.c in Sources */,
+				E1512774B52BCEDEFBF55772 /* quickjs.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1849,16 +2519,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		63DCA1A95D33B6B5CC340FF4 /* Sources */ = {
+		559167EBB1829C1E7E792E8F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				12581E91DCF1F45FDDE8C168 /* JortJavaScript.c in Sources */,
-				A29A3F99577135F6B2465AAC /* cutils.c in Sources */,
-				CAD9559F32357FABB46510EF /* dtoa.c in Sources */,
-				D2327DD1469F0D7EF3DE3CDA /* libregexp.c in Sources */,
-				80329B39F2612A04DE273338 /* libunicode.c in Sources */,
-				6F42CFC6EC6300DC49528707 /* quickjs.c in Sources */,
+				3DFBCA670CE27C5E1B83C558 /* BrokerEnvelope.c in Sources */,
+				F8CBBCB38EA6E783A7902BD0 /* BrokerIdentity.c in Sources */,
+				AEED127FD09653289BEF41AA /* JortJavaScriptProtocol.c in Sources */,
+				0B7299E83DAD1D69739F855F /* SandboxHarness.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1867,6 +2535,31 @@
 			buildActionMask = 2147483647;
 			files = (
 				858E73367BB4DF9FA2DE6B18 /* LockProbe.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		780757D025859B01DC427549 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D8D08CEA736F6900447B180 /* BrokerEnvelope.c in Sources */,
+				D33DDE269ADFC5D57AD5D27D /* BrokerIdentity.c in Sources */,
+				DF498D2B73EB679356DD6269 /* JortJavaScriptProtocol.c in Sources */,
+				92A86F2B3991702929F9868F /* main.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8AFEE6F95C6BBDE98E9B5224 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B2D9FA1C665862E26EB0E0F /* BrokerEnvelope.c in Sources */,
+				C4A2936B2A56B21B452DFBB7 /* JortAppleEventProbeTests.m in Sources */,
+				0125E4528B8CA75FE1BE52F6 /* JortBrokerEnvelopeTests.m in Sources */,
+				9FB30D26DA25BC4F7127DDB3 /* JortBrokerFaultTests.m in Sources */,
+				343D091DEF2D89EDBB3F2BD0 /* JortJavaScriptProtocol.c in Sources */,
+				2089A18DADAEF23357755E4E /* JortJavaScriptProtocolTests.m in Sources */,
+				C5EA7E14540753619F55F7E4 /* JortSignedNativeProbeTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1906,6 +2599,30 @@
 				84522182CD30EB1A9B34C484 /* SuspendedPackageValidator.swift in Sources */,
 				EA87B07265FD7FFA525FB16C /* ToolPackageTests.swift in Sources */,
 				9DA384B6D7DE55EA2CF69E3B /* ToolRuntimeTests.swift in Sources */,
+				01B5CA24E55AA32866C09292 /* WorkerProcessJavaScriptTransport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00671315B7103AB7F4F0AAE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A05159A2D4C3EABCE7FDE7D7 /* AppleEventProbe.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A8DC6D3C6FE7B9E7390F6B3F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10AE41BF4276269B32611549 /* JortJavaScript.c in Sources */,
+				19166F4CE25D9EAFA53BCEA6 /* JortJavaScriptProtocol.c in Sources */,
+				464CDE434B300D5C7F2C0FEB /* cutils.c in Sources */,
+				7DF4DC883D373D646B640A6D /* dtoa.c in Sources */,
+				5E17E5ABF213131EEE559581 /* libregexp.c in Sources */,
+				A5A0395325F13CB5AE249E9C /* libunicode.c in Sources */,
+				45DCFBAB8DF63C68C1EC3F65 /* main.c in Sources */,
+				0C5A81EABC8E20CE7B6BB43E /* quickjs.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1930,6 +2647,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B4B9423F59FE18DC86822AB0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C2F8BEA893A2616C40E6E2A /* AppleEventProbe.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BB247C4512158CD62385C9B1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1939,6 +2664,18 @@
 				4691B3AA6E12FA7E4E6A3DE6 /* ToolExecutorDispatcher.swift in Sources */,
 				DAC2132EED3BD883F21B901E /* ToolInvocationCoordinator.swift in Sources */,
 				590F42E5FF20AF24622B1141 /* ToolRuntime.swift in Sources */,
+				0E5B09CBE4B8B25B83E5AD93 /* XPCJavaScriptBrokerTransport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BFE97C1274598705A87699C6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D1BC17702D943089BECBDA36 /* BrokerEnvelope.c in Sources */,
+				F834BA5D186C76DD499F6CC3 /* BrokerFaultHarness.c in Sources */,
+				423F71F1D574EF0F2258129F /* BrokerIdentity.c in Sources */,
+				62C936BAEEBF2432CFD60723 /* JortJavaScriptProtocol.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1973,6 +2710,16 @@
 				C450D0050E55BC7ACE2D6B04 /* ToolInvocationPresentationTests.swift in Sources */,
 				15A3DCE18F9D356AA1B222FF /* ToolInvocationTestCase.swift in Sources */,
 				0C314F158147AB6B69DDAC5D /* ToolModelIntegrationTests.swift in Sources */,
+				618E573CE9F1EAAA4005650B /* WorkerProcessJavaScriptTransport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0364CF3112194C24CF9D039 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				02268323F00137679C93DB7C /* JortJavaScriptClient.c in Sources */,
+				EEFB38B710959AE4151D8AE7 /* JortJavaScriptProtocol.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2009,6 +2756,7 @@
 				60F8DEC8B89DE852B7BF7040 /* ToolDocumentEffectTests.swift in Sources */,
 				EFBDADA56A7450FAACA2FE20 /* ToolGoldenCompatibilityTests.swift in Sources */,
 				81AD1C4092CEA2C6CC14DA10 /* ToolPersistenceTests.swift in Sources */,
+				3F93F6D5B36FFE746A476F22 /* WorkerProcessJavaScriptTransport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2025,10 +2773,25 @@
 			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
 			targetProxy = CB65039B1CD8AB365C4A63A4 /* PBXContainerItemProxy */;
 		};
+		0B13040380FB9C794D9DE539 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9AD54A9C747E98D8CFE3122B /* JortJavaScriptTestOracle */;
+			targetProxy = 2ECF52F2C4F440C91CBCA0E6 /* PBXContainerItemProxy */;
+		};
 		0D282B9AA469450BECF62371 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
 			targetProxy = F95E9E3E512D43839455CAC6 /* PBXContainerItemProxy */;
+		};
+		0DBD6CB049E2EF35D8633AD3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3739FB93A007E7219848329A /* JortJavaScriptSandboxHarness */;
+			targetProxy = B8FCAAFB12E435AD8729E18A /* PBXContainerItemProxy */;
+		};
+		149ADC6C3CB482A254F7A501 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1258AAF20B245B71F2019493 /* JortJavaScriptNativeProbe */;
+			targetProxy = BA7789CF5DABE55D18A6FDEB /* PBXContainerItemProxy */;
 		};
 		16DFDB53FB80B86920225A46 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2045,15 +2808,20 @@
 			target = D7119C245676A4F069D25D44 /* StoreLockProbe */;
 			targetProxy = 517D72B211FBCD8D9C026BC8 /* PBXContainerItemProxy */;
 		};
-		209F3958CD7C207E9E556F12 /* PBXTargetDependency */ = {
+		1F4F4FB843F9036BAFD971D1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 9B6298D78A634AC3CF42FC03 /* JortJavaScript */;
-			targetProxy = 3AC35F4ED6E29BDF39ABEB83 /* PBXContainerItemProxy */;
+			target = 3A16B52213E188C51D5FF571 /* JortToolRuntime */;
+			targetProxy = 7C4BCDC2C07DD6D7D1804938 /* PBXContainerItemProxy */;
 		};
 		28734AAFC7062AF63B00D701 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
 			targetProxy = 62D38AF9A08CB3C128D5615A /* PBXContainerItemProxy */;
+		};
+		2C398BB0D4FDE3493F176BA3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C9F655F3B6C5E921EA335A5A /* JortJavaScriptWorker */;
+			targetProxy = 67F84308EC362C45FEE86A2C /* PBXContainerItemProxy */;
 		};
 		2C72D2877B5E387A7CF202CB /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2074,6 +2842,16 @@
 			isa = PBXTargetDependency;
 			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
 			targetProxy = F855D8F45E8EC5F89C0AA1B9 /* PBXContainerItemProxy */;
+		};
+		4A63A2FDC7632D5D738425A4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 30C4E0C146ECB98598FAC528 /* JortAppleEventProbe */;
+			targetProxy = 910AF98FC9CDD0A0F1C4A05D /* PBXContainerItemProxy */;
+		};
+		4EDB56D2E1AFBA0FC6175D55 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9AD54A9C747E98D8CFE3122B /* JortJavaScriptTestOracle */;
+			targetProxy = 17F78AF29274BF541F73E89A /* PBXContainerItemProxy */;
 		};
 		5C79C9D14A95632E3F8DF791 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2100,15 +2878,30 @@
 			target = C32E76A665123E52BD3970CF /* JortToolContracts */;
 			targetProxy = A638D3038CB7B10FE629EF27 /* PBXContainerItemProxy */;
 		};
+		7983CCF8019339965EF7CF07 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E6F2F901488E738074BA7265 /* JortJavaScriptClient */;
+			targetProxy = A504AE75BF814F8810E643E6 /* PBXContainerItemProxy */;
+		};
 		7ADFBF35FD4BD6B5A6B82D26 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = C95C707E2A3214B5F7E60416 /* JortSettings */;
 			targetProxy = FC2E84292E778FA2C4D70BD4 /* PBXContainerItemProxy */;
 		};
+		7DDE10F5D2192ED060B9ADD1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0D26DD125668581EF7021F63 /* JortJavaScriptBrokerFaultHarness */;
+			targetProxy = F719549022B1A4C829A9401F /* PBXContainerItemProxy */;
+		};
 		8050A09A9F120B48DEAB05A3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = B386A86BE2EBA3E88CBB0142 /* JortAppKit */;
 			targetProxy = A4381FE62B8B8C19572233F8 /* PBXContainerItemProxy */;
+		};
+		85F38150284E5084B5587134 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E6F2F901488E738074BA7265 /* JortJavaScriptClient */;
+			targetProxy = 491E614152DAFAFEED84E840 /* PBXContainerItemProxy */;
 		};
 		8E90AFA9DCE6EE4EE631A5E7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2130,6 +2923,16 @@
 			target = B386A86BE2EBA3E88CBB0142 /* JortAppKit */;
 			targetProxy = FE875064B8EF691A0628E759 /* PBXContainerItemProxy */;
 		};
+		A0101207BE7F8FAD54B6477F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D883E7AFD9CC9D1BB2CE5220 /* JortJavaScriptBroker */;
+			targetProxy = 41E2C2F9FEA8395C76E1AEB6 /* PBXContainerItemProxy */;
+		};
+		A9A93066F58A9F0AFA609AB5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9AD54A9C747E98D8CFE3122B /* JortJavaScriptTestOracle */;
+			targetProxy = BCA8D27213F90DA6FDB75C5F /* PBXContainerItemProxy */;
+		};
 		C89693304D8A37F7A783A861 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 3A16B52213E188C51D5FF571 /* JortToolRuntime */;
@@ -2150,15 +2953,15 @@
 			target = 07E5453287B9F8C62DA2C8CB /* JortDocument */;
 			targetProxy = 04907754554BF7F7F55866F7 /* PBXContainerItemProxy */;
 		};
+		CE32880BA81C949A5FEFC647 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E6F2F901488E738074BA7265 /* JortJavaScriptClient */;
+			targetProxy = FF541EA779E0303BEA6AEF8B /* PBXContainerItemProxy */;
+		};
 		D32ED6B70C0406E861786C4F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4996422CDDDC50EC7CF340C1 /* JortPersistence */;
 			targetProxy = 9D8FEF1C761D5F571C4EBE64 /* PBXContainerItemProxy */;
-		};
-		D74537E2B4CFCDE3BC9A7358 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 9B6298D78A634AC3CF42FC03 /* JortJavaScript */;
-			targetProxy = B44D59BD06E0B5BA6F01C1D5 /* PBXContainerItemProxy */;
 		};
 		DAA02E66218E9C5BB198722C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2174,6 +2977,11 @@
 			isa = PBXTargetDependency;
 			target = 3A16B52213E188C51D5FF571 /* JortToolRuntime */;
 			targetProxy = 3D7BD61036DB557E928CD99B /* PBXContainerItemProxy */;
+		};
+		EA32BC457C751FEBB231A353 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C9F655F3B6C5E921EA335A5A /* JortJavaScriptWorker */;
+			targetProxy = 80214DBE4F42EDA4480B6C26 /* PBXContainerItemProxy */;
 		};
 		EE6AD0042388BB5748625ACD /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2209,6 +3017,28 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		08943AE862747F06B640EF28 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptBroker.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"JORT_JS_ALLOW_ADHOC=1",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Configuration/JortJavaScriptBroker-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.broker;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		08AFB3BE070DF457C1EEC4F1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2222,6 +3052,33 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.uitests;
 				SDKROOT = macosx;
 				TEST_TARGET_NAME = Jort;
+			};
+			name = Debug;
+		};
+		0BD8961288DC5D275C44CADB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"JORT_JS_ALLOW_ADHOC=1",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.client;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -2256,6 +3113,56 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		15C80BCCBACECB78EB2694CE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"JORT_JS_ALLOW_ADHOC=1",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.client;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		1E4153C3F3827A354237CEF2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Tests/JavaScriptContainment/Fixtures/Harness.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"JORT_JS_ALLOW_ADHOC=1",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptBroker $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/Harness-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.sandbox-harness";
+				SDKROOT = macosx;
+			};
+			name = Debug;
 		};
 		1F06EE3CB00C6B5AEFD1CE39 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2294,33 +3201,23 @@
 			};
 			name = Release;
 		};
-		247B2D3485656723182AB600 /* Release */ = {
+		290A467A72AC6B41B8D46156 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
-				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
-					"CONFIG_VERSION=\\\"2026-06-04\\\"",
+					"JORT_JS_ALLOW_ADHOC=1",
 				);
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptBroker $(SRCROOT)/Sources/JortJavaScriptProtocol";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.broker-fault-harness";
 				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
-			name = Release;
+			name = Debug;
 		};
 		2A17A1689B16722A4F08AA4F /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -2349,6 +3246,22 @@
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		2BC0D78AD8431CF09688E165 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol $(SRCROOT)/Sources/JortJavaScriptBroker";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascriptcontainmenttests;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -2387,7 +3300,10 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -2415,6 +3331,31 @@
 			};
 			name = Release;
 		};
+		34A59A289ACD98490F59A06A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptWorker.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"CONFIG_VERSION=\\\"2026-06-04\\\"",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Configuration/JortJavaScriptWorker-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				OTHER_CODE_SIGN_FLAGS = "--identifier $(PRODUCT_BUNDLE_IDENTIFIER)";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.worker;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
 		36D0804BB8C1C2B5F77F451E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2429,6 +3370,30 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		42C3A6D82268D51D8432E542 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptWorker.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"CONFIG_VERSION=\\\"2026-06-04\\\"",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/Probe-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.native-probe";
+				SDKROOT = macosx;
+			};
+			name = Debug;
 		};
 		4A022C9D3FE85F752FF362BB /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2463,6 +3428,28 @@
 					"@loader_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.foundationtests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		554AE6F7FAFB84507913B934 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptBroker.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"JORT_JS_ALLOW_ADHOC=1",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Configuration/JortJavaScriptBroker-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.broker;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -2553,7 +3540,10 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -2587,6 +3577,20 @@
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
+		};
+		61449A41FAA9140B8372310F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptBroker $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.broker-fault-harness";
+				SDKROOT = macosx;
+			};
+			name = Release;
 		};
 		651C24A7701FB83A9F900FDE /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -2632,6 +3636,25 @@
 			};
 			name = Release;
 		};
+		6A41F1F61CA75969A782B116 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"CONFIG_VERSION=\\\"2026-06-04\\\"",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.test-oracle";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		6DB1D197CAD0A60ED64FE7F1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2643,6 +3666,30 @@
 					"@loader_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolcontractstests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		7279ABBBFCD166B06C99B51D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptWorker.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"CONFIG_VERSION=\\\"2026-06-04\\\"",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/Probe-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.native-probe";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -2693,6 +3740,31 @@
 			};
 			name = Debug;
 		};
+		8AD3522C717AA99358CCA275 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptWorker.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"CONFIG_VERSION=\\\"2026-06-04\\\"",
+				);
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Configuration/JortJavaScriptWorker-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				OTHER_CODE_SIGN_FLAGS = "--identifier $(PRODUCT_BUNDLE_IDENTIFIER)";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.worker;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		8C659146637D611AB716E5BB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2737,6 +3809,22 @@
 			};
 			name = Debug;
 		};
+		95F1CAFDFB3EF6F89C65453C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol $(SRCROOT)/Sources/JortJavaScriptBroker";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascriptcontainmenttests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		99825EC470C938F54C105C9C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2752,31 +3840,22 @@
 			};
 			name = Debug;
 		};
-		A26F58A29EA2A558316A22E8 /* Debug */ = {
+		A5C05324742FAD79657F8014 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
-				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"CONFIG_VERSION=\\\"2026-06-04\\\"",
 				);
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.test-oracle";
 				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -2840,6 +3919,77 @@
 			};
 			name = Debug;
 		};
+		CDC2CA90114C00A2104083A8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/AppleEventReceiver-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.apple-event-receiver";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		DB1705D10CCF155BACCA3A8E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Tests/JavaScriptContainment/Fixtures/Harness.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptBroker $(SRCROOT)/Sources/JortJavaScriptProtocol";
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/Harness-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.sandbox-harness";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		DB486EDC0ACB5A452A8CD229 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/Probe-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.apple-event-probe";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		E172D7B514D7B8B22D034A05 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/AppleEventReceiver-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.apple-event-receiver";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		EA68912979EDCF0434539AF1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2862,9 +4012,34 @@
 			};
 			name = Debug;
 		};
+		F8DD11C6AE390FB45024FDCD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				INFOPLIST_FILE = "Tests/JavaScriptContainment/Fixtures/Probe-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.javascript.apple-event-probe";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0A643136531F592E707DF2BB /* Build configuration list for PBXNativeTarget "JortJavaScriptBroker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				554AE6F7FAFB84507913B934 /* Debug */,
+				08943AE862747F06B640EF28 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		0DB9047E26FC3FB6B3A79210 /* Build configuration list for PBXNativeTarget "Jort" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -2928,11 +4103,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		389A730E371B318A103A3064 /* Build configuration list for PBXNativeTarget "JortJavaScript" */ = {
+		3AF51D8CA1746D5AC4AEE3F1 /* Build configuration list for PBXNativeTarget "JortJavaScriptNativeProbe" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A26F58A29EA2A558316A22E8 /* Debug */,
-				247B2D3485656723182AB600 /* Release */,
+				42C3A6D82268D51D8432E542 /* Debug */,
+				7279ABBBFCD166B06C99B51D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -2955,11 +4130,56 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		6084DA38BEB111E86B1EDCBB /* Build configuration list for PBXNativeTarget "JortJavaScriptContainmentTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2BC0D78AD8431CF09688E165 /* Debug */,
+				95F1CAFDFB3EF6F89C65453C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		6F3B1C50360919027B18F677 /* Build configuration list for PBXNativeTarget "JortToolRuntimeTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				562DAE51263793CEDDAEFCD8 /* Debug */,
 				36D0804BB8C1C2B5F77F451E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6FC13DF0ECE10322BF729B1B /* Build configuration list for PBXNativeTarget "JortJavaScriptWorker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				34A59A289ACD98490F59A06A /* Debug */,
+				8AD3522C717AA99358CCA275 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9A6F1A9E1C02488705F71753 /* Build configuration list for PBXNativeTarget "JortJavaScriptTestOracle" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A5C05324742FAD79657F8014 /* Debug */,
+				6A41F1F61CA75969A782B116 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BBC8DAA2B68608154D4EE368 /* Build configuration list for PBXNativeTarget "JortAppleEventProbe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DB486EDC0ACB5A452A8CD229 /* Debug */,
+				F8DD11C6AE390FB45024FDCD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BE99AE89415FCA1209C506EE /* Build configuration list for PBXNativeTarget "JortJavaScriptClient" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BD8961288DC5D275C44CADB /* Debug */,
+				15C80BCCBACECB78EB2694CE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -2982,11 +4202,38 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		EAB73A21C63BB31BC2EF7A69 /* Build configuration list for PBXNativeTarget "JortJavaScriptBrokerFaultHarness" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				290A467A72AC6B41B8D46156 /* Debug */,
+				61449A41FAA9140B8372310F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EABCBE027F1CB4B71DA68DF1 /* Build configuration list for PBXNativeTarget "JortAppleEventReceiver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CDC2CA90114C00A2104083A8 /* Debug */,
+				E172D7B514D7B8B22D034A05 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		F33F249F6D6697F34A9FDBE5 /* Build configuration list for PBXNativeTarget "JortToolRuntime" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4A022C9D3FE85F752FF362BB /* Debug */,
 				7D6405B05150ADC02166F25B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F50E8E65CB81B88B5B8F5181 /* Build configuration list for PBXNativeTarget "JortJavaScriptSandboxHarness" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E4153C3F3827A354237CEF2 /* Debug */,
+				DB1705D10CCF155BACCA3A8E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

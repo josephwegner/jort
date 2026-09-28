@@ -1,0 +1,10 @@
+{
+  "appIdentifier": "dev.jort.editor",
+  "brokerIdentifier": "dev.jort.javascript.broker",
+  "workerIdentifier": "dev.jort.javascript.worker",
+  "clientIdentifier": "dev.jort.javascript.client",
+  "brokerExecutable": "Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/MacOS/JortJavaScriptBroker",
+  "workerExecutable": "Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker",
+  "clientFramework": "Contents/Frameworks/JortJavaScriptClient.framework",
+  "quickJSOwner": "JortJavaScriptWorker"
+}

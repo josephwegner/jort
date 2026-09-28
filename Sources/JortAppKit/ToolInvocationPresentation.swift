@@ -192,6 +192,8 @@ import JortSettings
     refreshing = true
     defer { refreshing = false }
     let snapshot = editor.state
+    let hadPresentation = !paintSnapshot.shapes.isEmpty || !controls.isEmpty
+    var refreshDisplay = invalidateDisplay
     var shapes: [(NSBezierPath, NSColor)] = []
     mounts.begin()
     controls = []
@@ -201,12 +203,17 @@ import JortSettings
       controls = mounts.ordered
       paintSnapshot = InvocationPaintSnapshot(shapes: shapes)
       accessibilityViews = nextAccessibilityViews
+      if refreshDisplay {
+        editor.textView.window?.invalidateCursorRects(for: editor.textView)
+        editor.textView.setNeedsDisplay(editor.textView.visibleRect)
+      }
     }
     overlays.begin()
     if recomputeCompletion { updateCompletion() }
     if snapshot.invocations.isEmpty && !styleReconciler.hasStyles
       && completionController.completion == nil
     {
+      refreshDisplay = invalidateDisplay && hadPresentation
       nextAccessibilityViews += overlays.finish(snapshot: snapshot)
       return
     }
@@ -397,8 +404,6 @@ import JortSettings
       popover.setAccessibilityChildren(popover.subviews)
 
     }
-    editor.textView.window?.invalidateCursorRects(for: editor.textView)
-    if invalidateDisplay { editor.textView.setNeedsDisplay(editor.textView.visibleRect) }
   }
 
   private func updateErrorAccessories(_ snapshot: DocumentSnapshot) {

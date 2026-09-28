@@ -1,24 +1,28 @@
 import Foundation
 import JortToolContracts
 
-public struct ToolExecutorDispatcher: ToolExecuting {
+public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
   public var modelAvailable: @Sendable () async -> Bool
   public var provider: @Sendable () -> any ModelProvider
   public var authenticationFailed: @Sendable () async -> Void
+  public var javaScript: JavaScriptBrokerClient
   public init(
     modelAvailable: @escaping @Sendable () async -> Bool = { false },
     provider: (@Sendable () -> any ModelProvider)? = nil,
+    javaScript: JavaScriptBrokerClient = .shared,
     authenticationFailed: @escaping @Sendable () async -> Void = {}
   ) {
     self.modelAvailable = modelAvailable
     self.provider = provider ?? { UnavailableModelProvider() }
+    self.javaScript = javaScript
     self.authenticationFailed = authenticationFailed
   }
   public func validate(_ package: ToolPackage, input: ToolExecutionInput) async
     -> ToolExecutionResult
   {
     if package.manifest.executorType == .javascript {
-      return await ToolRuntime.execute(package, input: input, validationOnly: true)
+      return await ToolRuntime.execute(
+        package, input: input, validationOnly: true, client: javaScript)
     }
     do { _ = try ModelRequest(package: package, content: input.content) } catch {
       return .init(error: "Check this tool’s instructions and selected model in Tools Settings.")
@@ -32,7 +36,7 @@ public struct ToolExecutorDispatcher: ToolExecuting {
     -> ToolExecutionResult
   {
     if package.manifest.executorType == .javascript {
-      return await ToolRuntime.execute(package, input: input)
+      return await ToolRuntime.execute(package, input: input, client: javaScript)
     }
     do {
       try Task.checkCancellation()
@@ -47,6 +51,20 @@ public struct ToolExecutorDispatcher: ToolExecuting {
     {
       return .init(failure: ModelFailure.malformed.toolFailure)
     }
+  }
+
+  public func validate(_ request: ToolExecutionRequest) async -> ToolExecutionResult {
+    if request.package.manifest.executorType == .javascript {
+      return await javaScript.validate(request)
+    }
+    return await validate(request.package, input: request.input)
+  }
+
+  public func execute(_ request: ToolExecutionRequest) async -> ToolExecutionResult {
+    if request.package.manifest.executorType == .javascript {
+      return await javaScript.execute(request)
+    }
+    return await execute(request.package, input: request.input)
   }
 }
 

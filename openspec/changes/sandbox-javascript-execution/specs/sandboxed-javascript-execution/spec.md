@@ -59,18 +59,18 @@ Jort SHALL use protocol version 1 with only fixed primitive fields, SHALL reject
 - **THEN** Jort rejects it without emitting success or document effects
 - **AND** invalidates the affected channel when authenticity or protocol integrity is uncertain
 
-### Requirement: Hard OS limits precede untrusted source delivery
-The worker SHALL lower and verify a 256 MiB `RLIMIT_AS`, a deadline-derived `RLIMIT_CPU` no greater than 31 hard seconds, zero core/file-size/additional-process limits, and a checked minimal file-descriptor limit before announcing Ready or receiving source, and SHALL additionally preserve the 16 MiB QuickJS heap, 512 KiB engine stack, maximum 30-second deadline, cancellation, API, byte, and line limits.
+### Requirement: Enforceable OS and engine limits precede untrusted source delivery
+The worker SHALL lower and verify a deadline-derived `RLIMIT_CPU` no greater than 31 hard seconds, zero core/file-size/additional-process limits, and a checked minimal file-descriptor limit before announcing Ready or receiving source, and SHALL additionally preserve the 16 MiB QuickJS heap, 512 KiB engine stack, maximum 30-second deadline, cancellation, API, byte, and line limits. Jort SHALL NOT claim or implement a deterministic whole-process memory ceiling or memory watchdog; macOS manages memory pressure outside QuickJS accounting.
 
 #### Scenario: Worker cannot install a required limit
 - **WHEN** any hard or soft limit cannot be lowered to and read back at the approved value
 - **THEN** the worker never announces Ready and the broker sends it no source or input
 - **AND** the request ends as a bounded sandbox-bootstrap failure
 
-#### Scenario: Native allocation bypasses QuickJS heap accounting
-- **WHEN** a test worker attempts native allocation beyond the address-space ceiling without using QuickJS allocation hooks
-- **THEN** the OS refuses allocation or terminates that disposable process within the watchdog
-- **AND** the main process survives and accepts no partial result
+#### Scenario: Allocation occurs outside QuickJS heap accounting
+- **WHEN** native worker allocation fails or macOS terminates a worker under memory pressure
+- **THEN** Jort treats the exit or lost connection as one bounded worker failure without claiming a specific memory threshold
+- **AND** the main process accepts no partial result or canonical mutation
 
 #### Scenario: Native CPU loop bypasses QuickJS interruption
 - **WHEN** a test worker burns CPU without calling the QuickJS interrupt handler
@@ -80,7 +80,7 @@ The worker SHALL lower and verify a 256 MiB `RLIMIT_AS`, a deadline-derived `RLI
 #### Scenario: Script reaches an engine-level limit first
 - **WHEN** ordinary JavaScript exceeds its heap, stack, deadline, cancellation, output-byte, or output-line limit before an OS limit
 - **THEN** the worker returns or terminates with the corresponding bounded failure
-- **AND** the outer OS limits remain installed as defense against native-engine failure
+- **AND** the CPU, process, and file limits remain installed as defense in depth
 
 ### Requirement: Watchdog, cancellation, and terminal outcomes are process-safe
 The broker SHALL own bootstrap and execution wall-clock watchdogs, child cancellation and forced termination, pipe closure, exit-status interpretation, and `waitpid` reaping, and SHALL produce exactly one terminal reply for each admitted request.
@@ -103,13 +103,13 @@ The broker SHALL own bootstrap and execution wall-clock watchdogs, child cancell
 #### Scenario: Broker connection fails
 - **WHEN** the broker crashes, restarts, becomes unavailable, or the XPC session is interrupted or invalidated
 - **THEN** the main client watchdog makes the generation terminal and abandons the channel
-- **AND** the main app remains responsive while any orphaned inherited-sandbox child remains constrained by its hard limits
+- **AND** any orphaned inherited-sandbox child remains constrained by its sandbox and CPU limit while macOS manages memory pressure
 
 ### Requirement: Containment evidence and QuickJS provenance are release-blocking
-Jort SHALL verify dependency isolation, runtime mapping, nested signatures/entitlements, sandbox denials, hard resource limits, watchdog recovery, bounded protocol rejection, and lifecycle nonmutation, and SHALL maintain a reproducible vendored-QuickJS provenance and security-review record.
+Jort SHALL verify dependency isolation, runtime mapping, nested signatures/entitlements, sandbox denials, CPU and engine limits, wall-watchdog recovery, bounded protocol rejection, and lifecycle nonmutation, and SHALL maintain a reproducible vendored-QuickJS provenance and security-review record.
 
 #### Scenario: Containment verification suite runs
-- **WHEN** signed test/package fixtures exercise normal, denial, crash, hang, native CPU/memory, malformed, oversized, cancellation, and late-reply cases
+- **WHEN** signed test/package fixtures exercise normal, denial, crash, hang, native CPU, engine allocation, malformed, oversized, cancellation, and late-reply cases
 - **THEN** every case proves process cleanup, bounded failure, responsive main application, and absence of unauthorized canonical mutation
 - **AND** a missing signature/entitlement, prohibited dependency, or ineffective OS limit fails the release gate
 

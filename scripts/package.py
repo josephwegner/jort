@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a fresh unsigned app, then atomically replace the local artifact."""
+"""Validate a fresh locally signed app, then atomically replace the artifact."""
 import ctypes
 import os
 from pathlib import Path
@@ -8,6 +8,14 @@ import re
 import shutil
 import sys
 import tempfile
+
+
+FRAMEWORKS = [
+    'JortDocument', 'JortPersistence', 'JortAppKit', 'JortSettings',
+    'JortToolContracts', 'JortJavaScriptClient', 'JortToolRuntime',
+]
+BROKER = 'Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/MacOS/JortJavaScriptBroker'
+WORKER = 'Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker'
 
 
 def package(source, destination):
@@ -28,9 +36,12 @@ def package(source, destination):
             raise ValueError('Missing executable')
         if not (staged / 'Contents/Resources' / info['CFBundleIconFile']).is_file():
             raise ValueError('Missing icon')
-        for module in ['JortDocument', 'JortPersistence', 'JortAppKit', 'JortSettings', 'JortToolContracts', 'JortToolRuntime', 'JortJavaScript']:
+        for module in FRAMEWORKS:
             if not (staged / f'Contents/Frameworks/{module}.framework/{module}').is_file():
                 raise ValueError(f'Missing {module}')
+        for nested in [BROKER, WORKER]:
+            if not os.access(staged / nested, os.X_OK):
+                raise ValueError(f'Missing nested executable: {nested}')
         if destination.exists():
             libc = ctypes.CDLL('/usr/lib/libSystem.B.dylib', use_errno=True)
             swap = libc.renameatx_np
@@ -41,7 +52,7 @@ def package(source, destination):
             os.rename(staged, destination)
     finally:
         shutil.rmtree(staging)
-    print(f'Built {destination} — unsigned, local-only; not a distribution artifact.')
+    print(f'Built {destination} — locally signed, not a distribution artifact.')
 
 
 if __name__ == '__main__':

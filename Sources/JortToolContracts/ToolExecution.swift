@@ -55,6 +55,13 @@ public protocol ToolExecuting: Sendable {
   func execute(_ package: ToolPackage, input: ToolExecutionInput) async -> ToolExecutionResult
 }
 
+/// Executors that cross a process boundary receive the immutable generation as
+/// part of the request, rather than reconstructing identity at dispatch time.
+public protocol GenerationAwareToolExecuting: ToolExecuting {
+  func validate(_ request: ToolExecutionRequest) async -> ToolExecutionResult
+  func execute(_ request: ToolExecutionRequest) async -> ToolExecutionResult
+}
+
 public struct UnavailableToolValidator: ToolPackageValidator {
   public init() {}
   public func validatePackage(_ package: ToolPackage) async throws {

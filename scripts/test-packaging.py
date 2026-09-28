@@ -7,17 +7,25 @@ spec = importlib.util.spec_from_file_location('package', Path(__file__).with_nam
 module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp); source = root / 'Build/Jort.app'; destination = root / 'dist/Jort.app'
-    for sub in ['MacOS', 'Resources', 'Frameworks']:
+    for sub in ['MacOS', 'Resources', 'Frameworks',
+                'XPCServices/JortJavaScriptBroker.xpc/Contents/MacOS',
+                'XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers']:
         (source / 'Contents' / sub).mkdir(parents=True)
     (source / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleShortVersionString': '0.3.0', 'CFBundleVersion': '3', 'CFBundleExecutable': 'Jort', 'CFBundleIconFile': 'AppIcon.icns'}))
     binary = source / 'Contents/MacOS/Jort'; binary.write_text('fixture'); binary.chmod(0o755)
     (source / 'Contents/Resources/AppIcon.icns').write_text('fixture')
-    for name in ['JortDocument', 'JortPersistence', 'JortAppKit', 'JortSettings', 'JortToolContracts', 'JortToolRuntime', 'JortJavaScript']:
+    for name in module.FRAMEWORKS:
         folder = source / f'Contents/Frameworks/{name}.framework'; folder.mkdir(); (folder / name).write_text('fixture')
+    worker = source / module.WORKER; worker.write_text('fixture'); worker.chmod(0o755)
+    broker = source / module.BROKER; broker.write_text('fixture'); broker.chmod(0o755)
     module.package(source, destination)
     (destination / 'stale-file').write_text('must disappear')
     module.package(source, destination)
     assert not (destination / 'stale-file').exists()
+    assert (destination / module.BROKER).is_file()
+    assert (destination / module.WORKER).is_file()
+    assert not (destination / 'Contents/Helpers/JortJavaScriptWorker').exists()
+    assert not (destination / 'Contents/Frameworks/JortJavaScript.framework').exists()
     (source / 'Contents/Resources/AppIcon.icns').unlink()
     try:
         module.package(source, destination)

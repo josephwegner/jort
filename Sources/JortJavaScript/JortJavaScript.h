@@ -11,5 +11,11 @@ char *jort_js_run(const char *source, const char *input_json, const char *entry,
                   double timeout_seconds, size_t result_limit,
                   JortJSCancellation *token, int *status);
 char *jort_js_validate(const char *source);
+// Worker-only raw UTF-8 adapter: exact content is constructed as a JS string, never
+// parsed as executable text. The returned string is exclusively output or public error.
+char *jort_js_run_text(const char *source, const char *content, const char *clock,
+                      const char *uuid, const char *entry, double timeout_seconds,
+                      size_t output_bytes, size_t output_lines, JortJSCancellation *token,
+                      int *status);
 void jort_js_free(char *value);
 #endif

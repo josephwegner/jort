@@ -4,7 +4,7 @@ The current Swift `ToolRuntime` invokes `jort_js_validate` and `jort_js_run` fro
 
 The Wave 2 architecture introduces `JortToolContracts`, an executor-neutral `JortToolRuntime`, a pure lifecycle reducer, and a headless coordinator. Settings obtains executor-specific validation through an injected fail-closed protocol; AppKit and Document never call QuickJS. This change replaces only the concrete JavaScript validator/executor behind that seam.
 
-Jort targets macOS 14. Apple documents XPC services as independently sandboxable privilege-separation processes, while directly launched children inherit the launching process's sandbox. The design combines those properties: a minimal XPC broker owns a directly launched, one-run child that inherits the broker's restrictive sandbox. The child is the only binary containing QuickJS; the broker remains a small first-party supervisor able to terminate its own child reliably. POSIX `setrlimit` supplies hard per-process address-space and CPU limits; XPC itself is not treated as a resource limiter.
+Jort targets macOS 14. Apple documents XPC services as independently sandboxable privilege-separation processes, while directly launched children inherit the launching process's sandbox. The design combines those properties: a minimal XPC broker owns a directly launched, one-run child that inherits the broker's restrictive sandbox. The child is the only binary containing QuickJS; the broker remains a small first-party supervisor able to terminate its own child reliably. POSIX `setrlimit` supplies a hard CPU limit and prevents core files, file output, and subprocess creation; XPC itself is not treated as a resource limiter.
 
 ## Goals / Non-Goals
 
@@ -13,9 +13,9 @@ Jort targets macOS 14. Apple documents XPC services as independently sandboxable
 - Ensure no process holding Jort documents, settings, credentials, provider transports, or AppKit objects loads QuickJS.
 - Give engine code an independently enforced App Sandbox with no network, arbitrary user-file, Keychain credential, Apple Events, hardware, app-group, or PowerBox authority.
 - Create a new OS process and fresh engine state for every validation or execution and reap it after exactly one terminal result.
-- Enforce hard OS CPU/address-space limits before package source enters the child, while retaining all current engine/API bounds.
+- Enforce hard OS CPU and process/file limits before package source enters the child, while retaining the 16 MiB QuickJS heap and all current engine/API bounds.
 - Bound and authenticate every transport step and map every terminal condition into the existing generation reducer without partial canonical mutation.
-- Produce structural, negative-authority, and resource-exhaustion evidence suitable for the later signed-release manifest.
+- Produce structural, negative-authority, CPU/engine-limit, and lifecycle evidence suitable for the later signed-release manifest.
 
 **Non-Goals:**
 
@@ -24,6 +24,7 @@ Jort targets macOS 14. Apple documents XPC services as independently sandboxable
 - Moving model-provider HTTP requests into the worker.
 - Adding third-party/community package discovery, download, trust prompts, or automatic updates.
 - Treating JavaScript API removal, XPC, or QuickJS's allocator as the sole security boundary.
+- Providing a deterministic whole-process memory ceiling or a Jort-managed memory watchdog; macOS remains responsible for system memory pressure.
 
 ## Decisions
 
@@ -57,7 +58,7 @@ Do not expose arbitrary `Codable`, `NSSecureCoding`, internal contract graphs, o
 
 The request contains only:
 
-- exact protocol version, operation (`validate` or `execute`), 128-bit request nonce, invocation ID, and lifecycle generation;
+- exact protocol version, operation (`validate` for compile-only package checks, `validateInput` for invocation-input validation, or `execute`), 128-bit request nonce, invocation ID, and lifecycle generation;
 - normalized JavaScript manifest/execution contract;
 - immutable UTF-8 source;
 - exact UTF-8 input content for execution;
@@ -82,26 +83,25 @@ Independent version-1 maxima are:
 
 The broker-to-child protocol has a fixed magic, exact version, operation/status tag, nonce/generation, fixed-width lengths, and payload hash. It reads the fixed header first, rejects any independent or summed length before allocation, then reads exactly the declared payload with deadline/cancellation checks. Truncation, trailing bytes, second frames, invalid UTF-8, hash mismatch, nonexclusive output/error, excessive line count, or unexpected exit is failure. There is no permissive version negotiation: unsupported versions fail closed so both binaries must be upgraded together.
 
-### Install hard OS limits before source reaches the child
+### Install enforceable OS limits before source reaches the child
 
 The broker passes only the already validated deadline and compiled policy version as numeric launch arguments. At the first worker-controlled bootstrap point, before Ready and before reading any source or input, the child lowers both soft and hard limits and verifies them with `getrlimit`:
 
-- `RLIMIT_AS`: 256 MiB address-space ceiling;
 - `RLIMIT_CPU`: soft `max(1, ceil(requestedSeconds))` and hard one second later, with requested time constrained to 0.01 through 30 seconds;
 - `RLIMIT_CORE`: zero;
 - `RLIMIT_FSIZE`: zero;
 - `RLIMIT_NPROC`: zero additional child processes; and
 - `RLIMIT_NOFILE`: only the small checked descriptor ceiling required by dyld/bootstrap and the three protocol streams.
 
-The exact `RLIMIT_NOFILE` value is recorded after a signed-target bootstrap test because it is platform-loader dependent; source is never sent if any required limit cannot be lowered and verified. The 256 MiB address-space value is a security policy constant and may change only with measured signed-worker startup/negative-allocation evidence and security review.
+The exact `RLIMIT_NOFILE` value is recorded after a signed-target bootstrap test because it is platform-loader dependent; source is never sent if any required limit cannot be lowered and verified.
 
-After Ready, the child creates a fresh QuickJS runtime with the existing 16 MiB heap and 512 KiB engine stack limits, installs cancellation/deadline interruption, and retains all current disabled-global/module/eval and result restrictions. OS limits cover native-engine defects and allocations outside QuickJS; engine limits give earlier controlled errors. A test-only native burn fixture proves `RLIMIT_CPU` independently of the QuickJS interrupt, and a native allocation fixture proves `RLIMIT_AS` independently of the QuickJS heap.
+After Ready, the child creates a fresh QuickJS runtime with the existing 16 MiB heap and 512 KiB engine stack limits, installs cancellation/deadline interruption, and retains all current disabled-global/module/eval and result restrictions. A test-only native burn fixture proves `RLIMIT_CPU` independently of the QuickJS interrupt. Jort intentionally does not poll worker memory or promise a deterministic whole-process memory ceiling: ordinary JavaScript allocation remains bounded by QuickJS, while allocations outside its accounting and system-wide memory pressure are left to macOS. An allocation failure, worker termination, or connection loss is handled like any other bounded worker failure and can never publish partial output.
 
 ### Make the broker the watchdog and sole child-lifecycle owner
 
 Worker bootstrap has a separate bounded watchdog. Execution wall time starts immediately before the broker releases the complete request frame and expires at the requested deadline; cancellation starts a short fixed termination grace. On timeout, cancellation, malformed/excess output, protocol violation, or client invalidation, the broker closes pipes, sends termination to the child it still owns, escalates to `SIGKILL` after the grace, and confirms reaping with `waitpid`. It emits exactly one terminal reply and discards all later pipe/XPC events.
 
-Normal success and validation failure also require EOF, expected exit, complete frame verification, and reaping before the broker returns success. Thus the next request can never inherit native runtime state. Broker crash/interruption invalidates the client session; launchd may restart only the engine-free broker, while the inherited-sandbox worker loses its supervisor/pipes and remains bounded by hard CPU/address-space limits. The main client watchdog can invalidate/abandon the XPC request; the reducer makes that generation terminal and refuses every late reply.
+Normal success and validation failure also require EOF, expected exit, complete frame verification, and reaping before the broker returns success. Thus the next request can never inherit native runtime state. Broker crash/interruption invalidates the client session; launchd may restart only the engine-free broker, while the inherited-sandbox worker loses its supervisor/pipes and remains bounded by its CPU limit and sandbox. The main client watchdog can invalidate/abandon the XPC request; the reducer makes that generation terminal and refuses every late reply.
 
 ### Preserve executor-neutral lifecycle and atomic document publication
 
@@ -117,18 +117,18 @@ The model executor remains a separate concrete Runtime path in the main applicat
 
 Generated-project and packaged-fixture checks recursively inspect Mach-O load commands and symbols: QuickJS/JortJavaScript may occur only in `JortJavaScriptWorker`; the app, every framework, and the broker must be free of it. Runtime process tests confirm the main process never maps the engine while a separate ephemeral worker does.
 
-Signature/entitlement tests verify nested locations, unique identifiers, expected signer relationships, broker sandbox, worker inheritance, Hardened Runtime, and absence of prohibited entitlements. Native denial probes running under the inherited worker sandbox attempt representative user-file reads/writes, network client/server access, Keychain lookup, Apple Events, device access, and subprocess creation. Resource probes bypass QuickJS to prove the OS limits and watchdog. All tests assert the editor/main process survives and no canonical patch is emitted.
+Signature/entitlement tests verify nested locations, unique identifiers, expected signer relationships, broker sandbox, worker inheritance, Hardened Runtime, and absence of prohibited entitlements. Native denial probes running under the inherited worker sandbox attempt representative user-file reads/writes, network client/server access, Keychain lookup, Apple Events, device access, and subprocess creation. A CPU probe bypasses QuickJS to prove the kernel CPU limit, while engine-allocation fixtures prove the QuickJS heap fails safely. All tests assert the editor/main process survives and no canonical patch is emitted.
 
 Extend the vendored record with imported-file inventory, upstream archive URL/version/SHA-256, reproducible verification/import steps, exact local patch diff, license, last review, and analyzer baseline. Review upstream changes, known vulnerability reports, local patches, and analyzer delta at every Jort release and at least every 90 days; an update or diagnostic change requires dedicated review rather than automatic baseline acceptance. Community/public package import remains blocked until this change and Wave 4 are verified.
 
 ## Risks / Trade-offs
 
 - **Risk: The hybrid introduces two helper targets and more failure modes.** → Keep the broker engine-free and protocol-small, specify one terminal state machine, inject launch/pipe/XPC failures, and make Wave 4 derive its manifest from the generated target graph.
-- **Risk: A cap that is safe on one OS/toolchain prevents worker bootstrap on another.** → Test signed debug/release helper startup on every supported macOS architecture, verify limits before Ready, fail closed, and require measured security review for policy changes.
+- **Risk: Whole-process native allocation is not deterministically capped by Jort.** → Keep QuickJS's 16 MiB heap limit, bound worker concurrency, isolate every run in a disposable sandboxed process, treat abnormal termination as failure, and keep public/community package import disabled. macOS handles system memory pressure; transient application or system slowdown is an accepted product trade-off.
 - **Risk: XPC has already received bytes before application length checks.** → Authenticate the private peer, use low-level primitive dictionaries, enforce a total send bound in the client, inspect lengths before copying/decoding in the broker, and independently frame/bound the child pipe.
 - **Risk: Killing by stale PID could target another process.** → The broker retains the launched child object, serializes termination with exit handling, acts only while ownership is live, and confirms reaping; the main app never sends signals by a remotely observed PID.
 - **Risk: Worker compromise attacks the broker through output.** → Broker parsing accepts one fixed header and bounded byte fields, treats output as UTF-8 data only, never deserializes object graphs, and kills on any framing violation.
-- **Risk: Four workers can still consume substantial aggregate resources.** → Runtime admission caps active children, each has hard independent address-space/CPU limits, and tests measure aggregate peak use; the broker refuses excess capacity.
+- **Risk: Four workers can still consume substantial aggregate resources.** → Runtime admission prevents unbounded process fan-out, each worker has an independent CPU limit and QuickJS heap limit, and the broker refuses excess capacity. Whole-process memory pressure is intentionally delegated to macOS.
 - **Trade-off: Process startup makes validation/execution slower.** → Authoring validation is explicit and awaited; execution already exposes asynchronous processing. Security isolation takes precedence, and timings are tracked without weakening limits or reusing engine processes.
 - **Trade-off: Main-process model execution remains network-capable.** → It does not execute native QuickJS code, retains its narrow provider contract, and never shares credentials/network objects with containment processes.
 
@@ -139,7 +139,7 @@ Extend the vendored record with imported-file inventory, upstream archive URL/ve
 3. Implement worker bootstrap limits/Ready handshake, one-frame QuickJS validation/execution, inherited-descriptor closure, and bounded result framing.
 4. Implement broker peer checks, worker signature/path checks, four-child admission, launch/pipes, independent field bounds, watchdog/cancel/kill/reap, and single-terminal reply state.
 5. Switch Settings validation and Runtime JavaScript execution to the XPC client while keeping a test-only in-process comparison oracle outside production target dependencies.
-6. Run behavioral parity, generation-race, crash/hang/malformed/oversize, native CPU/memory exhaustion, sandbox-denial, signature/entitlement, load-command/symbol, and runtime-mapping tests.
+6. Run behavioral parity, generation-race, crash/hang/malformed/oversize, native CPU and engine-allocation, sandbox-denial, signature/entitlement, load-command/symbol, and runtime-mapping tests.
 7. Remove production main-process/broker linkage to `JortJavaScript`, delete the in-process executor adapter, and update dependency/provenance/security verification documentation.
 8. Keep community import disabled and hand the resulting nested target manifest, identifiers, entitlements, and verification commands to Wave 4.
 
@@ -147,4 +147,4 @@ During steps 1–5, a build flag may select the old executor only in dedicated l
 
 ## Open Questions
 
-None at proposal time. The platform design is the XPC-broker/disposable-child hybrid; OS enforcement is `setrlimit` plus broker watchdog/owned-child termination; protocol v1 and its independent bounds are fixed above. The loader-dependent `RLIMIT_NOFILE` numeric constant is the only implementation-calibrated value and must be recorded by the signed bootstrap test before source delivery can be enabled.
+None. The platform design is the XPC-broker/disposable-child hybrid; OS enforcement covers CPU and process/file limits plus broker wall-clock/owned-child termination. QuickJS enforces its own heap limit, while macOS manages whole-process memory pressure without a Jort memory watchdog or deterministic ceiling. Protocol v1 and its independent bounds are fixed above. The loader-dependent `RLIMIT_NOFILE` numeric constant must be recorded by the signed bootstrap test before source delivery can be enabled.

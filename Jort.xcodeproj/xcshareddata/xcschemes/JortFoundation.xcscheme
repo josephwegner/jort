@@ -114,10 +114,26 @@
                ReferencedContainer = "container:Jort.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AAD41B0B72A435E416EC1596"
+               BuildableName = "JortJavaScriptContainmentTests.xctest"
+               BlueprintName = "JortJavaScriptContainmentTests"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>
       <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "JORT_APPLE_EVENT_PROBE"
+            value = "0"
+            isEnabled = "YES">
+         </EnvironmentVariable>
          <EnvironmentVariable
             key = "JORT_PERFORMANCE_ENFORCE"
             value = "$(JORT_PERFORMANCE_ENFORCE)"

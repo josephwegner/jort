@@ -8,5 +8,11 @@
 *.xcuserstate
 xcuserdata/
 __pycache__/
-.codex
+.codex/*
+!.codex/config.toml
+!.codex/agents/
+!.codex/agents/**
+!.codex/rules/
+!.codex/rules/**
 .opencode
+.codex

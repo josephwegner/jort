@@ -43,6 +43,34 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "30C4E0C146ECB98598FAC528"
+               BuildableName = "JortAppleEventProbe"
+               BlueprintName = "JortAppleEventProbe"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F2DE992B8FBCCEA0DD19414D"
+               BuildableName = "JortAppleEventReceiver.app"
+               BlueprintName = "JortAppleEventReceiver"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "07E5453287B9F8C62DA2C8CB"
                BuildableName = "JortDocument.framework"
                BlueprintName = "JortDocument"
@@ -57,9 +85,93 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "9B6298D78A634AC3CF42FC03"
-               BuildableName = "JortJavaScript.framework"
-               BlueprintName = "JortJavaScript"
+               BlueprintIdentifier = "D883E7AFD9CC9D1BB2CE5220"
+               BuildableName = "JortJavaScriptBroker.xpc"
+               BlueprintName = "JortJavaScriptBroker"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "0D26DD125668581EF7021F63"
+               BuildableName = "JortJavaScriptBrokerFaultHarness"
+               BlueprintName = "JortJavaScriptBrokerFaultHarness"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E6F2F901488E738074BA7265"
+               BuildableName = "JortJavaScriptClient.framework"
+               BlueprintName = "JortJavaScriptClient"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "1258AAF20B245B71F2019493"
+               BuildableName = "JortJavaScriptNativeProbe"
+               BlueprintName = "JortJavaScriptNativeProbe"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "3739FB93A007E7219848329A"
+               BuildableName = "JortJavaScriptSandboxHarness"
+               BlueprintName = "JortJavaScriptSandboxHarness"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9AD54A9C747E98D8CFE3122B"
+               BuildableName = "JortJavaScriptTestOracle"
+               BlueprintName = "JortJavaScriptTestOracle"
+               ReferencedContainer = "container:Jort.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "C9F655F3B6C5E921EA335A5A"
+               BuildableName = "JortJavaScriptWorker"
+               BlueprintName = "JortJavaScriptWorker"
                ReferencedContainer = "container:Jort.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>

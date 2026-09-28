@@ -14,7 +14,8 @@ import JortSettings
       directory
       ?? FileManager.default.temporaryDirectory.appendingPathComponent("ToolEditor-\(UUID())")
     let editor = EditorViewController(persistence: ownPersistence(directory: directory))
-    editor.toolInvocationCoordinator = ToolInvocationCoordinator(executor: ToolExecutorDispatcher())
+    editor.toolInvocationCoordinator = ToolInvocationCoordinator(
+      executor: ToolExecutorDispatcher(javaScript: .testWorker))
     let window = NSWindow(
       contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled],
       backing: .buffered, defer: false)

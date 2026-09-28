@@ -88,6 +88,29 @@ private actor ControlledExecutor: ToolExecuting {
       XCTAssertEqual(operations, failure ? [] : [.submit])
     }
   }
+  func testContextualEmptyInputWarnsBeforeCreatingAnExecutionRequest() async {
+    let executor = ControlledExecutor()
+    let coordinator = ToolInvocationCoordinator(executor: executor)
+    let contextual = ToolPackage(
+      manifest: .init(
+        id: "dev.test.contextual", name: "Contextual", command: "/contextual",
+        inputMode: .contextual),
+      source: "export default () => ({output:'ok'});")
+    var warnings: [String] = []
+    let identity = InvocationGeneration(invocationID: UUID(), generation: UUID())
+
+    coordinator.submit(
+      identity: identity, package: contextual, input: .init(content: ""),
+      apply: { _ in
+        XCTFail("Contextual empty input must not reach the document")
+        return true
+      }, warning: { warnings.append($0) })
+
+    XCTAssertEqual(warnings, ["Enter content within the tool’s input limit."])
+    XCTAssertFalse(coordinator.hasJob(identity.invocationID))
+    let validating = await executor.validating
+    XCTAssertFalse(validating)
+  }
   func testCancellationIgnoresLateValidationAndExecution() async throws {
     for cancelValidation in [true, false] {
       let executor = ControlledExecutor()
@@ -134,6 +157,58 @@ private actor ControlledExecutor: ToolExecuting {
     await executor.result(.init(output: "too large"))
     try await wait { operations.count == 2 }
     XCTAssertEqual(operations.last, .failure("Output exceeds the tool limit."))
+  }
+
+  func testTerminalBrokerFailuresDoNotPublishAndLeaveAnotherInvocationAvailable() async throws {
+    let cases: [ToolFailureCode] = [
+      .unavailable, .busy, .launch, .sandboxBootstrap, .cpuLimit, .engineLimit, .crash,
+      .timeout, .cancelled, .outputLimit, .protocolError, .malformedResponse, .internalError,
+    ]
+
+    for code in cases {
+      let executor = ControlledExecutor()
+      let coordinator = ToolInvocationCoordinator(executor: executor)
+      let failed = InvocationGeneration(invocationID: UUID(), generation: UUID())
+      var operations: [InvocationDocumentOperation] = []
+      coordinator.submit(
+        identity: failed, package: package, input: .init(content: "input"),
+        apply: {
+          operations.append($0.operation)
+          return true
+        }, warning: { XCTFail("Unexpected warning: \($0)") })
+      try await wait { await executor.validating }
+      await executor.validation(.init(output: ""))
+      try await wait { await executor.executing }
+      await executor.result(
+        .init(failure: .init(code, message: "Bounded \(code.rawValue) failure.")))
+      try await wait { operations.count == 2 }
+
+      XCTAssertEqual(
+        operations, [.submit, .failure("Bounded \(code.rawValue) failure.")],
+        "code: \(code)")
+      XCTAssertFalse(coordinator.hasJob(failed.invocationID), "code: \(code)")
+      XCTAssertFalse(
+        operations.contains {
+          if case .publish = $0 { return true }
+          return false
+        })
+
+      let healthy = InvocationGeneration(invocationID: UUID(), generation: UUID())
+      coordinator.submit(
+        identity: healthy, package: package, input: .init(content: "unrelated"),
+        apply: {
+          operations.append($0.operation)
+          return true
+        }, warning: { XCTFail("Unexpected warning: \($0)") })
+      try await wait { await executor.validating }
+      await executor.validation(.init(output: ""))
+      try await wait { await executor.executing }
+      await executor.result(.init(output: "healthy"))
+      try await wait { operations.count == 4 }
+      XCTAssertEqual(
+        Array(operations.suffix(2)), [.submit, .publish("healthy")], "code: \(code)")
+      XCTAssertFalse(coordinator.hasJob(healthy.invocationID), "code: \(code)")
+    }
   }
 }
 

@@ -7,7 +7,12 @@ settings:
   base:
     SWIFT_VERSION: '6.0'
     SWIFT_STRICT_CONCURRENCY: complete
-    CODE_SIGNING_ALLOWED: NO
+    # Local builds use ad-hoc signatures so nested helper entitlements are
+    # exercised without requiring Developer ID credentials (Wave 4 work).
+    CODE_SIGNING_ALLOWED: YES
+    CODE_SIGNING_REQUIRED: YES
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: '-'
     GENERATE_INFOPLIST_FILE: YES
     MACOSX_DEPLOYMENT_TARGET: '14.0'
     MARKETING_VERSION: 0.3.0
@@ -36,10 +41,36 @@ targets:
     sources: [Sources/JortToolRuntime]
     dependencies:
       - target: JortToolContracts
-      - target: JortJavaScript
+      - target: JortJavaScriptClient
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolruntime
+  JortJavaScriptClient:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/JortJavaScriptClient/JortJavaScriptClient.c
+      - path: Sources/JortJavaScriptClient/JortJavaScriptClient.h
+        buildPhase: headers
+        headerVisibility: public
+      - path: Sources/JortJavaScriptProtocol/JortJavaScriptProtocol.c
+      - path: Sources/JortJavaScriptProtocol/JortJavaScriptProtocol.h
+        buildPhase: headers
+        headerVisibility: private
+    dependencies:
+      - sdk: CoreFoundation.framework
+      - sdk: Security.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.client
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptProtocol'
+      configs:
+        Debug:
+          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
+        Release:
+          # Local Release qualification is also ad-hoc signed. A Team-signed
+          # build still takes the strict matching-Team requirement at runtime.
+          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
   JortToolRuntimeTests:
     type: bundle.unit-test
     platform: macOS
@@ -52,24 +83,200 @@ targets:
       - target: JortSettings
       - target: JortDocument
       - target: JortPersistence
+      - target: JortJavaScriptTestOracle
+        link: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolruntimetests
-  JortJavaScript:
-    type: framework
+  JortJavaScriptBroker:
+    type: xpc-service
     platform: macOS
     sources:
-      - path: Sources/JortJavaScript
-      - path: Vendor/QuickJS
-        excludes: [JORT.md, LICENSE]
-      - path: Vendor/QuickJS/LICENSE
-        buildPhase: resources
+      - Sources/JortJavaScriptBroker
+      - Sources/JortJavaScriptProtocol
+    dependencies:
+      - target: JortJavaScriptWorker
+        embed: true
+        codeSign: false
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+    postBuildScripts:
+      - name: Seal JavaScript worker entitlements
+        script: 'bash "$SRCROOT/scripts/sign-javascript-worker.sh"'
+        inputFiles:
+          - $(SRCROOT)/scripts/sign-javascript-worker.sh
+          - $(SRCROOT)/Configuration/JortJavaScriptWorker.entitlements
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/JortJavaScriptWorker
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/JortJavaScriptWorker-signature.stamp
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript
-        HEADER_SEARCH_PATHS: '$(SRCROOT)/Vendor/QuickJS'
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.broker
+        CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptBroker.entitlements
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        INFOPLIST_FILE: Configuration/JortJavaScriptBroker-Info.plist
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptProtocol'
+      configs:
+        Debug:
+          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
+        Release:
+          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
+  JortJavaScriptWorker:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Sources/JortJavaScriptWorker
+      - path: Sources/JortJavaScriptProtocol
+      - path: Sources/JortJavaScript/JortJavaScript.c
+      - path: Vendor/QuickJS
+        excludes: [JORT.md, LICENSE]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.worker
+        CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptWorker.entitlements
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        INFOPLIST_FILE: Configuration/JortJavaScriptWorker-Info.plist
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol'
         GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'CONFIG_VERSION=\"2026-06-04\"']
         CLANG_WARN_DOCUMENTATION_COMMENTS: NO
+        OTHER_CODE_SIGN_FLAGS: '--identifier $(PRODUCT_BUNDLE_IDENTIFIER)'
+  # Nonshipping process fixture for behavioral parity. It keeps QuickJS out of
+  # the XCTest process and is never embedded in Jort.app.
+  JortJavaScriptTestOracle:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Sources/JortJavaScriptWorker
+      - path: Sources/JortJavaScriptProtocol
+      - path: Sources/JortJavaScript/JortJavaScript.c
+      - path: Vendor/QuickJS
+        excludes: [JORT.md, LICENSE]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.test-oracle
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol'
+        GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'CONFIG_VERSION=\"2026-06-04\"']
+        CLANG_WARN_DOCUMENTATION_COMMENTS: NO
+  # Signed nonshipping probes: the harness has the broker sandbox; its child
+  # inherits it and runs the production worker's resource bootstrap.
+  JortJavaScriptNativeProbe:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Tests/JavaScriptContainment/Fixtures/NativeProbe.c
+      - path: Sources/JortJavaScriptProtocol
+      - path: Sources/JortJavaScript/JortJavaScript.c
+      - path: Vendor/QuickJS
+        excludes: [JORT.md, LICENSE]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.native-probe
+        CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptWorker.entitlements
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        INFOPLIST_FILE: Tests/JavaScriptContainment/Fixtures/Probe-Info.plist
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Vendor/QuickJS $(SRCROOT)/Sources/JortJavaScript $(SRCROOT)/Sources/JortJavaScriptProtocol'
+        GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'CONFIG_VERSION=\"2026-06-04\"']
+        CLANG_WARN_DOCUMENTATION_COMMENTS: NO
+  JortJavaScriptSandboxHarness:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Tests/JavaScriptContainment/Fixtures/SandboxHarness.c
+      - path: Sources/JortJavaScriptBroker/BrokerEnvelope.c
+      - path: Sources/JortJavaScriptBroker/BrokerIdentity.c
+      - path: Sources/JortJavaScriptProtocol
+    dependencies:
+      - sdk: Foundation.framework
+      - sdk: Security.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.sandbox-harness
+        CODE_SIGN_ENTITLEMENTS: Tests/JavaScriptContainment/Fixtures/Harness.entitlements
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        INFOPLIST_FILE: Tests/JavaScriptContainment/Fixtures/Harness-Info.plist
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptBroker $(SRCROOT)/Sources/JortJavaScriptProtocol'
+      configs:
+        Debug:
+          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
+  JortJavaScriptBrokerFaultHarness:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Tests/JavaScriptContainment/Fixtures/BrokerFaultHarness.c
+      - path: Sources/JortJavaScriptBroker/BrokerEnvelope.c
+      - path: Sources/JortJavaScriptBroker/BrokerIdentity.c
+      - path: Sources/JortJavaScriptProtocol
+    dependencies:
+      - target: JortJavaScriptClient
+        link: false
+      - sdk: Security.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.broker-fault-harness
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptBroker $(SRCROOT)/Sources/JortJavaScriptProtocol'
+      configs:
+        Debug:
+          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
+  JortAppleEventReceiver:
+    type: application
+    platform: macOS
+    sources: [Tests/JavaScriptContainment/Fixtures/AppleEventProbe.m]
+    dependencies:
+      - sdk: AppKit.framework
+      - sdk: ApplicationServices.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.apple-event-receiver
+        ENABLE_DEBUG_DYLIB: NO
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Tests/JavaScriptContainment/Fixtures/AppleEventReceiver-Info.plist
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+  JortAppleEventProbe:
+    type: tool
+    platform: macOS
+    sources: [Tests/JavaScriptContainment/Fixtures/AppleEventProbe.m]
+    dependencies:
+      - sdk: AppKit.framework
+      - sdk: ApplicationServices.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.apple-event-probe
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        INFOPLIST_FILE: Tests/JavaScriptContainment/Fixtures/Probe-Info.plist
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+  JortJavaScriptContainmentTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/JavaScriptContainment
+        excludes: [Fixtures]
+      - path: Sources/JortJavaScriptBroker/BrokerEnvelope.c
+      - Sources/JortJavaScriptProtocol
+    dependencies:
+      - target: JortAppleEventProbe
+        link: false
+      - sdk: AppKit.framework
+      - sdk: ApplicationServices.framework
+      - target: JortJavaScriptBrokerFaultHarness
+        link: false
+      - target: JortJavaScriptNativeProbe
+        link: false
+      - target: JortJavaScriptSandboxHarness
+        link: false
+      - target: JortJavaScriptWorker
+        link: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascriptcontainmenttests
+        HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptProtocol $(SRCROOT)/Sources/JortJavaScriptBroker'
   JortSettings:
     type: framework
     platform: macOS
@@ -134,6 +341,16 @@ targets:
           - $(SRCROOT)/scripts/generate-icon.sh
         outputFiles:
           - $(SRCROOT)/Jort/Resources/AppIcon.icns
+    postBuildScripts:
+      - name: Seal JavaScript broker entitlements
+        script: 'bash "$SRCROOT/scripts/sign-javascript-broker.sh"'
+        inputFiles:
+          - $(SRCROOT)/scripts/sign-javascript-broker.sh
+          - $(SRCROOT)/Configuration/JortJavaScriptBroker.entitlements
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/XPCServices/JortJavaScriptBroker.xpc
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/JortJavaScriptBroker-signature.stamp
     info:
       path: Jort/Info.plist
       properties:
@@ -158,7 +375,9 @@ targets:
         embed: true
       - target: JortToolContracts
         embed: true
-      - target: JortJavaScript
+      - target: JortJavaScriptClient
+        embed: true
+      - target: JortJavaScriptBroker
         embed: true
       - target: JortToolRuntime
         embed: true
@@ -186,7 +405,10 @@ targets:
       - target: JortPersistence
       - target: JortSettings
       - target: JortToolContracts
+      - target: JortToolRuntime
       - target: StoreLockProbe
+        link: false
+      - target: JortJavaScriptTestOracle
         link: false
     settings:
       base:
@@ -206,6 +428,8 @@ targets:
       - target: JortToolRuntime
       - target: JortSettings
       - target: JortToolContracts
+      - target: JortJavaScriptTestOracle
+        link: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editortests
@@ -233,7 +457,15 @@ schemes:
         JortDocument: all
         JortPersistence: all
         JortSettings: all
-        JortJavaScript: all
+        JortJavaScriptBroker: all
+        JortJavaScriptWorker: all
+        JortJavaScriptTestOracle: all
+        JortJavaScriptNativeProbe: all
+        JortJavaScriptSandboxHarness: all
+        JortJavaScriptBrokerFaultHarness: all
+        JortAppleEventReceiver: all
+        JortAppleEventProbe: all
+        JortJavaScriptClient: all
         JortToolRuntime: all
         JortToolContracts: all
         StoreLockProbe: all
@@ -259,7 +491,17 @@ schemes:
     test:
       environmentVariables:
         JORT_PERFORMANCE_ENFORCE: $(JORT_PERFORMANCE_ENFORCE)
-      targets: [JortFoundationTests, JortToolContractsTests, JortToolRuntimeTests]
+        JORT_APPLE_EVENT_PROBE: '0'
+      targets: [JortFoundationTests, JortToolContractsTests, JortToolRuntimeTests, JortJavaScriptContainmentTests]
+  JortJavaScriptContainment:
+    build:
+      targets:
+        JortJavaScriptContainmentTests: all
+        JortAppleEventReceiver: all
+    test:
+      environmentVariables:
+        JORT_APPLE_EVENT_PROBE: '1'
+      targets: [JortJavaScriptContainmentTests]
   Jort:
     build:
       targets:

@@ -7,18 +7,18 @@ QuickJS currently parses and executes vendored C code inside Jort's main process
 - Replace the in-process JavaScript executor with a minimal, independently sandboxed XPC broker that launches one disposable QuickJS child for each validation or execution.
 - Link QuickJS only into the disposable worker executable; the app, AppKit, Document, Settings, Contracts, ordinary Runtime client, and XPC broker no longer link or load the engine.
 - Define an exact-version, allowlisted binary IPC protocol with independent source, manifest, input, output, error, metadata, and total-envelope caps enforced before application copying or decoding.
-- Establish and verify hard `RLIMIT_AS`, `RLIMIT_CPU`, core/file/process/file-descriptor limits in the child before the broker sends package source, while retaining QuickJS's heap, stack, deadline, cancellation, disabled-global, module, eval, byte, and line limits.
+- Establish and verify hard CPU, core/file/process/file-descriptor limits in the child before the broker sends package source, while retaining QuickJS's 16 MiB heap, stack, deadline, cancellation, disabled-global, module, eval, byte, and line limits. Whole-process memory pressure remains managed by macOS without a Jort memory watchdog or deterministic process-memory ceiling.
 - Give the broker its own App Sandbox with no network, arbitrary user-file, Keychain, Apple Events, device, app-group, or user-selected-file entitlement; the disposable child inherits only that sandbox.
 - Make the broker own child lifecycle, wall-clock watchdog, cancellation, forced termination, output framing, and one-run disposal; cap concurrent children and reject malformed or excess work safely.
 - Reduce crash, hang, timeout, cancellation, protocol/version/correlation failure, limit violation, and malformed output into bounded generation-local failures with no partial document mutation.
-- Add package/link/signature/entitlement, denied-authority, resource-exhaustion, crash/hang, bounded-decoding, lifecycle-race, and engine-provenance verification.
+- Add package/link/signature/entitlement, denied-authority, CPU and engine-limit, crash/hang, bounded-decoding, lifecycle-race, and engine-provenance verification.
 - Keep model-provider HTTP execution in the main-process provider path and block public/community package import until containment and the later signed-release change are both verified.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `sandboxed-javascript-execution`: Defines process topology, sandbox authority, versioned bounded IPC, hard resource enforcement, disposable worker lifecycle, peer identity, and containment verification.
+- `sandboxed-javascript-execution`: Defines process topology, sandbox authority, versioned bounded IPC, bounded engine and CPU execution, disposable worker lifecycle, peer identity, and containment verification.
 
 ### Modified Capabilities
 

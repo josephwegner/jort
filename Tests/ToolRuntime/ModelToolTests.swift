@@ -17,6 +17,22 @@ private actor RecordingTransport: OpenRouterTransport {
   }
 }
 
+private actor CountingJavaScriptBroker: JavaScriptBrokerTransport {
+  private(set) var sends = 0
+  private(set) var cancellations = 0
+
+  func send(_ request: JavaScriptRequestPayload, operation: JavaScriptOperation) async
+    -> ToolExecutionResult
+  {
+    sends += 1
+    return .init(output: "unexpected JavaScript dispatch")
+  }
+
+  func cancel(invocationID: String, generation: String) async {
+    cancellations += 1
+  }
+}
+
 final class ModelToolTests: StoreTestCase {
   private func package(mode: ToolInputMode = .contained) -> ToolPackage {
     var manifest = ToolManifest(
@@ -56,12 +72,12 @@ final class ModelToolTests: StoreTestCase {
   func testPackageRoundTripUnknownModelAndConflictingCommands() async throws {
     let directory = try root(),
       registry = ToolPackageRegistry(
-        validator: RuntimePackageValidator(),
+        validator: RuntimePackageValidator(client: .testWorker),
         bundledDirectory: directory.appendingPathComponent("empty"), installedDirectory: directory)
     var value = package()
     _ = try await registry.save(value)
     let reloaded = try await ToolPackageRegistry(
-      validator: RuntimePackageValidator(),
+      validator: RuntimePackageValidator(client: .testWorker),
       bundledDirectory: directory.appendingPathComponent("empty"), installedDirectory: directory
     ).inspect()
     XCTAssertEqual(reloaded.executable, [value])
@@ -79,7 +95,7 @@ final class ModelToolTests: StoreTestCase {
   func testModelSettingsPersistenceAndAncestry() async throws {
     let directory = try root(),
       registry = ToolPackageRegistry(
-        validator: RuntimePackageValidator(),
+        validator: RuntimePackageValidator(client: .testWorker),
         bundledDirectory: directory.appendingPathComponent("empty"),
         installedDirectory: directory.appendingPathComponent("tools"))
     let preferences = ownStore(SQLiteSettingsStore(directory: directory)),
@@ -128,6 +144,36 @@ final class ModelToolTests: StoreTestCase {
     XCTAssertEqual(captured.count, 1)
     XCTAssertEqual(captured.first?.content, "秘密\ntext")
     XCTAssertEqual(captured.first?.instructions, package().instructions)
+  }
+  func testModelDispatchNeverCrossesTheJavaScriptBrokerBoundary() async throws {
+    let provider = FakeModelProvider(.success("answer"))
+    let broker = CountingJavaScriptBroker()
+    let dispatcher = ToolExecutorDispatcher(
+      modelAvailable: { true }, provider: { provider },
+      javaScript: JavaScriptBrokerClient(transport: broker))
+    let value = package()
+    let input = ToolExecutionInput(content: "exact model input")
+    let request = try ToolExecutionRequest(
+      identity: .init(invocationID: UUID(), generation: UUID()), package: value, input: input)
+
+    let validation = await dispatcher.validate(request)
+    XCTAssertNil(validation.error)
+    let result = await dispatcher.execute(request)
+
+    XCTAssertEqual(result.output, "answer")
+    let brokerSends = await broker.sends
+    let brokerCancellations = await broker.cancellations
+    XCTAssertEqual(brokerSends, 0)
+    XCTAssertEqual(brokerCancellations, 0)
+    let requests = await provider.requests
+    let captured = try XCTUnwrap(requests.first)
+    XCTAssertEqual(captured.toolID, value.manifest.id)
+    XCTAssertEqual(captured.version, value.manifest.version)
+    XCTAssertEqual(captured.modelID, value.manifest.modelID ?? "")
+    XCTAssertEqual(captured.instructions, value.instructions)
+    XCTAssertEqual(captured.content, input.content)
+    XCTAssertEqual(captured.maximumBytes, value.manifest.maximumOutputBytes)
+    XCTAssertEqual(captured.maximumLines, value.manifest.maximumOutputLines)
   }
   func testOpenRouterRequestAndMalformedResponseBounds() async throws {
     let transport = RecordingTransport([

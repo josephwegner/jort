@@ -98,8 +98,28 @@ Run commands from the repository root. Scripts default DEVELOPER_DIR to
 `/Applications/Xcode.app/Contents/Developer`; set it explicitly to select another
 installed toolchain. XcodeGen must match `.xcodegen-version`.
 
+Agents use `./scripts/validate` rather than constructing Xcode or test commands. The dispatcher
+prints bounded diagnostics, saves complete logs under `.build-validation`, and serializes all
+Xcode-backed checks with `.build-validation/xcode.lock`. Its typed arguments form the stable Codex
+approval surface. `changed --plan-only` exposes the file-to-check mapping, `focused` accepts only
+the enumerated suite/configuration options and XCTest IDs, `gate` is the final comprehensive lane,
+and `result` reads a prior record without executing or treating it as proof for current code.
+Every validation request runs fresh; there is no evidence cache.
+
+Project Codex configuration is loaded only after the checkout is trusted. The configured agent
+models (`gpt-5.6-luna`, `gpt-5.6-terra`, and `gpt-6-astra`) must be available on the host account;
+if a model is unavailable, keep the same role boundaries with an available model rather than
+bypassing validation. Xcode checks require full Xcode and normal macOS test-runner access. A
+sandboxed run may fail before compilation when Swift's macro plugin server cannot launch; rerun
+the same typed dispatcher command with the required host permission.
+
 | Command | Enforcement and purpose |
 | --- | --- |
+| `./scripts/validate changed --plan-only` | Read-only, deterministic plan for current changes. Unknown source/test paths conservatively select both primary suites. |
+| `./scripts/validate focused foundation --only Bundle/TestCase` | Fresh focused Foundation test execution. Repeat `--only` for multiple test identifiers. |
+| `./scripts/validate focused native --configuration Release` | Fresh focused native execution with an enumerated build configuration. |
+| `./scripts/validate gate` | Canonical final local gate: formatting, project generation, Foundation, native, packaging, first-party analysis, and UI. Run once after the final edit. |
+| `./scripts/validate result --check NAME` | Read-only summary and bounded log-tail inspection. Never substitutes for a fresh validation request. |
 | `python3 scripts/format.py` | Local mechanical formatting; includes new Swift files within the explicit formatting roots. |
 | `python3 scripts/format.py --check` | Blocking local/CI byte-for-byte formatting check, without writes. |
 | `python3 scripts/check-project.py` | Blocking local/CI deterministic project/plist generation. Run `xcodegen generate` after changing project.yml and review the resulting project/scheme diff. |

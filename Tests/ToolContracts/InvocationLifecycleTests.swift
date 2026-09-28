@@ -132,8 +132,53 @@ extension InvocationLifecycleTests {
       XCTAssertEqual(ToolInputNormalization.submitted(source), expected)
     }
     let failure = ToolFailure(.implementation, message: String(repeating: "😀", count: 600))
-    XCTAssertEqual(failure.message.utf8.count, 2048)
+    XCTAssertLessThanOrEqual(failure.message.utf8.count, 512)
     XCTAssertEqual(ToolExecutionResult(failure: failure).failure?.code, .implementation)
+  }
+}
+
+extension InvocationLifecycleTests {
+  func testUTF8FailureTruncationNeverSplitsAScalar() throws {
+    let message = String(repeating: "😀", count: 200)
+    let failure = ToolFailure(.protocolError, message: message)
+    XCTAssertLessThanOrEqual(failure.message.utf8.count, 512)
+    XCTAssertEqual(failure.message, String(repeating: "😀", count: 128))
+  }
+
+  func testJavaScriptPayloadIsPrimitiveBoundedAndCorrelated() throws {
+    let identity = InvocationGeneration(invocationID: UUID(), generation: UUID())
+    let package = ToolPackage(
+      manifest: .init(id: "dev.test.payload", name: "Payload", command: "/payload"),
+      source: "export default async function(input) { return {output: input.content}; }")
+    let request = try ToolExecutionRequest(
+      identity: identity, package: package, input: .init(content: "秘密"))
+    let payload = try request.javascriptPayload(deadlineMilliseconds: 500)
+    XCTAssertEqual(payload.protocolVersion, 1)
+    XCTAssertEqual(payload.invocationID, identity.invocationID.uuidString.lowercased())
+    XCTAssertEqual(payload.generation, identity.generation.uuidString.lowercased())
+    XCTAssertEqual(String(data: payload.input, encoding: .utf8), "秘密")
+    XCTAssertEqual(String(data: payload.clock, encoding: .utf8), request.input.clock)
+    XCTAssertEqual(String(data: payload.uuid, encoding: .utf8), request.input.uuid)
+    XCTAssertLessThanOrEqual(payload.contract.count, JavaScriptRequestPayload.maximumContractBytes)
+  }
+
+  func testJavaScriptPayloadRejectsOverlongEnvelopeBeforeTransport() {
+    XCTAssertThrowsError(
+      try JavaScriptRequestPayload(
+        invocationID: UUID().uuidString, generation: UUID().uuidString,
+        contract: Data(repeating: 0, count: JavaScriptRequestPayload.maximumContractBytes + 1),
+        source: Data(), input: Data(), clock: Data(), uuid: Data(), deadlineMilliseconds: 1,
+        maximumOutputBytes: 1, maximumOutputLines: 1))
+  }
+
+  func testCompileOnlyPackageValidationAllowsEmptyContextualInput() throws {
+    let package = ToolPackage(
+      manifest: .init(
+        id: "dev.test.contextual", name: "Contextual", command: "/contextual",
+        inputMode: .contextual),
+      source: "export default async function(input) { return {output: input.content}; }")
+
+    XCTAssertNoThrow(try ToolExecutionRequest(validationOf: package))
   }
 }
 

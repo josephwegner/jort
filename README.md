@@ -17,12 +17,27 @@ prints one concise result per check and stores complete command output plus `sum
 `analysis`, `quickjs`, `tsan`, `ui`, `package`, and `all`. Validation stops at the first failure by
 default; pass `--keep-going` to collect every result.
 
+For implementation work, `./scripts/validate changed --plan-only` shows the conservative checks
+selected for the working tree. Use `./scripts/validate focused foundation` or `focused native`
+with repeated `--only XCTestBundle/TestCase` filters while iterating. `--configuration Release`
+and `--performance` are explicit options; arbitrary `xcodebuild` arguments are not accepted.
+Run `./scripts/validate gate` once after the final code change. Every command executes fresh.
+Stored results are diagnostics, not cached passes; inspect the latest compact result with
+`./scripts/validate result` or add `--check NAME` for a bounded log tail.
+
+All dispatcher-owned Xcode work shares a repository lock, preventing concurrent agents from
+competing for build state. Project Codex rules pre-authorize the typed dispatcher surface, while
+`AGENTS.md`, the repo-local Jort skill, and `.codex/agents/` route discovery and log triage to
+lower-cost models and reserve Astra for hard cross-module work. The main task remains responsible
+for integration and the final gate.
+
 `./scripts/validate presentation` runs localization checks and focused native presentation tests,
 including the strict Core Animation transaction-warning gate.
 
 Normal tests build only frameworks and command-line test bundles. Document/persistence tests do not construct AppKit objects; separate native adapter tests exercise their own AppKit views inside `xctest`. Neither suite builds or modifies an installed Jort application. Computer Use is not part of the test workflow.
 
-These commands are intentionally separate and should be run by the user when desired:
+These underlying commands are intentionally separate and should normally be reached through the
+dispatcher; they remain available to a user for direct manual diagnosis:
 
 ```sh
 ./scripts/test-ui.sh  # Builds and ad-hoc signs an isolated accessibility test app/runner
@@ -74,12 +89,13 @@ The maximum serialized payload is **64 MiB**. Oversize, busy, permissions, disk,
 - `JortDocument`: authoritative main-actor coordinator, immutable Sendable snapshots, typed transactions, line lineage, anchors, and revisions. No AppKit dependency.
 - `JortPersistence`: storage actor, locking, versioned codecs, atomic migration/recovery, typed main-actor scheduling.
 - `JortToolContracts`: Foundation-only package/execution values, typed failures, and the pure invocation reducer.
-- `JortToolRuntime`: injected QuickJS/model execution, lazy provider construction, and headless task coordination.
+- `JortToolRuntime`: authenticated JavaScript-broker client, injected model execution, lazy provider construction, and headless task coordination.
+- `JortJavaScriptBroker` / `JortJavaScriptWorker`: private sandbox supervision and one-run QuickJS execution; only the disposable worker links the engine.
 - `JortSettings`: versioned settings persistence, immutable package generations, catalog snapshots, and injected asynchronous validation.
 - `JortAppKit`: native text, gutter, coordinator-backed undo, selection/viewport mapping, localized status presentation.
 - `Jort`: composition, menus, and lifecycle.
 
-Tool discovery and syntax validation run asynchronously and never gate editor readiness or immediate typing. QuickJS may initialize during catalog validation. Contracts, runtime, and Settings tests run headlessly; native suites cover text-system integration and presentation. The first-party analysis lane enforces module dependencies with `scripts/audit-tool-dependencies.py`.
+Tool discovery and syntax validation run asynchronously and never gate editor readiness or immediate typing. Validation launches a disposable sandboxed worker rather than initializing QuickJS in the app. Contracts, runtime, and Settings tests run headlessly; native suites cover text-system integration and presentation. The first-party analysis lane enforces module dependencies with `scripts/audit-tool-dependencies.py`.
 
 See [review implementation status](docs/review-status.md), [normative line identity](docs/line-identity.md), and [performance budgets](docs/performance.md). CI configuration includes clean generation checks, tests, static analysis, sanitizer checks, accessibility smoke testing, and a fresh Release package. This workspace is not yet a Git repository, so remote CI has not been executed here.
 

@@ -36,19 +36,31 @@ The editor removes exactly one leading ASCII space from extracted content before
 validation and execution. Additional spaces, tabs, newlines, and all other text
 are preserved; the canonical input in the document is never trimmed.
 
-Execution has a 16 MiB heap, 512 KiB stack, five-second timeout, and manifest
-input/output bounds. Cancellation interrupts execution. There are no filesystem,
-network, process, native bridge, module loading, `eval`, or function-constructor
-facilities. No engine standard-library or operating-system bindings are linked.
-Each run creates a fresh runtime. The engine source and MIT license are pinned
-under `Vendor/QuickJS`; its two small local extensions are documented there.
+Execution has a 16 MiB QuickJS heap, 512 KiB engine stack, five-second wall
+timeout, CPU limit, and manifest input/output bounds. Cancellation terminates the
+disposable run. There are no filesystem, network, process, native bridge, module
+loading, `eval`, or function-constructor facilities. No engine standard-library
+or operating-system bindings are linked.
 
-QuickJS remains in the application process until the Wave 3 sandbox change.
-Settings reaches syntax validation through an injected runtime interface during
-asynchronous catalog loading; invalid installed overrides still fall back to valid
-bundled tools. Catalog validation runs off the main actor and never delays the
-editor becoming editable. Provider transports and credentials remain lazy until
-a model invocation or connection workflow requires them.
+Every validation and execution uses a fresh QuickJS worker behind Jort's private,
+independently sandboxed broker. Only that disposable worker links the native
+engine; it receives the normalized package contract, source, exact input,
+captured clock/UUID, correlation identity, and declared bounds—never a document,
+credential, provider, path, URL, bookmark, or native application object. The
+broker owns timeout, cancellation, termination, and reaping. Settings uses the
+same boundary for fail-closed source validation, and provider transports and
+credentials remain in the separate lazy model path.
+
+Jort intentionally does not promise a whole-process memory ceiling or implement
+a process-memory watchdog. Ordinary JavaScript allocation remains constrained by
+the QuickJS heap limit; macOS manages native allocations and system memory
+pressure. A worker allocation failure, crash, or lost connection publishes no
+partial output. This trade-off is accepted for bundled and user-authored tools;
+public/community package import remains disabled pending the signed release gate.
+
+The engine source, MIT license, exact local patch, reproducible import procedure,
+and review policy are pinned under `Vendor/QuickJS` and
+`docs/quickjs-security-review.md`.
 
 `compatibleVersions` may list up to 32 older positive package versions that map
 unchanged to the current entry, input, and output contracts. Completed output is
