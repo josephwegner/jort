@@ -2,10 +2,11 @@
 """Credential-free adversarial tests for the release contract and publication."""
 import ast
 import copy
-from contextlib import nullcontext
+from contextlib import nullcontext, redirect_stderr
 from datetime import datetime, timedelta, timezone
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -104,6 +105,60 @@ class ReleaseTests(unittest.TestCase):
 
     def validate(self):
         return validation.validate_bundle(self.app, self.manifest, self.inspector)
+
+    def write_release_selectors(self, contents):
+        (self.root / '.release.env').write_text(contents)
+
+    def test_release_selector_file_defaults_and_cli_precedence(self):
+        self.write_release_selectors(
+            '# non-secret selectors only\n'
+            'export JORT_RELEASE_IDENTITY="' + IDENTITY + '"\n'
+            'JORT_RELEASE_TEAM_ID=' + TEAM + '\n'
+            'JORT_RELEASE_PROVISIONING_PROFILE=${PWD}/profile.mobileprovision\n'
+            'JORT_RELEASE_NOTARY_PROFILE="fixture-profile"\n'
+            'JORT_RELEASE_ARCHITECTURE=arm64\n')
+        args = release.parse_release_args(['--revision', 'a' * 40, '--candidate'], self.root)
+        self.assertEqual(args.identity, IDENTITY)
+        self.assertEqual(args.team_id, TEAM)
+        self.assertEqual(args.provisioning_profile, self.root / 'profile.mobileprovision')
+        self.assertEqual(args.notary_profile, 'fixture-profile')
+        self.assertEqual(args.architectures, ['arm64'])
+        self.write_release_selectors('JORT_RELEASE_PROVISIONING_PROFILE=$PWD/other.profile\n')
+        self.assertEqual(release.load_release_selectors(self.root)['provisioning_profile'],
+                         str(self.root / 'other.profile'))
+        explicit = release.parse_release_args([
+            '--revision', 'a' * 40, '--identity', 'B' * 40, '--team-id', 'OTHER12345',
+            '--provisioning-profile', '/tmp/other.profile', '--notary-profile', 'other-profile',
+            '--architectures', 'x86_64', '--candidate'], self.root)
+        self.assertEqual((explicit.identity, explicit.team_id, explicit.provisioning_profile,
+                          explicit.notary_profile, explicit.architectures),
+                         ('B' * 40, 'OTHER12345', Path('/tmp/other.profile'), 'other-profile', ['x86_64']))
+
+    def test_release_selector_file_is_optional(self):
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            release.parse_release_args(['--revision', 'a' * 40], self.root)
+        explicit = release.parse_release_args([
+            '--revision', 'a' * 40, '--identity', IDENTITY, '--team-id', TEAM,
+            '--provisioning-profile', '/tmp/profile', '--notary-profile', 'fixture'], self.root)
+        self.assertEqual(explicit.identity, IDENTITY)
+
+    def test_release_selector_file_rejects_unsafe_or_secret_values_without_echoing_them(self):
+        raw_secret = 'DO-NOT-ECHO-release-secret'
+        invalid = (
+            'UNAPPROVED=value',
+            'JORT_RELEASE_IDENTITY=' + IDENTITY + '\nJORT_RELEASE_IDENTITY=' + IDENTITY,
+            'JORT_RELEASE_TEAM_ID=',
+            'JORT_RELEASE_PROVISIONING_PROFILE=$(whoami)',
+            'JORT_RELEASE_PROVISIONING_PROFILE=$PWD_OTHER/profile',
+            'JORT_RELEASE_NOTARY_PROFILE=`whoami`',
+            'JORT_RELEASE_TOKEN=' + raw_secret,
+            'not an assignment',
+        )
+        for contents in invalid:
+            with self.subTest(contents=contents.split('=')[0]), self.assertRaises(ValueError) as error:
+                self.write_release_selectors(contents + '\n')
+                release.load_release_selectors(self.root)
+            self.assertNotIn(raw_secret, str(error.exception))
 
     def test_complete_and_deterministic(self):
         self.validate()

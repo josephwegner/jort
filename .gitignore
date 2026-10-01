@@ -18,3 +18,4 @@ __pycache__/
 !.codex/rules/**
 .opencode
 .codex
+/.release.env

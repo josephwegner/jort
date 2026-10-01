@@ -21,6 +21,16 @@ from release_validation import compare_inventory, validate_bundle
 from provisioning_profile import embed as embed_profile, inspect as inspect_profile
 
 BOUNDARIES = ('preflight', 'build', 'manifest', 'validate', 'sign', 'post-sign', 'image', 'image-sign', 'notary', 'staple', 'mount', 'assessment', 'publish')
+RELEASE_SELECTOR_FILE = '.release.env'
+RELEASE_SELECTOR_KEYS = {
+    'JORT_RELEASE_IDENTITY': 'identity',
+    'JORT_RELEASE_TEAM_ID': 'team_id',
+    'JORT_RELEASE_NOTARY_PROFILE': 'notary_profile',
+    'JORT_RELEASE_PROVISIONING_PROFILE': 'provisioning_profile',
+    'JORT_RELEASE_ARCHITECTURE': 'architecture',
+}
+RELEASE_SECRET_KEY = re.compile(r'(?i)(?:secret|token|password|passwd|private|credential|api[_-]?key|p12)')
+RELEASE_SELECTOR_LINE = re.compile(r'(?:(?:export)[ \t]+)?([A-Z][A-Z0-9_]*)[ \t]*=[ \t]*(.*)')
 NOTARY_TERMINAL_STATUSES = {'Rejected', 'Invalid'}
 NOTARY_FAILURE_STATUSES = NOTARY_TERMINAL_STATUSES | {'In Progress', 'Unavailable'}
 NOTARY_DIAGNOSTIC_ISSUES = 20
@@ -44,6 +54,44 @@ def _notary_text(value, limit=NOTARY_DIAGNOSTIC_TEXT):
     text = ''.join(character if 32 <= ord(character) <= 126 else ' ' for character in text)
     text = ' '.join(text.split())
     return text[:limit] if text else None
+
+
+def load_release_selectors(root=ROOT):
+    """Read the repository-local selector file without interpreting shell code."""
+    path = Path(root) / RELEASE_SELECTOR_FILE
+    if not path.exists() and not path.is_symlink():
+        return {}
+    require(path.is_file() and not path.is_symlink(), 'invalid release selector file')
+    selectors = {}
+    for line in path.read_text(encoding='utf-8').splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+        match = RELEASE_SELECTOR_LINE.fullmatch(line)
+        require(match is not None, 'malformed release selector file')
+        key, raw_value = match.groups()
+        if key not in RELEASE_SELECTOR_KEYS:
+            require(RELEASE_SECRET_KEY.search(key) is None, 'secret-bearing release selector is prohibited')
+            raise ValueError('unknown release selector')
+        require(key not in selectors, 'duplicate release selector')
+        value = raw_value.strip()
+        require(value, 'missing release selector value')
+        if value[0] in "\"'":
+            quote = value[0]
+            require(len(value) >= 2 and value[-1] == quote, 'malformed quoted release selector')
+            value = value[1:-1]
+            require(quote not in value and '\\' not in value, 'unsafe release selector value')
+        else:
+            require(not any(character.isspace() for character in value), 'malformed release selector value')
+            require('"' not in value and "'" not in value and '\\' not in value, 'unsafe release selector value')
+        remaining_expansions = re.sub(r'\$\{PWD\}|\$PWD(?![A-Za-z0-9_])', '', value)
+        require('`' not in value and '$(' not in value and '$' not in remaining_expansions,
+                'unsafe release selector expansion')
+        value = value.replace('${PWD}', str(Path(root).resolve())).replace('$PWD', str(Path(root).resolve()))
+        require(value and '\x00' not in value and '\n' not in value and '\r' not in value,
+                'unsafe release selector value')
+        selectors[key] = value
+    return {RELEASE_SELECTOR_KEYS[key]: value for key, value in selectors.items()}
 
 
 def _notary_issue(issue):
@@ -325,19 +373,31 @@ def release(args, runner=None):
         raise
 
 
-def main():
+def parse_release_args(argv=None, root=ROOT):
+    selectors = load_release_selectors(root)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--revision', required=True)
-    parser.add_argument('--identity', required=True, help='exact Developer ID Application certificate SHA-1')
-    parser.add_argument('--team-id', required=True)
-    parser.add_argument('--notary-profile', required=True)
-    parser.add_argument('--provisioning-profile', required=True, type=Path,
+    parser.add_argument('--identity', default=selectors.get('identity'), help='exact Developer ID Application certificate SHA-1')
+    parser.add_argument('--team-id', default=selectors.get('team_id'))
+    parser.add_argument('--notary-profile', default=selectors.get('notary_profile'))
+    parser.add_argument('--provisioning-profile', default=selectors.get('provisioning_profile'), type=Path,
                         help='non-secret Developer ID provisioning profile path')
-    parser.add_argument('--architectures', nargs='+', default=['arm64'])
+    parser.add_argument('--architectures', nargs='+', default=[selectors.get('architecture', 'arm64')])
     parser.add_argument('--candidate', action='store_true', help='qualify a signed candidate without publishing')
     parser.add_argument('--fail-at', choices=BOUNDARIES, help=argparse.SUPPRESS)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    missing = [flag for flag, value in (
+        ('--identity', args.identity), ('--team-id', args.team_id),
+        ('--notary-profile', args.notary_profile), ('--provisioning-profile', args.provisioning_profile),
+    ) if not value]
+    if missing:
+        parser.error('missing required release selectors: ' + ', '.join(missing))
+    return args
+
+
+def main():
     try:
+        args = parse_release_args()
         release(args)
     except (ValueError, OSError, KeyError, json.JSONDecodeError) as error:
         print('Release stopped: ' + ((_notary_text(str(error)) or 'validation failed') if isinstance(error, ValueError) else type(error).__name__), file=sys.stderr)

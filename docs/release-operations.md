@@ -68,6 +68,24 @@ it never prints matching bytes or filenames. These high-confidence patterns do
 not claim to recognize every arbitrary password. Keep credentials outside the
 repository even when their format is not recognized.
 
+### Remembering non-secret selectors
+
+Copy [`.release.env.example`](../.release.env.example) to a root-local
+`.release.env` on the protected release Mac. It is Git-ignored and may contain
+only the Developer ID certificate SHA-1, Team ID, provisioning-profile path,
+notary Keychain-profile name, and architecture. The release wrapper parses this
+as a narrow data format; it never sources the file or executes shell syntax.
+Blank lines, full-line comments, `KEY=VALUE`, and `export KEY=VALUE` are
+supported. Quotes are allowed around a value; `$PWD` and `${PWD}` expand only
+to the repository root, so the supplied profile example works regardless of
+the directory from which the wrapper is invoked.
+
+Never add a private key, `.p12` file or password, Apple ID password, API key,
+token, or notarization credential. Those stay in the protected macOS Keychain.
+Unknown, duplicate, malformed, secret-named, or shell-like entries are rejected
+without printing their values. Command-line selectors remain available and
+override matching `.release.env` entries.
+
 The checked-in manifest schema is enforced at runtime without remote references
 or additional packages. Each code object's reviewed entitlement source path and
 SHA-256 are bound into the manifest. Signing and verification also enforce an
@@ -80,7 +98,14 @@ size, app/build versions, source and manifest hashes, architectures, certificate
 metadata, Team ID, notarization result, staple validation, Gatekeeper assessment,
 and toolchain identity must all be present. The record omits authentication data.
 
-First qualify a disposable candidate while publication remains policy-disabled:
+First qualify a disposable candidate while publication remains policy-disabled.
+With a configured `.release.env`, only the exact revision is needed:
+
+```sh
+./scripts/release.sh --revision "$(git rev-parse HEAD)" --candidate
+```
+
+Otherwise, provide every selector explicitly:
 
 ```sh
 ./scripts/release.sh \
