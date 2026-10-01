@@ -47,12 +47,25 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
     NSTask *task = [NSTask new];
     task.executableURL = [NSURL fileURLWithPath:@"/usr/bin/vmmap"];
     task.arguments = @[@"-wide", [NSString stringWithFormat:@"%d", pid]];
-    NSPipe *output = NSPipe.pipe;
+    // vmmap can emit more than a pipe buffer for an instrumented process.
+    // A disposable file lets it finish without blocking on an unread pipe.
+    char outputPath[] = "/private/tmp/jort-vmmap-XXXXXX";
+    int descriptor = mkstemp(outputPath);
+    if (descriptor < 0) return nil;
+    unlink(outputPath);
+    NSFileHandle *output = [[NSFileHandle alloc] initWithFileDescriptor:descriptor closeOnDealloc:YES];
     task.standardOutput = output;
     task.standardError = output;
+    XCTestExpectation *finished = [self expectationWithDescription:@"bounded vmmap inspection"];
+    task.terminationHandler = ^(NSTask *process) { [finished fulfill]; };
     if (![task launchAndReturnError:error]) return nil;
-    [task waitUntilExit];
-    NSData *data = [output.fileHandleForReading readDataToEndOfFile];
+    XCTWaiterResult result = [XCTWaiter waitForExpectations:@[finished] timeout:10];
+    if (result != XCTWaiterResultCompleted) {
+        kill(task.processIdentifier, SIGKILL);
+        [task waitUntilExit];
+    }
+    [output seekToFileOffset:0];
+    NSData *data = [output readDataToEndOfFile];
     NSString *report = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     if (task.terminationStatus != 0) {
         if (error) *error = [NSError errorWithDomain:@"JortSignedNativeProbeTests"
@@ -145,7 +158,7 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
         NSArray<NSString *> *names = @[@"JortJavaScriptSandboxHarness", childName];
         NSArray<NSURL *> *targets = @[harnessTarget, childTarget];
         NSArray<NSString *> *identifiers = @[@"dev.jort.javascript.sandbox-harness",
-            productionWorker ? @"dev.jort.javascript.worker" : @"dev.jort.javascript.native-probe"];
+            productionWorker ? @"dev.jort.editor.javascript-worker" : @"dev.jort.javascript.native-probe"];
         NSArray<NSURL *> *entitlements = @[
             [fixtures URLByAppendingPathComponent:@"Harness.entitlements"],
             [root URLByAppendingPathComponent:@"Configuration/JortJavaScriptWorker.entitlements"]
@@ -181,17 +194,30 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
         task.standardError = output;
         NSPipe *control = nil;
         XCTestExpectation *ready = nil;
+        XCTestExpectation *drained = nil;
         __block NSString *mappingOutput = @"";
+        __block BOOL mappingReady = NO;
         if ([mode isEqualToString:@"mapping"]) {
             control = NSPipe.pipe;
             task.standardInput = control;
             ready = [self expectationWithDescription:@"production worker ready without source"];
+            drained = [self expectationWithDescription:@"mapping probe output drained"];
             output.fileHandleForReading.readabilityHandler = ^(NSFileHandle *handle) {
                 NSData *data = handle.availableData;
-                if (!data.length) return;
+                if (!data.length) {
+                    handle.readabilityHandler = nil;
+                    [drained fulfill];
+                    return;
+                }
                 NSString *chunk = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] ?: @"";
-                @synchronized (self) { mappingOutput = [mappingOutput stringByAppendingString:chunk]; }
-                if ([chunk rangeOfString:@"READY "].location != NSNotFound) [ready fulfill];
+                @synchronized (self) {
+                    mappingOutput = [mappingOutput stringByAppendingString:chunk];
+                    if (!mappingReady && [mappingOutput rangeOfString:@"READY [0-9]+\n"
+                        options:NSRegularExpressionSearch].location != NSNotFound) {
+                        mappingReady = YES;
+                        [ready fulfill];
+                    }
+                }
             };
         }
         XCTestExpectation *finished = [self expectationWithDescription:@"bounded native containment probe"];
@@ -201,20 +227,21 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
         if (error) return;
         if (ready) {
             XCTWaiterResult readyResult = [XCTWaiter waitForExpectations:@[ready] timeout:4];
-            XCTAssertEqual(readyResult, XCTWaiterResultCompleted, @"%@", mappingOutput);
+            NSString *readyOutput;
+            @synchronized (self) { readyOutput = [mappingOutput copy]; }
+            XCTAssertEqual(readyResult, XCTWaiterResultCompleted, @"%@", readyOutput);
             NSRegularExpression *expression = [NSRegularExpression regularExpressionWithPattern:@"READY ([0-9]+)"
                 options:0 error:&error];
-            NSTextCheckingResult *match = [expression firstMatchInString:mappingOutput options:0
-                range:NSMakeRange(0, mappingOutput.length)];
-            XCTAssertNotNil(match, @"%@", mappingOutput);
-            pid_t workerPID = [[mappingOutput substringWithRange:[match rangeAtIndex:1]] intValue];
+            NSTextCheckingResult *match = [expression firstMatchInString:readyOutput options:0
+                range:NSMakeRange(0, readyOutput.length)];
+            XCTAssertNotNil(match, @"%@", readyOutput);
+            pid_t workerPID = match ? [[readyOutput substringWithRange:[match rangeAtIndex:1]] intValue] : 0;
             NSString *maps = workerPID > 0 ? [self vmmapForProcess:workerPID error:&error] : nil;
             XCTAssertNotNil(maps, @"vmmap host restriction or failure: %@", error);
             XCTAssertTrue([maps containsString:childTarget.path], @"vmmap did not map the exact production worker: %@", maps);
             // EOF is the explicit bounded control signal. The harness then
             // SIGTERMs and waitpid-reaps its owned worker.
             [control.fileHandleForWriting closeFile];
-            output.fileHandleForReading.readabilityHandler = nil;
         }
         XCTWaiterResult result = [XCTWaiter waitForExpectations:@[finished] timeout:12];
         if (result != XCTWaiterResultCompleted) {
@@ -222,8 +249,15 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
             [task waitUntilExit];
         }
         XCTAssertEqual(result, XCTWaiterResultCompleted);
-        NSString *diagnostic = [[NSString alloc] initWithData:[output.fileHandleForReading readDataToEndOfFile]
-            encoding:NSUTF8StringEncoding];
+        NSString *diagnostic;
+        if (drained) {
+            XCTAssertEqual([XCTWaiter waitForExpectations:@[drained] timeout:2], XCTWaiterResultCompleted);
+            output.fileHandleForReading.readabilityHandler = nil;
+            @synchronized (self) { diagnostic = [mappingOutput copy]; }
+        } else {
+            diagnostic = [[NSString alloc] initWithData:[output.fileHandleForReading readDataToEndOfFile]
+                encoding:NSUTF8StringEncoding];
+        }
         XCTAssertEqual(task.terminationStatus, 0, @"%@", diagnostic);
         if (ready) XCTAssertTrue([diagnostic containsString:@"REAPED"], @"%@", diagnostic);
         XCTAssertEqualObjects([NSData dataWithContentsOfURL:file], expected);
@@ -239,6 +273,10 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
 
 - (void)testNativeCPULimitAndProductionBrokerReaping {
     [self runProbe:@"cpu"];
+}
+
+- (void)testWorkerDropsInheritedMachCapabilitiesBeforeReady {
+    [self runProbe:@"ports"];
 }
 
 - (void)testSignedInheritedSandboxDeniesProtectedUSBDeviceOpen {

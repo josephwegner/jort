@@ -287,7 +287,31 @@ private actor SettingsModelTransport: OpenRouterTransport {
   }
 }
 
+private struct ConflictingSettingsCredentialStore: ModelCredentialStore {
+  func read() throws -> String? { throw ModelCredentialStoreFailure.conflict }
+  func replace(with credential: String) {}
+  func remove() {}
+}
+
 extension SettingsWorkspaceTests {
+  func testModelsPaneShowsActionableCredentialConflictWithoutNetwork() async throws {
+    _ = NSApplication.shared
+    let transport = SettingsModelTransport()
+    let connection = OpenRouterConnection(
+      credentials: ConflictingSettingsCredentialStore(), transport: transport)
+    let pane = ModelsSettingsViewController(connection: connection)
+    _ = pane.view
+    await pane.refresh()
+    XCTAssertEqual(pane.statusLabel.stringValue, "Connection Needs Attention")
+    XCTAssertEqual(pane.detailLabel.stringValue, ModelCredentialStoreFailure.conflict.message)
+    XCTAssertFalse(pane.checkButton.isHidden)
+    XCTAssertFalse(pane.disconnectButton.isHidden)
+    XCTAssertTrue(pane.disconnectButton.isEnabled)
+    XCTAssertTrue(pane.connectButton.isEnabled)
+    let requests = await transport.count
+    XCTAssertEqual(requests, 0)
+  }
+
   func testModelsConnectionStatesAndNoNetworkWhenOpened() async throws {
     _ = NSApplication.shared
     let transport = SettingsModelTransport(), credentials = MemoryModelCredentialStore("test-only")

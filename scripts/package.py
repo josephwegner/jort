@@ -1,59 +1,49 @@
 #!/usr/bin/env python3
-"""Validate a fresh locally signed app, then atomically replace the artifact."""
+"""Validate a run-owned local stage before atomically replacing the local app."""
+import argparse
 import ctypes
 import os
 from pathlib import Path
-import plistlib
-import re
 import shutil
-import sys
 import tempfile
 
-
-FRAMEWORKS = [
-    'JortDocument', 'JortPersistence', 'JortAppKit', 'JortSettings',
-    'JortToolContracts', 'JortJavaScriptClient', 'JortToolRuntime',
-]
-BROKER = 'Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/MacOS/JortJavaScriptBroker'
-WORKER = 'Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker'
+from release_manifest import load, require
+from release_validation import validate_bundle
 
 
-def package(source, destination):
-    source, destination = Path(source), Path(destination)
+def atomic_swap(staged, destination):
+    if destination.exists():
+        libc = ctypes.CDLL('/usr/lib/libSystem.B.dylib', use_errno=True)
+        swap = libc.renameatx_np
+        swap.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        if swap(-2, os.fsencode(staged), -2, os.fsencode(destination), 2) != 0:
+            raise OSError(ctypes.get_errno(), 'Atomic app swap failed')
+    else:
+        os.rename(staged, destination)
+
+
+def package(source, destination, manifest, validator=validate_bundle, swap=atomic_swap):
+    source, destination = Path(source).resolve(), Path(destination).absolute()
+    require(source.is_dir() and source.suffix == '.app', 'invalid source application')
+    require(destination.name == 'Jort.app' and not destination.is_symlink(), 'invalid local destination')
+    require(source != destination and source not in destination.parents and destination not in source.parents, 'overlapping package paths')
     destination.parent.mkdir(parents=True, exist_ok=True)
+    require(destination.parent.resolve() == destination.parent, 'linked destination directory')
     staging = Path(tempfile.mkdtemp(prefix='.jort-stage-', dir=destination.parent))
-    staged = staging / 'Jort.app'
     try:
+        staged = staging / 'Jort.app'
         shutil.copytree(source, staged, symlinks=True)
-        info = plistlib.loads((staged / 'Contents/Info.plist').read_bytes())
-        spec = (Path(__file__).resolve().parent.parent / 'project.yml').read_text()
-        for key, setting in [('CFBundleShortVersionString', 'MARKETING_VERSION'), ('CFBundleVersion', 'CURRENT_PROJECT_VERSION')]:
-            expected = re.search(r'^\s*' + setting + r':\s*(.+)$', spec, re.M).group(1).strip('"\' ')
-            if info.get(key) != expected:
-                raise ValueError(f'{key}: expected {expected}, found {info.get(key)}')
-        executable = staged / 'Contents/MacOS' / info['CFBundleExecutable']
-        if not os.access(executable, os.X_OK):
-            raise ValueError('Missing executable')
-        if not (staged / 'Contents/Resources' / info['CFBundleIconFile']).is_file():
-            raise ValueError('Missing icon')
-        for module in FRAMEWORKS:
-            if not (staged / f'Contents/Frameworks/{module}.framework/{module}').is_file():
-                raise ValueError(f'Missing {module}')
-        for nested in [BROKER, WORKER]:
-            if not os.access(staged / nested, os.X_OK):
-                raise ValueError(f'Missing nested executable: {nested}')
-        if destination.exists():
-            libc = ctypes.CDLL('/usr/lib/libSystem.B.dylib', use_errno=True)
-            swap = libc.renameatx_np
-            swap.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
-            if swap(-2, os.fsencode(staged), -2, os.fsencode(destination), 2) != 0:
-                raise OSError(ctypes.get_errno(), 'Atomic app swap failed')
-        else:
-            os.rename(staged, destination)
+        validator(staged, manifest)
+        swap(staged, destination)
     finally:
         shutil.rmtree(staging)
-    print(f'Built {destination} — locally signed, not a distribution artifact.')
+    print(f'Built {destination} — local-only, not a distribution artifact.')
 
 
 if __name__ == '__main__':
-    package(*sys.argv[1:])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('source', type=Path)
+    parser.add_argument('destination', type=Path)
+    parser.add_argument('--manifest', required=True, type=Path)
+    args = parser.parse_args()
+    package(args.source, args.destination, load(args.manifest))

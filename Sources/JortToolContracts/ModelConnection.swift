@@ -7,12 +7,15 @@ public struct ModelConnectionStatus: Codable, Equatable, Sendable {
   public var state: ModelConnectionState = .notConnected
   public var lastVerified: Date?
   public var expiration: Date?
+  public var credentialMigration: ModelCredentialMigrationOutcome?
   public init(
-    state: ModelConnectionState = .notConnected, lastVerified: Date? = nil, expiration: Date? = nil
+    state: ModelConnectionState = .notConnected, lastVerified: Date? = nil, expiration: Date? = nil,
+    credentialMigration: ModelCredentialMigrationOutcome? = nil
   ) {
     self.state = state
     self.lastVerified = lastVerified
     self.expiration = expiration
+    self.credentialMigration = credentialMigration
   }
 }
 

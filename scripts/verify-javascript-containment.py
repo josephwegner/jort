@@ -26,8 +26,8 @@ WORKER_EXECUTABLE = BROKER_BUNDLE + "/Contents/Helpers/JortJavaScriptWorker"
 CLIENT_FRAMEWORK = "Contents/Frameworks/JortJavaScriptClient.framework/JortJavaScriptClient"
 EXPECTED_IDENTIFIERS = {
     APP_EXECUTABLE: "dev.jort.editor",
-    BROKER_EXECUTABLE: "dev.jort.javascript.broker",
-    WORKER_EXECUTABLE: "dev.jort.javascript.worker",
+    BROKER_EXECUTABLE: "dev.jort.editor.javascript-broker",
+    WORKER_EXECUTABLE: "dev.jort.editor.javascript-worker",
     CLIENT_FRAMEWORK: "dev.jort.javascript.client",
 }
 EXPECTED_ENTITLEMENTS = {
@@ -204,7 +204,7 @@ def verify(app: Path, check_runtime_mapping: bool = True) -> list[str]:
 
     bundle_infos = {
         "Contents/Info.plist": "dev.jort.editor",
-        BROKER_BUNDLE + "/Contents/Info.plist": "dev.jort.javascript.broker",
+        BROKER_BUNDLE + "/Contents/Info.plist": "dev.jort.editor.javascript-broker",
     }
     for relative, expected in bundle_infos.items():
         try:

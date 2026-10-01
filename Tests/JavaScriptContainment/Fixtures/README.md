@@ -18,6 +18,21 @@ resource-limit setup so missing resources, connection refusal, and resource
 quotas cannot masquerade as sandbox denials. After bootstrap, subprocess
 creation must fail with a permission error or the installed process quota.
 
+The Mach-port fixture installs a parent-owned send right in the registered-port
+array and a task exception handler. The inherited worker must first observe both
+capabilities, then prove the production bootstrap clears registered ports, task
+and thread exception handlers, the bootstrap slot and cached bootstrap right,
+and the debug-control slot before Ready. Darwin's OS-managed task-access policy
+endpoint is present in normal sandboxed processes and cannot be cleared; the
+probe verifies the kernel rejects replacing a populated slot even with null,
+and verifies bootstrap preserves that endpoint. The SDK declares
+a resource-notify slot that this release kernel does not implement; XNU
+initializes that slot empty rather than inheriting it. Own task/thread and
+ordinary host rights remain intrinsic runtime rights. This is not a claim that
+libSystem has no internal Mach ports or that App Sandbox denies every system
+service; the boundary clears the parent-supplied IPC capabilities, and App
+Sandbox continues to govern system-service access.
+
 The CPU fixture installs the production 1-second soft / 2-second hard CPU
 policy, retains the production default `SIGXCPU` disposition, and executes a
 native tight loop. The test supervisor permits eight wall seconds so the kernel
@@ -66,6 +81,9 @@ while its verified worker is active. It requires one typed unavailable result,
 no output, stable client descriptors, and eventual worker disappearance.
 Each anonymous fault round checks one correlated terminal reply, no surviving
 child, and stable request descriptor counts.
+Injected spawn failures explicitly overwrite the unspecified PID output with
+zero and minus one. Fixture interceptors fail the test on nonpositive signal or
+wait targets without ever passing those targets to the operating system.
 
 ## Target integration
 

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "appTarget": "Jort",
+  "systemDependencyRoots": ["/System/Library/", "/usr/lib/"],
+  "swiftSystemRunpaths": ["/usr/lib/swift"],
+  "supportedArchitectures": ["arm64", "x86_64"],
+  "forbiddenPaths": ["Contents/Frameworks/JortJavaScript.framework"],
+  "requiredResources": ["Contents/Resources/AppIcon.icns", "Contents/Resources/ToolTemplates.json", "Contents/Resources/emoji.json"],
+  "requiredDirectories": [],
+  "publicationEnabled": false,
+  "communityImportEnabled": false,
+  "qualification": {"signedReleaseVerified": false, "sandboxExecutionVerified": false},
+  "peerRequirements": {
+    "JortJavaScriptClient": [{"edge": "app-to-broker", "peerTarget": "JortJavaScriptBroker", "teamRelation": "self", "requirementTemplate": "anchor apple generic and identifier \"dev.jort.editor.javascript-broker\" and certificate leaf[subject.OU] = \"%@\""}],
+    "JortJavaScriptBroker": [
+      {"edge": "broker-to-app", "peerTarget": "Jort", "teamRelation": "self", "requirementTemplate": "anchor apple generic and identifier \"dev.jort.editor\" and certificate leaf[subject.OU] = \"%@\""},
+      {"edge": "broker-to-worker", "peerTarget": "JortJavaScriptWorker", "teamRelation": "self", "requirementTemplate": "anchor apple generic and identifier \"dev.jort.editor.javascript-worker\" and certificate leaf[subject.OU] = \"%@\""}
+    ]
+  },
+  "roles": {
+    "Jort": {"role": "app", "identifier": "dev.jort.editor", "entitlements": {"keychain-access-groups": ["{TEAM_ID}.dev.jort.editor.credentials"]}},
+    "JortAppKit": {"role": "framework", "entitlements": {}},
+    "JortDocument": {"role": "framework", "entitlements": {}},
+    "JortPersistence": {"role": "framework", "entitlements": {}},
+    "JortSettings": {"role": "framework", "entitlements": {}},
+    "JortToolContracts": {"role": "framework", "entitlements": {}},
+    "JortToolRuntime": {"role": "framework", "entitlements": {}},
+    "JortJavaScriptClient": {"role": "framework", "entitlements": {}},
+    "JortJavaScriptBroker": {"role": "broker", "identifier": "dev.jort.editor.javascript-broker", "entitlements": {"com.apple.security.app-sandbox": true}},
+    "JortJavaScriptWorker": {"role": "worker", "identifier": "dev.jort.editor.javascript-worker", "quickjs": true, "entitlements": {"com.apple.security.app-sandbox": true, "com.apple.security.inherit": true}}
+  }
+}

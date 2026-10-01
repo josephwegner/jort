@@ -1,0 +1,9 @@
+[
+  {"name": "complete", "mutation": "none", "valid": true},
+  {"name": "missing-worker", "mutation": "remove-worker", "valid": false},
+  {"name": "missing-broker", "mutation": "remove-broker", "valid": false},
+  {"name": "duplicate-embedding", "mutation": "duplicate-embedding", "valid": false},
+  {"name": "stale-engine-framework", "mutation": "stale-engine", "valid": false},
+  {"name": "unexpected-executable", "mutation": "extra-helper", "valid": false},
+  {"name": "missing-framework", "mutation": "remove-framework", "valid": false}
+]

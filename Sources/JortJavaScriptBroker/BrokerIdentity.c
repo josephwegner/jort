@@ -12,6 +12,26 @@
 #define JORT_JS_ALLOW_ADHOC 0
 #endif
 
+#define APP_POLICY_PREFIX "JORT_PEER_V1|broker-to-app|"
+#define WORKER_POLICY_PREFIX "JORT_PEER_V1|broker-to-worker|"
+/* These sealed templates are both runtime inputs and release-verification data. */
+__attribute__((used, section("__TEXT,__jort_peer")))
+static const char app_policy[] = APP_POLICY_PREFIX
+    "anchor apple generic and identifier \"" JORT_APP_IDENTIFIER
+    "\" and certificate leaf[subject.OU] = \"%@\"";
+__attribute__((used, section("__TEXT,__jort_peer")))
+static const char worker_policy[] = WORKER_POLICY_PREFIX
+    "anchor apple generic and identifier \"" JORT_WORKER_IDENTIFIER
+    "\" and certificate leaf[subject.OU] = \"%@\"";
+
+static CFStringRef peer_requirement(const char *format_text, CFStringRef team) {
+    CFStringRef format = CFStringCreateWithCString(NULL, format_text, kCFStringEncodingUTF8);
+    if (!format) return NULL;
+    CFStringRef requirement = CFStringCreateWithFormat(NULL, NULL, format, team);
+    CFRelease(format);
+    return requirement;
+}
+
 static bool bundle_paths(char broker[PATH_MAX], char worker[PATH_MAX]) {
     char executable[PATH_MAX], resolved[PATH_MAX];
     uint32_t size = sizeof(executable);
@@ -62,8 +82,14 @@ static bool signer_matches(SecStaticCodeRef code, CFStringRef *team) {
     CFStringRef own_team = CFDictionaryGetValue(self_info, kSecCodeInfoTeamIdentifier);
     CFStringRef target_team = CFDictionaryGetValue(target_info, kSecCodeInfoTeamIdentifier);
     if (own_team && target_team && CFEqual(own_team, target_team)) {
-        *team = CFRetain(own_team);
-        valid = true;
+        CFStringRef text = peer_requirement(worker_policy + sizeof(WORKER_POLICY_PREFIX) - 1, own_team);
+        SecRequirementRef requirement = NULL;
+        valid = text && SecRequirementCreateWithString(text, kSecCSDefaultFlags, &requirement) == errSecSuccess
+            && SecStaticCodeCheckValidity(code, kSecCSStrictValidate | kSecCSCheckAllArchitectures,
+                requirement) == errSecSuccess;
+        if (valid) *team = CFRetain(own_team);
+        if (requirement) CFRelease(requirement);
+        if (text) CFRelease(text);
     } else if (JORT_JS_ALLOW_ADHOC && !own_team && !target_team) {
         CFNumberRef self_flags = CFDictionaryGetValue(self_info, kSecCodeInfoFlags);
         CFNumberRef target_flags = CFDictionaryGetValue(target_info, kSecCodeInfoFlags);
@@ -90,9 +116,7 @@ bool jort_broker_copy_app_requirement(char *requirement, size_t capacity) {
     if (!identifier || !CFEqual(identifier, CFSTR(JORT_BROKER_IDENTIFIER))) goto done;
     CFStringRef team = CFDictionaryGetValue(information, kSecCodeInfoTeamIdentifier);
     if (team) {
-        text = CFStringCreateWithFormat(NULL, NULL,
-            CFSTR("anchor apple generic and identifier \"%s\" and certificate leaf[subject.OU] = \"%@\""),
-            JORT_APP_IDENTIFIER, team);
+        text = peer_requirement(app_policy + sizeof(APP_POLICY_PREFIX) - 1, team);
     } else if (JORT_JS_ALLOW_ADHOC) {
         CFNumberRef flags = CFDictionaryGetValue(information, kSecCodeInfoFlags);
         uint32_t value = 0;

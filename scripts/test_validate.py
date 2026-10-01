@@ -8,6 +8,11 @@ from scripts import validate
 
 
 class ValidateTests(unittest.TestCase):
+    def test_tsan_checks_can_run_as_independent_canonical_lanes(self):
+        self.assertEqual(["tsan-foundation", "tsan-native"], validate.LANES["tsan"])
+        self.assertEqual(["tsan-foundation"], validate.LANES["tsan-foundation"])
+        self.assertEqual(["tsan-native"], validate.LANES["tsan-native"])
+
     def test_default_command_is_fast(self):
         with mock.patch.object(validate, "execute", return_value=0) as execute:
             self.assertEqual(0, validate.main([]))
@@ -37,6 +42,17 @@ class ValidateTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parser.parse_args(["focused", "foundation", "--configuration", "Profile"])
 
+    def test_focused_tsan_uses_isolated_build_and_exact_filter(self):
+        with mock.patch.object(validate, "execute", return_value=0) as execute:
+            self.assertEqual(0, validate.main(["focused", "containment", "--sanitizer", "thread",
+                "--only", "JortJavaScriptContainmentTests/JortBrokerFaultTests"]))
+        name, checks, _, _ = execute.call_args.args
+        self.assertEqual("focused-containment-debug-tsan", name)
+        command = checks[0].commands[0]
+        self.assertIn(".build-focused-containment-debug-tsan", command)
+        self.assertIn("-only-testing:JortJavaScriptContainmentTests/JortBrokerFaultTests", command)
+        self.assertEqual("YES", command[command.index("-enableThreadSanitizer") + 1])
+
     def test_log_root_cannot_escape(self):
         with self.assertRaises(ValueError):
             validate.safe_log_root(Path("/tmp/not-jort-validation"))
@@ -59,6 +75,17 @@ class ValidateTests(unittest.TestCase):
                 }],
             }))
             self.assertEqual(0, validate.show_result(run, "check", 1, validate.LOG_ROOT))
+
+    def test_signed_integration_reads_team_id_from_its_environment(self):
+        commands = validate.CHECKS["signed-integration"].commands
+        entitlement_check = next(command for command in commands
+                                 if any(argument.endswith("verify-credential-entitlements.py")
+                                        for argument in command))
+        self.assertEqual(
+            ("python3", "scripts/verify-credential-entitlements.py", "dist/Jort.app"),
+            entitlement_check,
+        )
+        self.assertFalse(any("${" in argument for command in commands for argument in command))
 
 
 if __name__ == "__main__":

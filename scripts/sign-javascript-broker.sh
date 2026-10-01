@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "$CODE_SIGNING_ALLOWED" != "YES" ]]; then
+  # The protected Apple Development path builds unsigned, embeds its selected
+  # profile, then signs the complete contained bundle in sign_development.py.
+  echo "Skipping broker signing because Xcode signing is disabled."
+  exit 0
+fi
+
 broker="$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/XPCServices/JortJavaScriptBroker.xpc"
 entitlements="$SRCROOT/Configuration/JortJavaScriptBroker.entitlements"
 identity="${EXPANDED_CODE_SIGN_IDENTITY:--}"
-
-if [[ "$CODE_SIGNING_ALLOWED" != "YES" ]]; then
-  echo "Broker signing requires CODE_SIGNING_ALLOWED=YES." >&2
-  exit 1
-fi
 if [[ ! -d "$broker" ]]; then
   echo "Missing embedded JavaScript broker: $broker" >&2
   exit 1
@@ -18,7 +20,7 @@ if [[ -z "$identity" ]]; then
 fi
 
 /usr/bin/codesign --force --sign "$identity" \
-  --identifier dev.jort.javascript.broker \
+  --identifier dev.jort.editor.javascript-broker \
   --entitlements "$entitlements" \
   --options runtime \
   --timestamp=none \

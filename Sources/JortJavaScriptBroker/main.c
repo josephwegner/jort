@@ -47,7 +47,7 @@ static void initialize_response(Run *run, uint32_t status) {
 }
 
 static void terminate_locked(Run *run, uint32_t status) {
-    if (run->terminal || !run->pid || run->terminated) return;
+    if (run->terminal || run->pid <= 0 || run->terminated) return;
     run->forced_status = status;
     run->terminated = true;
     run->kill_at = jort_js_monotonic() + 0.1;
@@ -60,7 +60,7 @@ static void watchdog(Run *run) {
         double now = jort_js_monotonic();
         if (run->cancelled) terminate_locked(run, JORT_JS_CANCELLED);
         else if (now >= run->deadline) terminate_locked(run, JORT_JS_TIMEOUT);
-        if (run->pid && run->terminated && now >= run->kill_at) (void)kill(run->pid, SIGKILL);
+        if (run->pid > 0 && run->terminated && now >= run->kill_at) (void)kill(run->pid, SIGKILL);
     }
     pthread_mutex_unlock(&run->lock);
 }
@@ -100,7 +100,14 @@ static bool spawn_worker(Run *run, const char *path, int *input, int *output) {
         environment[2] = sandbox_container;
     }
     pthread_mutex_lock(&run->lock);
-    if (!run->cancelled) ok = posix_spawn(&run->pid, path, &actions, &attributes, argv, environment) == 0;
+    // POSIX leaves the output PID unspecified on failure. Never publish it as
+    // an owned child: a negative value would make kill/waitpid target others.
+    pid_t child = 0;
+    if (!run->cancelled && posix_spawn(&child, path, &actions, &attributes, argv, environment) == 0
+        && child > 0) {
+        run->pid = child;
+        ok = true;
+    }
     pthread_mutex_unlock(&run->lock);
     if (ok) {
         *input = in[1]; in[1] = -1;
@@ -122,7 +129,7 @@ static int reap(Run *run, bool terminate, uint32_t failure) {
     double crash_grace = jort_js_monotonic() + 0.05;
     for (;;) {
         pthread_mutex_lock(&run->lock);
-        if (!run->pid) { pthread_mutex_unlock(&run->lock); return status; }
+        if (run->pid <= 0) { pthread_mutex_unlock(&run->lock); return status; }
         pid_t result = waitpid(run->pid, &status, WNOHANG);
         if (result == run->pid) {
             run->pid = 0;

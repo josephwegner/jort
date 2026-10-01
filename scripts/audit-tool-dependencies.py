@@ -33,8 +33,8 @@ def containment_errors(project_text):
     required = {
         'JortJavaScriptBroker': 'type: xpc-service',
         'JortJavaScriptWorker': 'type: tool',
-        'PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.broker': None,
-        'PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.worker': None,
+        'PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor.javascript-broker': None,
+        'PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor.javascript-worker': None,
         'CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptBroker.entitlements': None,
         'CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptWorker.entitlements': None,
     }
@@ -51,6 +51,79 @@ def containment_errors(project_text):
         errors.append('broker does not embed the disposable JavaScript worker in Contents/Helpers')
     if '      - target: JortJavaScriptWorker\n' in app:
         errors.append('app must not separately embed the disposable JavaScript worker')
+    return errors
+
+
+def release_identity_errors(project_text, local_entitlements, development_entitlements, production_entitlements):
+    """Check the source declarations that define the signed-release boundary."""
+    errors = []
+    app = target_body(project_text, 'Jort')
+    expected = {
+        'PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor',
+        'CODE_SIGN_ENTITLEMENTS: $(JORT_APP_ENTITLEMENTS)',
+        'CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO',
+        'ENABLE_HARDENED_RUNTIME: YES',
+        'JortCredentialEnvironment: $(JORT_CREDENTIAL_ENVIRONMENT)',
+        'JortExpectedTeamIdentifier: $(JORT_PRODUCTION_TEAM_ID)',
+    }
+    for value in expected:
+        if value not in app:
+            errors.append(f'app lacks {value}')
+    expected_development = {
+        'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.development.credentials'],
+    }
+    expected_production = {
+        'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.credentials'],
+    }
+    if local_entitlements != {
+        'com.apple.security.get-task-allow': True,
+        'com.apple.security.cs.disable-library-validation': True,
+    }:
+        errors.append('credential-free local app entitlements must contain only local debug exceptions')
+    if development_entitlements != expected_development:
+        errors.append('development app entitlements must contain only the development Keychain group')
+    if production_entitlements != expected_production:
+        errors.append('production app entitlements must contain only the production Keychain group')
+    if 'com.apple.security.app-sandbox' in development_entitlements or 'com.apple.security.app-sandbox' in production_entitlements:
+        errors.append('app must not be sandboxed for direct distribution')
+    for value in (
+        'CODE_SIGN_IDENTITY: \'-\'',
+        'JORT_BUILD_AUDIENCE: local-only',
+        'JORT_APP_ENTITLEMENTS: Configuration/JortLocal.entitlements',
+        'JORT_CREDENTIAL_ENVIRONMENT: development',
+    ):
+        if value not in project_text:
+            errors.append(f'missing explicit signing configuration: {value}')
+    return errors
+
+
+def credential_canary_errors(source):
+    """The disposable Keychain probe must retain device-only accessibility.
+
+    This is a static complement to the signed integration canary: both create
+    and update paths must pass the same accessibility restriction to Security.
+    """
+    errors = []
+    create = source.split('static int create_canary(', 1)
+    if len(create) != 2 or 'CFDictionarySetValue(item, kSecAttrAccessible, kSecAttrAccessibleWhenUnlockedThisDeviceOnly);' not in create[1]:
+        errors.append('credential canary create lacks device-only accessibility')
+    update = source.split('CFMutableDictionaryRef attributes =', 1)
+    if len(update) != 2 or 'CFDictionarySetValue(attributes, kSecAttrAccessible,' not in update[1] or 'kSecAttrAccessibleWhenUnlockedThisDeviceOnly' not in update[1]:
+        errors.append('credential canary update lacks device-only accessibility')
+    return errors
+
+
+def peer_identity_build_errors(project_text):
+    """Keep the ad-hoc peer exception out of every shipping Release target."""
+    errors = []
+    for target in ('JortJavaScriptClient', 'JortJavaScriptBroker'):
+        body = target_body(project_text, target)
+        if body.count('JORT_JS_ALLOW_ADHOC=1') != 1:
+            errors.append(f'{target} must define the ad-hoc peer exception only for Debug')
+        if not re.search(
+                r'configs:\n\s+Debug:\n\s+GCC_PREPROCESSOR_DEFINITIONS: '
+                r"\['\$\(inherited\)', 'JORT_JS_ALLOW_ADHOC=1'\]", body):
+            errors.append(f'{target} Debug configuration lacks the explicit local peer exception')
     return errors
 
 
@@ -134,7 +207,7 @@ def main():
           subpath: Contents/Helpers
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.broker
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor.javascript-broker
         CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptBroker.entitlements
   JortJavaScriptWorker:
     type: tool
@@ -142,7 +215,7 @@ def main():
       - path: Vendor/QuickJS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.worker
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor.javascript-worker
         CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptWorker.entitlements
   Jort:
     dependencies:
@@ -164,19 +237,40 @@ def main():
         assert 'path: Vendor/QuickJS' in worker_body
         assert 'CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptWorker.entitlements' in worker_body
         assert not containment_errors(real_project)
+        assert not peer_identity_build_errors(real_project)
+        assert not release_identity_errors(
+            real_project,
+            {
+                'com.apple.security.get-task-allow': True,
+                'com.apple.security.cs.disable-library-validation': True,
+            },
+            {'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.development.credentials']},
+            {'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.credentials']})
         assert not entitlement_errors(
             {'com.apple.security.app-sandbox': True},
             {'com.apple.security.app-sandbox': True, 'com.apple.security.inherit': True})
         assert entitlement_errors(
             {'com.apple.security.app-sandbox': True, 'com.apple.security.network.client': True},
             {'com.apple.security.app-sandbox': True, 'com.apple.security.inherit': True})
+        canary = (ROOT / 'Tests/ReleaseIdentity/CredentialCanary.c').read_text()
+        assert not credential_canary_errors(canary)
+        assert credential_canary_errors(canary.replace(
+            'CFDictionarySetValue(attributes, kSecAttrAccessible,\n                         kSecAttrAccessibleWhenUnlockedThisDeviceOnly);\n', ''))
         print(f'{len(fixtures)} forbidden dependency fixtures rejected.')
         return
     errors = []
     errors += containment_errors((ROOT / 'project.yml').read_text())
+    errors += peer_identity_build_errors((ROOT / 'project.yml').read_text())
     broker = plistlib.loads((ROOT / 'Configuration/JortJavaScriptBroker.entitlements').read_bytes())
     worker = plistlib.loads((ROOT / 'Configuration/JortJavaScriptWorker.entitlements').read_bytes())
+    local_entitlements = plistlib.loads((ROOT / 'Configuration/JortLocal.entitlements').read_bytes())
+    development_entitlements = plistlib.loads((ROOT / 'Configuration/JortDevelopment.entitlements').read_bytes())
+    production_entitlements = plistlib.loads((ROOT / 'Configuration/JortProduction.entitlements').read_bytes())
     errors += entitlement_errors(broker, worker)
+    errors += release_identity_errors(
+        (ROOT / 'project.yml').read_text(), local_entitlements,
+        development_entitlements, production_entitlements)
+    errors += credential_canary_errors((ROOT / 'Tests/ReleaseIdentity/CredentialCanary.c').read_text())
     for module in ALLOWED:
         for path in (ROOT / 'Sources' / module).rglob('*.swift'):
             errors += [f'{path.relative_to(ROOT)}: {e}' for e in violations(module, path.read_text())]

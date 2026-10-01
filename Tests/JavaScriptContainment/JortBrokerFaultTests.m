@@ -50,7 +50,7 @@
         if (error) return;
         NSDictionary *info = @{
             @"CFBundleExecutable": @"JortJavaScriptBroker",
-            @"CFBundleIdentifier": @"dev.jort.javascript.broker",
+            @"CFBundleIdentifier": @"dev.jort.editor.javascript-broker",
             @"CFBundlePackageType": @"XPC!"
         };
         XCTAssertTrue([info writeToURL:[contents URLByAppendingPathComponent:@"Info.plist"] atomically:YES]);
@@ -58,11 +58,11 @@
         XCTAssertTrue([files copyItemAtURL:source toURL:worker error:&error], @"%@", error);
         if (error) return;
         NSString *workerID = [fault isEqualToString:@"identifier"]
-            ? @"dev.jort.javascript.untrusted-worker" : @"dev.jort.javascript.worker";
+            ? @"dev.jort.javascript.untrusted-worker" : @"dev.jort.editor.javascript-worker";
         if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", workerID,
             @"--options", @"runtime", @"--timestamp=none", worker.path] error:&error]) return;
         // Seal only after the nested helper is signed, exactly as shipping does.
-        if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", @"dev.jort.javascript.broker",
+        if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", @"dev.jort.editor.javascript-broker",
             @"--options", @"runtime", @"--timestamp=none", bundle.path] error:&error]) return;
         if ([fault isEqualToString:@"tamper"]) {
             if (![self sign:@[@"--remove-signature", worker.path] error:&error]) return;
@@ -106,14 +106,14 @@
         NSDictionary *appInfo = @{@"CFBundleExecutable": @"Jort", @"CFBundleIdentifier": @"dev.jort.editor",
             @"CFBundlePackageType": @"APPL"};
         NSDictionary *brokerInfo = @{@"CFBundleExecutable": @"JortJavaScriptBroker",
-            @"CFBundleIdentifier": @"dev.jort.javascript.broker", @"CFBundlePackageType": @"XPC!",
+            @"CFBundleIdentifier": @"dev.jort.editor.javascript-broker", @"CFBundlePackageType": @"XPC!",
             @"XPCService": @{@"ServiceType": @"Application"}};
         XCTAssertTrue([appInfo writeToURL:[appContents URLByAppendingPathComponent:@"Info.plist"] atomically:YES]);
         XCTAssertTrue([brokerInfo writeToURL:[contents URLByAppendingPathComponent:@"Info.plist"] atomically:YES]);
-        if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", @"dev.jort.javascript.worker",
+        if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", @"dev.jort.editor.javascript-worker",
             @"--entitlements", [root URLByAppendingPathComponent:@"Configuration/JortJavaScriptWorker.entitlements"].path,
             @"--options", @"runtime", @"--timestamp=none", worker.path] error:&error]) return;
-        if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", @"dev.jort.javascript.broker",
+        if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", @"dev.jort.editor.javascript-broker",
             @"--entitlements", [root URLByAppendingPathComponent:@"Configuration/JortJavaScriptBroker.entitlements"].path,
             @"--options", @"runtime", @"--timestamp=none", bundle.path] error:&error]) return;
         if (![self sign:@[@"--force", @"--sign", @"-", @"--identifier", @"dev.jort.editor",
@@ -172,6 +172,8 @@
 - (void)testRealBrokerCapacity { [self checkMode:@"capacity"]; }
 - (void)testRealBrokerIdentityFailure { [self checkMode:@"identity"]; }
 - (void)testRealBrokerLaunchFailure { [self checkMode:@"launch"]; }
+- (void)testSpawnFailureWithNegativePIDNeverSignalsOrReaps { [self checkMode:@"spawn-negative"]; }
+- (void)testSpawnFailureWithZeroPIDNeverSignalsOrReaps { [self checkMode:@"spawn-zero"]; }
 - (void)testRealBrokerSecondFrame { [self checkMode:@"second"]; }
 - (void)testRealBrokerTruncatedFrame { [self checkMode:@"truncated"]; }
 - (void)testRealBrokerMalformedFrame { [self checkMode:@"malformed"]; }

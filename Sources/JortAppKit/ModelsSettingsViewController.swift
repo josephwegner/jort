@@ -75,14 +75,15 @@ import JortSettings
       .unableToVerify: "Unable to Verify", .needsAttention: "Connection Needs Attention",
     ]
     statusLabel.stringValue =
-      available || status.state == .connecting ? titles[status.state]! : "Not Connected"
+      available || status.state == .connecting || status.credentialMigration?.blocksUse == true
+      ? titles[status.state]! : "Not Connected"
     detailLabel.stringValue =
-      status.lastVerified.map {
+      status.credentialMigration?.message ?? status.lastVerified.map {
         "Last verified \($0.formatted(date: .abbreviated, time: .shortened))."
       } ?? "Connect to your OpenRouter account."
     connectButton.title = available ? "Replace Connection" : "Connect with OpenRouter"
-    checkButton.isHidden = !available
-    disconnectButton.isHidden = !available
+    checkButton.isHidden = !available && status.credentialMigration?.message == nil
+    disconnectButton.isHidden = !available && status.credentialMigration?.blocksUse != true
     let active = job != nil
     if active && connecting { statusLabel.stringValue = "Connecting" }
     connectButton.isEnabled = !active
@@ -105,7 +106,9 @@ import JortSettings
         connecting = false
         await refresh()
         detailLabel.stringValue =
-          (error as? ModelFailure)?.message ?? "Connection was cancelled or could not be completed."
+          (error as? ModelCredentialStoreFailure)?.message
+          ?? (error as? ModelFailure)?.message
+          ?? "Connection was cancelled or could not be completed."
       }
     }
   }

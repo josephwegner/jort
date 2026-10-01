@@ -3,6 +3,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <mach/mach.h>
+#include <servers/bootstrap.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -32,6 +34,26 @@ static int limit(int resource, rlim_t soft, rlim_t hard) {
 }
 
 static int bootstrap(uint32_t milliseconds, JortJSReady *ready) {
+    // Darwin also inherits registered, exception and bootstrap Mach ports.
+    // Drop these capabilities after libSystem/App Sandbox initialization but
+    // before Ready or any untrusted source. The worker uses pipes, not XPC.
+    // Keep intrinsic task/thread/host rights and Darwin's write-once system
+    // task-access policy endpoint. The latter is present in normal sandboxed
+    // processes and the kernel forbids replacing it, even with a null port.
+    if (mach_ports_register(mach_task_self(), NULL, 0) != KERN_SUCCESS
+        || task_set_exception_ports(mach_task_self(), EXC_MASK_ALL, MACH_PORT_NULL,
+            EXCEPTION_DEFAULT, THREAD_STATE_NONE) != KERN_SUCCESS) return 0;
+    mach_port_t thread = mach_thread_self();
+    kern_return_t cleared = thread_set_exception_ports(thread, EXC_MASK_ALL, MACH_PORT_NULL,
+        EXCEPTION_DEFAULT, THREAD_STATE_NONE);
+    mach_port_deallocate(mach_task_self(), thread);
+    if (cleared != KERN_SUCCESS
+        || task_set_special_port(mach_task_self(), TASK_BOOTSTRAP_PORT, MACH_PORT_NULL) != KERN_SUCCESS
+        || task_set_special_port(mach_task_self(), TASK_DEBUG_CONTROL_PORT, MACH_PORT_NULL) != KERN_SUCCESS) return 0;
+    // libSystem caches the bootstrap send right independently of the task slot.
+    if (MACH_PORT_VALID(bootstrap_port)
+        && mach_port_deallocate(mach_task_self(), bootstrap_port) != KERN_SUCCESS) return 0;
+    bootstrap_port = MACH_PORT_NULL;
     // Only the three standard streams survive; no writable directory or caller
     // environment is needed. The broker supplies /dev/null on stderr.
     for (int fd = 3, ceiling = getdtablesize(); fd < ceiling; ++fd) close(fd);

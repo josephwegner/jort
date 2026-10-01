@@ -1,9 +1,14 @@
 name: Native checks
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # This dispatch path is intentionally protected by the repository environment.
+  # Ordinary pull requests never receive Apple Development or release credentials.
+  workflow_dispatch:
 env:
   DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
 jobs:
-  test:
+  credential-free-validation:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -63,3 +68,28 @@ jobs:
           path: |
             .build-analysis-quickjs/*
             .build-validation
+
+  signed-integration:
+    # Repository administrators must bind this job to a protected environment
+    # that supplies only disposable Apple Development fixture credentials. It
+    # never accepts Developer ID or notarization credentials.
+    if: github.event_name == 'workflow_dispatch' && github.ref_protected
+    runs-on: [self-hosted, macOS, jort-signed-integration]
+    environment: signed-integration
+    steps:
+      - uses: actions/checkout@v4
+      - name: Explain protected integration prerequisites
+        env:
+          JORT_APPLE_DEVELOPMENT_IDENTITY: ${{ vars.JORT_APPLE_DEVELOPMENT_IDENTITY }}
+          JORT_DEVELOPMENT_TEAM_ID: ${{ vars.JORT_DEVELOPMENT_TEAM_ID }}
+          JORT_DEVELOPMENT_PROVISIONING_PROFILE: ${{ vars.JORT_DEVELOPMENT_PROVISIONING_PROFILE }}
+        run: |
+          test -n "${JORT_APPLE_DEVELOPMENT_IDENTITY:-}" || { echo "JORT_APPLE_DEVELOPMENT_IDENTITY must be configured in the protected environment" >&2; exit 1; }
+          test -n "${JORT_DEVELOPMENT_TEAM_ID:-}" || { echo "JORT_DEVELOPMENT_TEAM_ID must be configured in the protected environment" >&2; exit 1; }
+          test -n "${JORT_DEVELOPMENT_PROVISIONING_PROFILE:-}" || { echo "JORT_DEVELOPMENT_PROVISIONING_PROFILE must select an installed development provisioning profile" >&2; exit 1; }
+      - name: Signed helper identity and entitlement integration
+        env:
+          JORT_APPLE_DEVELOPMENT_IDENTITY: ${{ vars.JORT_APPLE_DEVELOPMENT_IDENTITY }}
+          JORT_DEVELOPMENT_TEAM_ID: ${{ vars.JORT_DEVELOPMENT_TEAM_ID }}
+          JORT_DEVELOPMENT_PROVISIONING_PROFILE: ${{ vars.JORT_DEVELOPMENT_PROVISIONING_PROFILE }}
+        run: ./scripts/validate signed-integration

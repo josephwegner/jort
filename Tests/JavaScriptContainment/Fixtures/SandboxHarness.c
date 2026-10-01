@@ -5,6 +5,8 @@
 #undef main
 
 #include <sys/resource.h>
+#include <poll.h>
+#include <mach/mach.h>
 
 static bool allocation_request(const char *path, bool exhaust) {
     // Both requests use the same program. Only the requested allocation changes:
@@ -93,23 +95,45 @@ static bool runtime_mapping_request(const char *path) {
     run.deadline = jort_js_monotonic() + 3;
     int input = -1, output = -1;
     pid_t owned_pid = 0;
-    bool verified = false;
+    bool verified = false, stopped = false;
     if (!spawn_worker(&run, path, &input, &output)) goto finish;
     owned_pid = run.pid;
     JortJSReady ready = {0};
     if (jort_js_ready_read(output, &ready, run.deadline) != JORT_JS_IO_OK
         || ready.status != JORT_JS_OK || ready.cpu_soft != 1 || ready.cpu_hard != 2
         || ready.nofile != JORT_JS_NOFILE) goto finish;
+    // Freeze this owned child before inspection. vmmap of an instrumented
+    // process can exceed the worker's input-handshake deadline; no source has
+    // been sent, and suspension makes the asserted paused state explicit.
+    if (kill(owned_pid, SIGSTOP)) goto finish;
+    stopped = true;
     // stdout is the XCTest control channel; the worker protocol remains on its
     // private pipe and stays blocked before source is received.
-    if (printf("READY %d\\n", owned_pid) < 0 || fflush(stdout)) goto finish;
+    if (printf("READY %d\n", owned_pid) < 0 || fflush(stdout)) goto finish;
     char stop = 0;
-    while (read(STDIN_FILENO, &stop, 1) < 0 && errno == EINTR) {}
-    verified = true;
+    double control_deadline = jort_js_monotonic() + 15;
+    while (jort_js_monotonic() < control_deadline) {
+        struct pollfd control = {STDIN_FILENO, POLLIN | POLLHUP, 0};
+        int available = poll(&control, 1, 100);
+        if (available < 0 && errno == EINTR) continue;
+        if (available < 0) break;
+        if (available > 0) {
+            verified = read(STDIN_FILENO, &stop, 1) == 0;
+            break;
+        }
+    }
 finish:
     /* Keep the worker's protocol stdin open until supervision sends SIGTERM.
      * Closing it first races with the worker's expected EOF exit (65), which
      * tests pipe closure rather than the broker-owned kill-and-reap path. */
+    if (stopped) {
+        pthread_mutex_lock(&run.lock);
+        terminate_locked(&run, JORT_JS_CANCELLED);
+        // Deliver the pending termination before the expired input read can
+        // run. The production supervisor still owns waitpid and PID release.
+        (void)kill(run.pid, SIGCONT);
+        pthread_mutex_unlock(&run.lock);
+    }
     int status = reap(&run, true, JORT_JS_CANCELLED);
     close_fd(&input);
     close_fd(&output);
@@ -120,7 +144,7 @@ finish:
             && WTERMSIG(status) == SIGTERM
             && waitpid(owned_pid, &again, WNOHANG) == -1 && errno == ECHILD;
     }
-    if (!verified) fprintf(stderr, "Runtime mapping probe ready/reap failed pid=%d forced=%u wait=%d\\n",
+    if (!verified) fprintf(stderr, "Runtime mapping probe ready/reap failed pid=%d forced=%u wait=%d\n",
         owned_pid, run.forced_status, status);
     else puts("REAPED");
     pthread_mutex_destroy(&run.lock);
@@ -129,7 +153,8 @@ finish:
 
 int main(int argc, char **argv) {
     if (argc != 4 || (strcmp(argv[1], "sandbox") && strcmp(argv[1], "cpu")
-        && strcmp(argv[1], "heap") && strcmp(argv[1], "mapping") && strcmp(argv[1], "device"))) return 64;
+        && strcmp(argv[1], "heap") && strcmp(argv[1], "mapping") && strcmp(argv[1], "device")
+        && strcmp(argv[1], "ports"))) return 64;
     if (!strcmp(argv[1], "mapping")) {
         if (!runtime_mapping_request(argv[2])) return 78;
         return 0;
@@ -141,9 +166,20 @@ int main(int argc, char **argv) {
     }
     bool cpu = !strcmp(argv[1], "cpu");
     bool device = !strcmp(argv[1], "device");
+    bool ports = !strcmp(argv[1], "ports");
+    if (ports) {
+        // Deliberately expose a parent-owned IPC capability via both Darwin
+        // inheritance paths. The child must observe it before dropping it.
+        mach_port_t canary = MACH_PORT_NULL;
+        if (mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &canary) != KERN_SUCCESS
+            || mach_port_insert_right(mach_task_self(), canary, canary, MACH_MSG_TYPE_MAKE_SEND) != KERN_SUCCESS
+            || mach_ports_register(mach_task_self(), &canary, 1) != KERN_SUCCESS
+            || task_set_exception_ports(mach_task_self(), EXC_MASK_BREAKPOINT, canary,
+                EXCEPTION_DEFAULT, THREAD_STATE_NONE) != KERN_SUCCESS) return 79;
+    }
     Run run = {0};
     if (pthread_mutex_init(&run.lock, NULL)) return 70;
-    run.request.deadline_ms = cpu ? 1000 : (device ? 11 : 10);
+    run.request.deadline_ms = cpu ? 1000 : (ports ? 12 : (device ? 11 : 10));
     // For the CPU probe only, allow the kernel CPU signal to act before the
     // fallback wall supervisor. Normal production wall supervision fires first.
     run.deadline = jort_js_monotonic() + 8;
@@ -197,7 +233,7 @@ int main(int argc, char **argv) {
             return 76;
         }
     } else if (!WIFEXITED(status) || WEXITSTATUS(status)
-        || strcmp(result, device ? "DENIED protected-device open-close\n"
+        || strcmp(result, ports ? "CLEARED inherited-mach-capabilities\n" : device ? "DENIED protected-device open-close\n"
             : "DENIED file-read file-write network-client network-server keychain subprocess\n")) {
         fprintf(stderr, "Native sandbox probe exit=%d result=%s\n", WIFEXITED(status) ? WEXITSTATUS(status) : -1, result);
         return 74;

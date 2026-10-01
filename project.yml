@@ -7,17 +7,33 @@ settings:
   base:
     SWIFT_VERSION: '6.0'
     SWIFT_STRICT_CONCURRENCY: complete
-    # Local builds use ad-hoc signatures so nested helper entitlements are
-    # exercised without requiring Developer ID credentials (Wave 4 work).
     CODE_SIGNING_ALLOWED: YES
     CODE_SIGNING_REQUIRED: YES
     CODE_SIGN_STYLE: Manual
-    CODE_SIGN_IDENTITY: '-'
     GENERATE_INFOPLIST_FILE: YES
     MACOSX_DEPLOYMENT_TARGET: '14.0'
     MARKETING_VERSION: 0.3.0
     CURRENT_PROJECT_VERSION: 3
     ARCHS: '$(ARCHS_STANDARD)'
+    JORT_APP_ENTITLEMENTS: Configuration/JortLocal.entitlements
+  configs:
+    # Routine builds are deliberately ad-hoc signed: they exercise the nested
+    # helper entitlement topology but neither select publisher credentials nor
+    # produce a distributable artifact.
+    Debug:
+      CODE_SIGN_IDENTITY: '-'
+      JORT_BUILD_AUDIENCE: local-only
+      JORT_CREDENTIAL_ENVIRONMENT: development
+      JORT_PRODUCTION_TEAM_ID: ''
+    # A plain Release build remains a local-only artifact. The separate release
+    # workflow supplies its production credentials and policy at invocation
+    # time; this source configuration must not imply distributability.
+    Release:
+      CODE_SIGN_IDENTITY: '-'
+      ENABLE_HARDENED_RUNTIME: YES
+      JORT_BUILD_AUDIENCE: local-only
+      JORT_CREDENTIAL_ENVIRONMENT: development
+      JORT_PRODUCTION_TEAM_ID: ''
 targets:
   JortToolContracts:
     type: framework
@@ -26,6 +42,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolcontracts
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
   JortToolContractsTests:
     type: bundle.unit-test
     platform: macOS
@@ -45,6 +63,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.toolruntime
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
   JortJavaScriptClient:
     type: framework
     platform: macOS
@@ -63,13 +83,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.client
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
         HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptProtocol'
       configs:
         Debug:
-          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
-        Release:
-          # Local Release qualification is also ad-hoc signed. A Team-signed
-          # build still takes the strict matching-Team requirement at runtime.
           GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
   JortToolRuntimeTests:
     type: bundle.unit-test
@@ -112,7 +130,9 @@ targets:
           - $(DERIVED_FILE_DIR)/JortJavaScriptWorker-signature.stamp
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.broker
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor.javascript-broker
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
         CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptBroker.entitlements
         CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
         ENABLE_HARDENED_RUNTIME: YES
@@ -120,8 +140,6 @@ targets:
         HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptProtocol'
       configs:
         Debug:
-          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
-        Release:
           GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
   JortJavaScriptWorker:
     type: tool
@@ -134,7 +152,9 @@ targets:
         excludes: [JORT.md, LICENSE]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.javascript.worker
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor.javascript-worker
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
         CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptWorker.entitlements
         CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
@@ -287,6 +307,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.settings
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
   JortDocument:
     type: framework
     platform: macOS
@@ -296,6 +318,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.document
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
   JortPersistence:
     type: framework
     platform: macOS
@@ -306,6 +330,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.persistence
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
   JortAppKit:
     type: framework
     platform: macOS
@@ -318,6 +344,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.appkit
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
   Jort:
     type: application
     platform: macOS
@@ -358,11 +386,18 @@ targets:
         CFBundleDisplayName: Jort
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        JortCredentialEnvironment: $(JORT_CREDENTIAL_ENVIRONMENT)
+        JortExpectedTeamIdentifier: $(JORT_PRODUCTION_TEAM_ID)
         LSApplicationCategoryType: public.app-category.productivity
         NSHighResolutionCapable: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jort.editor
+        MARKETING_VERSION: 0.3.0
+        CURRENT_PROJECT_VERSION: 3
+        CODE_SIGN_ENTITLEMENTS: $(JORT_APP_ENTITLEMENTS)
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        ENABLE_HARDENED_RUNTIME: YES
         GENERATE_INFOPLIST_FILE: NO
     dependencies:
       - target: JortDocument

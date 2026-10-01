@@ -8,16 +8,30 @@
 #include "BrokerIdentity.h"
 #include <libproc.h>
 #include <sys/resource.h>
+#include <spawn.h>
+#include <signal.h>
+#include <sys/wait.h>
+
+static int fixture_spawn(pid_t *, const char *, const posix_spawn_file_actions_t *,
+    const posix_spawnattr_t *, char *const [], char *const []);
+static int fixture_kill(pid_t, int);
+static pid_t fixture_waitpid(pid_t, int *, int);
 
 static bool fixture_worker_path(char *, size_t);
 static xpc_object_t observe_reply(xpc_object_t, const JortJSFrame *);
 #define jort_broker_verified_worker_path fixture_worker_path
 #define jort_broker_create_reply observe_reply
+#define posix_spawn fixture_spawn
+#define kill fixture_kill
+#define waitpid fixture_waitpid
 #define main unused_broker_main
 #include "../../../Sources/JortJavaScriptBroker/main.c"
 #undef main
 #undef jort_broker_create_reply
 #undef jort_broker_verified_worker_path
+#undef posix_spawn
+#undef kill
+#undef waitpid
 
 /* The signed interruption fixture uses the production client without transport
  * seams: its named XPC connection and signature requirement remain unchanged. */
@@ -26,6 +40,43 @@ static xpc_object_t observe_reply(xpc_object_t, const JortJSFrame *);
 static const char *mode, *worker_path;
 static unsigned observed, statuses[32], received, invalid_replies;
 static dispatch_semaphore_t terminal;
+static unsigned invalid_pid_operations;
+
+static int fixture_spawn(pid_t *pid, const char *path, const posix_spawn_file_actions_t *actions,
+    const posix_spawnattr_t *attributes, char *const arguments[], char *const environment[]) {
+    if (mode && (!strcmp(mode, "spawn-negative") || !strcmp(mode, "spawn-zero"))) {
+        *pid = !strcmp(mode, "spawn-negative") ? -1 : 0;
+        return EAGAIN;
+    }
+    return posix_spawn(pid, path, actions, attributes, arguments, environment);
+}
+
+// Trap unsafe operations in the fixture rather than ever signalling other
+// user processes, even when this test runs against a regressed implementation.
+static int fixture_kill(pid_t pid, int signal) {
+    if (pid <= 0) { invalid_pid_operations++; errno = ESRCH; return -1; }
+    return kill(pid, signal);
+}
+
+static pid_t fixture_waitpid(pid_t pid, int *status, int options) {
+    if (pid <= 0) { invalid_pid_operations++; errno = ECHILD; return -1; }
+    return waitpid(pid, status, options);
+}
+
+static bool invalid_pid_guards_hold(pid_t pid) {
+    Run run = { .pid = pid, .cancelled = true };
+    if (pthread_mutex_init(&run.lock, NULL)) return false;
+    pthread_mutex_lock(&run.lock);
+    terminate_locked(&run, JORT_JS_LAUNCH);
+    pthread_mutex_unlock(&run.lock);
+    bool verified = !run.terminated;
+    // Even a stale termination marker cannot turn a sentinel into SIGKILL.
+    run.terminated = true;
+    watchdog(&run);
+    (void)reap(&run, true, JORT_JS_LAUNCH);
+    pthread_mutex_destroy(&run.lock);
+    return verified && invalid_pid_operations == 0;
+}
 
 static bool fixture_worker_path(char *path, size_t capacity) {
     if (!strcmp(mode, "signed-service")) return jort_broker_verified_worker_path(path, capacity);
@@ -170,7 +221,11 @@ static bool process_gone(pid_t pid) {
     return kill(pid, 0) == -1 && errno == ESRCH;
 }
 
-static int signed_client_round(const char *broker_path, const char *worker_path, bool interrupt) {
+typedef enum { SIGNED_SUCCESS, SIGNED_INTERRUPTION, SIGNED_WAIT_TIMEOUT } SignedRound;
+
+static int signed_client_round(const char *broker_path, const char *worker_path, SignedRound round) {
+    bool interrupt = round == SIGNED_INTERRUPTION;
+    bool wait_timeout = round == SIGNED_WAIT_TIMEOUT;
     JortJSClient *client = jort_js_client_create();
     if (!client) return 90;
     dispatch_semaphore_t completed = dispatch_semaphore_create(0);
@@ -178,11 +233,11 @@ static int signed_client_round(const char *broker_path, const char *worker_path,
     __block uint32_t status = UINT32_MAX;
     __block bool payload_valid = false;
     uint8_t identity[16] = {1};
-    const char *source = interrupt ? "export default async function() { for (;;) {} }"
+    const char *source = interrupt || wait_timeout ? "export default async function() { for (;;) {} }"
         : "export default async function() { return {output: 'fixture-result'}; }";
     JortJSClientRequest request = {
         .operation = JORT_JS_EXECUTE, .nonce = identity, .invocation = identity, .generation = identity,
-        .deadline_ms = interrupt ? 10000 : 2000, .output_bytes = 1024, .output_lines = 10,
+        .deadline_ms = interrupt || wait_timeout ? 10000 : 2000, .output_bytes = 1024, .output_lines = 10,
         .contract = (const uint8_t *)"{}", .contract_length = 2,
         .source = (const uint8_t *)source, .source_length = strlen(source),
         .uuid = (const uint8_t *)"00000000-0000-0000-0000-000000000001", .uuid_length = 36
@@ -191,7 +246,7 @@ static int signed_client_round(const char *broker_path, const char *worker_path,
         size_t output_length, const uint8_t *error, size_t error_length) {
         completions++;
         status = result;
-        payload_valid = interrupt ? !output_length && error && error_length > 0
+        payload_valid = interrupt || wait_timeout ? !output_length && error && error_length > 0
             && error_length <= JORT_JS_ERROR_MAX : output_length == 14 && output
             && !memcmp(output, "fixture-result", 14) && !error_length;
         dispatch_semaphore_signal(completed);
@@ -223,7 +278,11 @@ static int signed_client_round(const char *broker_path, const char *worker_path,
         if (!worker || !process_at_path(broker, broker_path)) failure = 91;
         else if (kill(broker, SIGKILL)) failure = 92;
     }
-    if (dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC))) failure = 93;
+    // Exercise the controller-timeout cleanup deterministically, while the
+    // client's real asynchronous request is still pending.
+    long waited = dispatch_semaphore_wait(completed,
+        wait_timeout ? DISPATCH_TIME_NOW : dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC));
+    if (wait_timeout ? !waited : waited != 0) failure = 93;
     if (worker) {
         /* A killed broker cannot waitpid its worker. The production worker's
          * own bounded deadline/CPU policy must still let launchd reap it. */
@@ -232,25 +291,28 @@ static int signed_client_round(const char *broker_path, const char *worker_path,
         if (!process_gone(worker)) failure = 94;
     }
     delay_ms(200); /* Drain both the XPC error event and reply callback. */
+    // A timeout does not prove completion stopped. Cancel on the state queue
+    // before inspecting captured values or releasing their semaphore; after
+    // this barrier, later XPC/timer events cannot invoke completion again.
+    jort_js_client_cancel(client);
     dispatch_sync(client->queue, ^{});
-    uint32_t expected = interrupt ? JORT_JS_UNAVAILABLE : JORT_JS_OK;
+    uint32_t expected = wait_timeout ? JORT_JS_CANCELLED : interrupt ? JORT_JS_UNAVAILABLE : JORT_JS_OK;
     if (completions != 1 || status != expected || !payload_valid) {
         fprintf(stderr, "interruption=%d completions=%u status=%u expected=%u payload=%d\n",
             interrupt, completions, status, expected, payload_valid);
         if (!failure) failure = 95;
     }
-    jort_js_client_cancel(client);
-    dispatch_sync(client->queue, ^{});
     jort_js_client_release(client);
     dispatch_release(completed);
     return failure;
 }
 
 static int signed_interruption(const char *broker_path, const char *worker_path) {
-    int result = signed_client_round(broker_path, worker_path, false);
+    int result = signed_client_round(broker_path, worker_path, SIGNED_SUCCESS);
     delay_ms(100);
     int before = fd_count();
-    if (!result) result = signed_client_round(broker_path, worker_path, true);
+    if (!result) result = signed_client_round(broker_path, worker_path, SIGNED_INTERRUPTION);
+    if (!result) result = signed_client_round(broker_path, worker_path, SIGNED_WAIT_TIMEOUT);
     delay_ms(100);
     int after = fd_count();
     if (!result && (before < 0 || before != after)) result = 96;
@@ -268,7 +330,8 @@ static int round_trip(xpc_endpoint_t endpoint, unsigned count, unsigned millisec
         xpc_connection_resume(clients[i]);
         xpc_object_t message = request(round * 5 + i, milliseconds);
         xpc_connection_send_message_with_reply(clients[i], message, events, ^(xpc_object_t reply) {
-            if (xpc_get_type(reply) == XPC_TYPE_DICTIONARY) received++;
+            if (xpc_get_type(reply) == XPC_TYPE_DICTIONARY)
+                dispatch_async(events, ^{ received++; });
         });
         xpc_release(message);
     }
@@ -297,7 +360,8 @@ static int round_trip(xpc_endpoint_t endpoint, unsigned count, unsigned millisec
         for (unsigned i = 0; i < observed; i++) {
             uint32_t expected = JORT_JS_OK;
             if (!strcmp(mode, "identity")) expected = JORT_JS_IDENTITY;
-            else if (!strcmp(mode, "launch")) expected = JORT_JS_LAUNCH;
+            else if (!strcmp(mode, "launch") || !strcmp(mode, "spawn-negative")
+                || !strcmp(mode, "spawn-zero")) expected = JORT_JS_LAUNCH;
             else if (!strcmp(mode, "crash")) expected = JORT_JS_CRASH;
             else if (!strcmp(mode, "cancel")) expected = JORT_JS_CANCELLED;
             else if (!strcmp(mode, "second") || !strcmp(mode, "truncated")
@@ -315,7 +379,7 @@ static int round_trip(xpc_endpoint_t endpoint, unsigned count, unsigned millisec
     for (unsigned i = 0; i < count; i++) { xpc_connection_cancel(clients[i]); xpc_release(clients[i]); }
     delay_ms(50);
     int status; errno = 0;
-    if (waitpid(-1, &status, WNOHANG) != -1 || errno != ECHILD) return 86;
+    if (waitpid(-1, &status, WNOHANG) != -1 || errno != ECHILD || invalid_pid_operations) return 86;
     return failure;
 }
 
@@ -336,6 +400,8 @@ int main(int argc, char **argv) {
     if (argc == 3 && argv[1][0] == '1' && argv[1][1] == '\0') return child(argv[0], (unsigned)atoi(argv[2]));
     if (argc != 3) return 64;
     mode = argv[1]; worker_path = argv[2];
+    if ((!strcmp(mode, "spawn-negative") || !strcmp(mode, "spawn-zero"))
+        && !invalid_pid_guards_hold(!strcmp(mode, "spawn-negative") ? -1 : 0)) return 89;
     signal(SIGPIPE, SIG_IGN);
     events = dispatch_queue_create("dev.jort.broker.fault-fixture", DISPATCH_QUEUE_SERIAL);
     terminal = dispatch_semaphore_create(0);

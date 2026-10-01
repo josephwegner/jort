@@ -56,8 +56,28 @@ enum JortApp {
         self?.editor.toolPackages = (try? await packageRegistry.inspect().executable) ?? []
       }
     }
-    let credentials = KeychainModelCredentialStore(
-      service: installed ? "dev.jort.editor.openrouter" : "dev.jort.editor.development.openrouter")
+    let credentialEnvironment =
+      Bundle.main.object(
+        forInfoDictionaryKey: "JortCredentialEnvironment") as? String
+    let expectedTeamIdentifier =
+      Bundle.main.object(
+        forInfoDictionaryKey: "JortExpectedTeamIdentifier") as? String
+    let credentials: any ModelCredentialStore
+    do {
+      let environment: ModelCredentialEnvironment
+      switch credentialEnvironment {
+      case "production": environment = .production
+      case "development": environment = .development
+      default: throw ModelCredentialStoreFailure.unavailableIdentity
+      }
+      let policy = try ModelCredentialPolicy.forCurrentProcess(
+        environment: environment,
+        expectedProductionTeamIdentifier: environment == .production
+          ? expectedTeamIdentifier : nil)
+      credentials = KeychainModelCredentialStore(policy: policy)
+    } catch {
+      credentials = UnavailableModelCredentialStore()
+    }
     let connection = OpenRouterConnection(credentials: credentials, settings: settingsStore)
     editor.toolInvocationCoordinator = ToolInvocationCoordinator(
       executor: ToolExecutorDispatcher(

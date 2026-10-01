@@ -5,8 +5,8 @@
 | Role | Identifier | Required nested path | Entitlements |
 |---|---|---|---|
 | App | `dev.jort.editor` | `Jort.app/Contents/MacOS/Jort` | Wave 4 app policy |
-| XPC broker | `dev.jort.javascript.broker` | `Jort.app/Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/MacOS/JortJavaScriptBroker` | only `com.apple.security.app-sandbox = true` |
-| Worker | `dev.jort.javascript.worker` | `Jort.app/Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker` | exactly app-sandbox plus inherit |
+| XPC broker | `dev.jort.editor.javascript-broker` | `Jort.app/Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/MacOS/JortJavaScriptBroker` | only `com.apple.security.app-sandbox = true` |
+| Worker | `dev.jort.editor.javascript-worker` | `Jort.app/Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker` | exactly app-sandbox plus inherit |
 | C client framework | `dev.jort.javascript.client` | `Jort.app/Contents/Frameworks/JortJavaScriptClient.framework` | none |
 
 The app embeds the client framework, Runtime framework, and private broker; the broker bundle embeds the worker under its own `Contents/Helpers`. Runtime links the C client, the client speaks low-level authenticated XPC, and the broker alone launches the fixed worker path. QuickJS and `JortJavaScript.c` may link only into the worker among shipping products. The nonshipping `JortJavaScriptTestOracle` is an XCTest dependency and must never enter the app, package, release manifest, notarization input, or runtime mapping.

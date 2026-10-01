@@ -22,6 +22,10 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>JortCredentialEnvironment</key>
+	<string>$(JORT_CREDENTIAL_ENVIRONMENT)</string>
+	<key>JortExpectedTeamIdentifier</key>
+	<string>$(JORT_PRODUCTION_TEAM_ID)</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>NSHighResolutionCapable</key>

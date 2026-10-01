@@ -14,6 +14,14 @@
 #define JORT_JS_ALLOW_ADHOC 0
 #endif
 
+#define JORT_BROKER_IDENTIFIER "dev.jort.editor.javascript-broker"
+#define JORT_BROKER_POLICY_PREFIX "JORT_PEER_V1|app-to-broker|"
+/* The release verifier reads this section; runtime consumes this same template. */
+__attribute__((used, section("__TEXT,__jort_peer")))
+static const char broker_policy[] = JORT_BROKER_POLICY_PREFIX
+    "anchor apple generic and identifier \"" JORT_BROKER_IDENTIFIER
+    "\" and certificate leaf[subject.OU] = \"%@\"";
+
 struct JortJSClient {
     atomic_uint references;
     atomic_bool started;
@@ -63,11 +71,15 @@ static bool broker_requirement(char *buffer, size_t capacity) {
         SecCodeCopySigningInformation(self, kSecCSSigningInformation, &own) != errSecSuccess ||
         SecCodeCopySigningInformation(code, kSecCSSigningInformation, &target) != errSecSuccess) goto done;
     CFStringRef identifier = CFDictionaryGetValue(target, kSecCodeInfoIdentifier);
-    if (!identifier || !CFEqual(identifier, CFSTR("dev.jort.javascript.broker"))) goto done;
+    if (!identifier || !CFEqual(identifier, CFSTR(JORT_BROKER_IDENTIFIER))) goto done;
     CFStringRef own_team = CFDictionaryGetValue(own, kSecCodeInfoTeamIdentifier);
     CFStringRef target_team = CFDictionaryGetValue(target, kSecCodeInfoTeamIdentifier);
     if (own_team && target_team && CFEqual(own_team, target_team)) {
-        text = CFStringCreateWithFormat(NULL, NULL, CFSTR("anchor apple generic and identifier \"dev.jort.javascript.broker\" and certificate leaf[subject.OU] = \"%@\""), own_team);
+        CFStringRef format = CFStringCreateWithCString(NULL,
+            broker_policy + sizeof(JORT_BROKER_POLICY_PREFIX) - 1, kCFStringEncodingUTF8);
+        if (!format) goto done;
+        text = CFStringCreateWithFormat(NULL, NULL, format, own_team);
+        CFRelease(format);
     } else if (JORT_JS_ALLOW_ADHOC && !own_team && !target_team) {
         CFNumberRef a = CFDictionaryGetValue(own, kSecCodeInfoFlags);
         CFNumberRef b = CFDictionaryGetValue(target, kSecCodeInfoFlags);
@@ -195,7 +207,7 @@ void jort_js_client_send(JortJSClient *c, const JortJSClientRequest *r,
         else if (!message) fail(c, JORT_JS_PROTOCOL);
         else if (!broker_requirement(requirement, sizeof(requirement))) fail(c, JORT_JS_IDENTITY);
         else {
-            c->connection = xpc_connection_create("dev.jort.javascript.broker", c->queue);
+            c->connection = xpc_connection_create("dev.jort.editor.javascript-broker", c->queue);
             if (!c->connection) fail(c, JORT_JS_UNAVAILABLE);
             else if (xpc_connection_set_peer_code_signing_requirement(c->connection, requirement) != 0) {
                 // A newly created connection is suspended; balance it before
@@ -209,7 +221,15 @@ void jort_js_client_send(JortJSClient *c, const JortJSClientRequest *r,
                 xpc_connection_set_context(c->connection, c);
                 xpc_connection_set_finalizer_f(c->connection, finalized);
                 xpc_connection_set_event_handler(c->connection, ^(xpc_object_t event) {
-                    if (xpc_get_type(event) == XPC_TYPE_ERROR) fail(c, JORT_JS_UNAVAILABLE);
+                    if (xpc_get_type(event) == XPC_TYPE_ERROR) {
+                        // XPC owns its callback queue. Explicitly enter our
+                        // state queue, retaining across connection finalization.
+                        retain(c);
+                        dispatch_async(c->queue, ^{
+                            fail(c, JORT_JS_UNAVAILABLE);
+                            jort_js_client_release(c);
+                        });
+                    }
                 });
                 c->timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, c->queue);
                 retain(c);
@@ -221,7 +241,12 @@ void jort_js_client_send(JortJSClient *c, const JortJSClientRequest *r,
                 xpc_connection_resume(c->connection);
                 retain(c);
                 xpc_connection_send_message_with_reply(c->connection, message, c->queue, ^(xpc_object_t response) {
-                    reply(c, response); jort_js_client_release(c);
+                    xpc_retain(response);
+                    dispatch_async(c->queue, ^{
+                        reply(c, response);
+                        xpc_release(response);
+                        jort_js_client_release(c);
+                    });
                 });
             }
         }

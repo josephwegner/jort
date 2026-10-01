@@ -18,6 +18,74 @@ static int denied(int result) {
     return result == -1 && (errno == EACCES || errno == EPERM);
 }
 
+static int registered_port_count(void) {
+    mach_port_array_t ports = NULL;
+    mach_msg_type_number_t count = 0;
+    if (mach_ports_lookup(mach_task_self(), &ports, &count) != KERN_SUCCESS) return -1;
+    int valid = 0;
+    for (mach_msg_type_number_t i = 0; i < count; i++) {
+        if (MACH_PORT_VALID(ports[i])) {
+            valid++;
+            mach_port_deallocate(mach_task_self(), ports[i]);
+        }
+    }
+    if (ports) vm_deallocate(mach_task_self(), (vm_address_t)ports, count * sizeof(*ports));
+    return valid;
+}
+
+static int exception_port_count(bool current_thread) {
+    exception_mask_t masks[EXC_TYPES_COUNT];
+    mach_port_t ports[EXC_TYPES_COUNT];
+    exception_behavior_t behaviors[EXC_TYPES_COUNT];
+    thread_state_flavor_t flavors[EXC_TYPES_COUNT];
+    mach_msg_type_number_t count = EXC_TYPES_COUNT;
+    kern_return_t result;
+    if (current_thread) {
+        mach_port_t thread = mach_thread_self();
+        result = thread_get_exception_ports(thread, EXC_MASK_ALL, masks, &count, ports, behaviors, flavors);
+        mach_port_deallocate(mach_task_self(), thread);
+    } else {
+        result = task_get_exception_ports(mach_task_self(), EXC_MASK_ALL, masks, &count, ports, behaviors, flavors);
+    }
+    if (result != KERN_SUCCESS) return -1;
+    int valid = 0;
+    for (mach_msg_type_number_t i = 0; i < count; i++) {
+        if (MACH_PORT_VALID(ports[i])) {
+            valid++;
+            mach_port_deallocate(mach_task_self(), ports[i]);
+        }
+    }
+    return valid;
+}
+
+static int mach_ports_probe(void) {
+    mach_port_t access = MACH_PORT_NULL;
+    kern_return_t access_result = task_get_special_port(mach_task_self(), TASK_ACCESS_PORT, &access);
+    if (access_result != KERN_SUCCESS || access == MACH_PORT_DEAD) return 96;
+    // This normal OS-managed slot is populated on the verification host. Its
+    // write-once kernel contract makes clearing it impossible, even to null.
+    if (MACH_PORT_VALID(access)
+        && task_set_special_port(mach_task_self(), TASK_ACCESS_PORT, MACH_PORT_NULL) != KERN_NO_ACCESS) return 97;
+    if (registered_port_count() != 1 || exception_port_count(false) < 1) return 90;
+    JortJSReady ready = {0};
+    if (!bootstrap(12, &ready)) return 91;
+    if (registered_port_count() != 0 || exception_port_count(false) != 0 || exception_port_count(true) != 0
+        || bootstrap_port != MACH_PORT_NULL) return 92;
+    mach_port_t retained_access = MACH_PORT_NULL;
+    if (task_get_special_port(mach_task_self(), TASK_ACCESS_PORT, &retained_access) != KERN_SUCCESS
+        || retained_access != access) return 98;
+    if (MACH_PORT_VALID(retained_access)) mach_port_deallocate(mach_task_self(), retained_access);
+    if (MACH_PORT_VALID(access)) mach_port_deallocate(mach_task_self(), access);
+    const int slots[] = {TASK_BOOTSTRAP_PORT, TASK_DEBUG_CONTROL_PORT};
+    for (size_t i = 0; i < sizeof(slots) / sizeof(slots[0]); i++) {
+        mach_port_t port = MACH_PORT_NULL;
+        if (task_get_special_port(mach_task_self(), slots[i], &port) != KERN_SUCCESS) return 93;
+        if (port != MACH_PORT_NULL) { mach_port_deallocate(mach_task_self(), port); return 94; }
+    }
+    static const char result[] = "CLEARED inherited-mach-capabilities\n";
+    return write(STDOUT_FILENO, result, sizeof(result) - 1) == sizeof(result) - 1 ? 0 : 95;
+}
+
 static int file_denied(const char *path, int mode) {
     int descriptor = open(path, mode);
     if (descriptor >= 0) { close(descriptor); return 0; }
@@ -91,6 +159,7 @@ static int parse_config(char *input, char **file, char **keychain, char **servic
 
 int main(int argc, char **argv) {
     if (argc != 3 || strcmp(argv[1], "1")) return 64;
+    if (!strcmp(argv[2], "12")) return mach_ports_probe();
     if (!strcmp(argv[2], "11")) {
         char input[32] = {0};
         ssize_t length = read(STDIN_FILENO, input, sizeof(input) - 1);

@@ -17,6 +17,17 @@ private actor RecordingTransport: OpenRouterTransport {
   }
 }
 
+private struct MigrationCredentialStore: ModelCredentialStore {
+  let outcome: ModelCredentialMigrationOutcome
+  func read() throws -> String? {
+    if outcome == .conflict { throw ModelCredentialStoreFailure.conflict }
+    return "test-credential"
+  }
+  func migrationOutcome() async -> ModelCredentialMigrationOutcome { outcome }
+  func replace(with credential: String) {}
+  func remove() {}
+}
+
 private actor CountingJavaScriptBroker: JavaScriptBrokerTransport {
   private(set) var sends = 0
   private(set) var cancellations = 0
@@ -34,6 +45,41 @@ private actor CountingJavaScriptBroker: JavaScriptBrokerTransport {
 }
 
 final class ModelToolTests: StoreTestCase {
+  func testCredentialConflictReachesConnectionAndDispatcherWithoutNetworkRequest() async throws {
+    let credentials = MigrationCredentialStore(outcome: .conflict)
+    let transport = RecordingTransport([])
+    let connection = OpenRouterConnection(credentials: credentials, transport: transport)
+    let available = await connection.available()
+    let status = await connection.currentStatus()
+    XCTAssertFalse(available)
+    XCTAssertEqual(status.state, .needsAttention)
+    XCTAssertEqual(status.credentialMigration, .conflict)
+    do {
+      try await connection.check()
+      XCTFail("Conflicting credentials must not authorize a check")
+    } catch { XCTAssertEqual(error as? ModelCredentialStoreFailure, .conflict) }
+    let provider = OpenRouterProvider(credentials: credentials, transport: transport)
+    let dispatcher = ToolExecutorDispatcher(modelAvailable: { true }, provider: { provider })
+    let result = await dispatcher.execute(package(), input: .init(content: "input"))
+    XCTAssertEqual(result.failure?.code, .credentialStore)
+    XCTAssertEqual(result.error, ModelCredentialStoreFailure.conflict.message)
+    let requests = await transport.requests
+    XCTAssertTrue(requests.isEmpty)
+  }
+
+  func testCleanupIncompleteRemainsUsableAndVisibleAfterConnectionCheck() async throws {
+    let credentials = MigrationCredentialStore(outcome: .cleanupIncomplete)
+    let transport = RecordingTransport([.success(data(#"{"data":{"label":"test"}}"#))])
+    let connection = OpenRouterConnection(credentials: credentials, transport: transport)
+    let available = await connection.available()
+    XCTAssertTrue(available)
+    try await connection.check()
+    let status = await connection.currentStatus()
+    XCTAssertEqual(status.state, .connected)
+    XCTAssertEqual(status.credentialMigration, .cleanupIncomplete)
+    XCTAssertNotNil(status.credentialMigration?.message)
+  }
+
   private func package(mode: ToolInputMode = .contained) -> ToolPackage {
     var manifest = ToolManifest(
       id: "dev.test.model", name: "Model", command: "/model", inputMode: mode)

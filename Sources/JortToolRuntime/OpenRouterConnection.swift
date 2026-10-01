@@ -155,6 +155,11 @@ public actor OpenRouterConnection: ModelConnection {
     self.transportFactory = { transport ?? BoundedOpenRouterTransport() }
   }
   public func currentStatus() async -> ModelConnectionStatus {
+    await loadStatus()
+    if !busy { _ = await available() }
+    return status
+  }
+  private func loadStatus() async {
     if !loadedStatus {
       loadedStatus = true
       if let settings,
@@ -166,9 +171,33 @@ public actor OpenRouterConnection: ModelConnection {
         status = saved
       }
     }
-    return status
   }
-  public func available() async -> Bool { (try? await credentials.read()) != nil }
+  public func available() async -> Bool {
+    await loadStatus()
+    do { return try await readCredential() != nil } catch { return false }
+  }
+  private func readCredential() async throws -> String? {
+    do {
+      let value = try await credentials.read()
+      let priorMigration = status.credentialMigration
+      status.credentialMigration = await credentials.migrationOutcome()
+      if !busy {
+        if value == nil {
+          status.state = .notConnected
+        } else if priorMigration?.blocksUse == true {
+          status.state = .unableToVerify
+        }
+      }
+      await persist()
+      return value
+    } catch {
+      status.credentialMigration =
+        (error as? ModelCredentialStoreFailure)?.migrationOutcome ?? .unavailableIdentity
+      status.state = .needsAttention
+      await persist()
+      throw error
+    }
+  }
   private func persist() async {
     guard let settings, let data = try? JSONEncoder().encode(status),
       let text = String(data: data, encoding: .utf8)
@@ -248,13 +277,15 @@ public actor OpenRouterConnection: ModelConnection {
     guard !busy else { throw ModelFailure.authorization }
     busy = true
     defer { busy = false }
-    guard let key = try await credentials.read() else {
+    guard let key = try await readCredential() else {
       status = .init()
       await persist()
       throw ModelFailure.disconnected
     }
     do {
-      status = try await verify(key)
+      var verified = try await verify(key)
+      verified.credentialMigration = await credentials.migrationOutcome()
+      status = verified
       await persist()
     } catch {
       status.state = (error as? ModelFailure) == .authentication ? .needsAttention : .unableToVerify

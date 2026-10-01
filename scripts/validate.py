@@ -51,6 +51,13 @@ CHECKS = {item.name: item for item in (
     make_check("tsan-foundation", ["xcodebuild", "-project", "Jort.xcodeproj", "-scheme", "JortFoundation", "-configuration", "Debug", "-derivedDataPath", ".build-tsan", "-destination", "platform=macOS", "-enableThreadSanitizer", "YES", f"-skip-testing:{TSAN_SKIP}", "test"], xcode=True),
     make_check("tsan-native", ["xcodebuild", "-project", "Jort.xcodeproj", "-scheme", "JortNativeTests", "-configuration", "Debug", "-derivedDataPath", ".build-native-tsan", "-destination", "platform=macOS", "-enableThreadSanitizer", "YES", "test"], xcode=True),
     make_check("release", ["./scripts/build.sh"], xcode=True),
+    make_check(
+        "signed-integration",
+        ["./scripts/build.sh"],
+        ["python3", "scripts/verify-javascript-containment.py", "dist/Jort.app"],
+        ["python3", "scripts/verify-credential-entitlements.py", "dist/Jort.app"],
+        ["python3", "scripts/test-credential-canary.py"],
+        xcode=True),
 )}
 
 LANES = {
@@ -60,11 +67,15 @@ LANES = {
     "analysis": ["first-party-analysis"],
     "quickjs": ["quickjs-audit"],
     "tsan": ["tsan-foundation", "tsan-native"],
+    "tsan-foundation": ["tsan-foundation"],
+    "tsan-native": ["tsan-native"],
     "ui": ["ui", "containment-binary-ui"],
     "package": ["release", "packaging-tests", "containment-binary-release"],
+    "release-fixtures": ["packaging-tests"],
     "ci-test": ["format", "project", "foundation", "native", "packaging-tests", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release"],
     "all": ["format", "project", "foundation", "native", "packaging-tests", "first-party-analysis", "quickjs-audit", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release"],
     "gate": ["format", "project", "foundation", "native", "packaging-tests", "first-party-analysis", "quickjs-audit", "ui", "containment-binary-ui"],
+    "signed-integration": ["signed-integration"],
 }
 
 DIAGNOSTIC = re.compile(r"(?:^|\s)(?:error:|fatal error:|warning: ThreadSanitizer:|SUMMARY: ThreadSanitizer:|Test Case .* failed|\*\* (?:BUILD|TEST) FAILED \*\*|Formatting differs:|Generated configuration drift:|QuickJS diagnostic set changed|Assertion failed)")
@@ -114,13 +125,16 @@ def xcode_lock(timeout: float = 180.0) -> Iterator[None]:
             fcntl.flock(stream, fcntl.LOCK_UN)
 
 
-def focused_check(suite: str, configuration: str, filters: Sequence[str], performance: bool) -> Check:
+def focused_check(suite: str, configuration: str, filters: Sequence[str], performance: bool, sanitizer: str | None = None) -> Check:
     scheme = {"foundation": "JortFoundation", "native": "JortNativeTests", "containment": "JortJavaScriptContainment", "ui": "Jort"}[suite]
     derived = f".build-focused-{suite}-{configuration.lower()}"
+    suffix = "-tsan" if sanitizer == "thread" else ""
+    derived += suffix
     command = ["env", f"JORT_PERFORMANCE_ENFORCE={int(performance)}", "xcodebuild", "-project", "Jort.xcodeproj", "-scheme", scheme, "-configuration", configuration, "-derivedDataPath", derived, "-destination", "platform=macOS", "ENABLE_TESTABILITY=YES"]
     command.extend(f"-only-testing:{value}" for value in filters)
+    if sanitizer == "thread": command.extend(("-enableThreadSanitizer", "YES"))
     command.append("test")
-    return make_check(f"focused-{suite}-{configuration.lower()}", command, xcode=True)
+    return make_check(f"focused-{suite}-{configuration.lower()}{suffix}", command, xcode=True)
 
 
 def changed_plan(paths: Sequence[str]) -> list[Check]:
@@ -222,6 +236,7 @@ def build_parser() -> argparse.ArgumentParser:
     for lane in LANES:
         item = sub.add_parser(lane); item.add_argument("--keep-going", action="store_true"); item.add_argument("--log-root", type=Path, default=LOG_ROOT)
     focused = sub.add_parser("focused"); focused.add_argument("suite", choices=("foundation", "native", "containment", "ui")); focused.add_argument("--configuration", choices=("Debug", "Release"), default="Debug"); focused.add_argument("--only", action="append", default=[]); focused.add_argument("--performance", action="store_true"); focused.add_argument("--keep-going", action="store_true"); focused.add_argument("--log-root", type=Path, default=LOG_ROOT)
+    focused.add_argument("--sanitizer", choices=("thread",))
     changed = sub.add_parser("changed"); changed.add_argument("--base"); changed.add_argument("--path", action="append", default=[]); changed.add_argument("--plan-only", action="store_true"); changed.add_argument("--keep-going", action="store_true"); changed.add_argument("--log-root", type=Path, default=LOG_ROOT)
     result = sub.add_parser("result"); result.add_argument("--run", type=Path); result.add_argument("--check"); result.add_argument("--lines", type=int, default=40); result.add_argument("--log-root", type=Path, default=LOG_ROOT)
     sub.add_parser("self-test")
@@ -237,7 +252,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         log_root = safe_log_root(args.log_root)
         if command in LANES: return execute(command, [CHECKS[name] for name in LANES[command]], args.keep_going, log_root)
         if command == "focused":
-            item = focused_check(args.suite, args.configuration, args.only, args.performance); return execute(item.name, [item], args.keep_going, log_root)
+            item = focused_check(args.suite, args.configuration, args.only, args.performance, args.sanitizer); return execute(item.name, [item], args.keep_going, log_root)
         if command == "changed":
             paths = args.path or git_changed_paths(args.base); checks = changed_plan(paths)
             print("Changed paths:"); [print(f"  {path}") for path in sorted(paths)]

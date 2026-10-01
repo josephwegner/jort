@@ -196,6 +196,7 @@
 		99C0E0B15DD6B97AC6EEC34D /* JortDocument.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9A70CCF21EAB787D223C6E4A /* InvocationCompletionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565009FEEAAC0E2977EF79B1 /* InvocationCompletionController.swift */; };
 		9A94772F3E4F68A2ACBE9327 /* InvocationAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4961DB5476F6F2F966DB503 /* InvocationAccessibilityTests.swift */; };
+		9A9AB95CBEB0895F1806B530 /* ModelCredentialsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E92F112C5E0188708931ECD8 /* ModelCredentialsTests.swift */; };
 		9D6F7A0C0EF1D8B350CE65CD /* ModelToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA59492C31450C9F988EA91 /* ModelToolTests.swift */; };
 		9DA384B6D7DE55EA2CF69E3B /* ToolRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F8BE73707D77A84B75F48B /* ToolRuntimeTests.swift */; };
 		9DA9A391B4C08CA58AAC9191 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8CF4DBF8442B91591C85C2 /* SettingsWindowController.swift */; };
@@ -960,6 +961,7 @@
 		E08C38A6AD7E93755E054182 /* libregexp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = libregexp.c; sourceTree = "<group>"; };
 		E1BDAC7CA1A2AF0B0AEA9816 /* PersistentText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentText.swift; sourceTree = "<group>"; };
 		E89D2823CD5C05C21437F6EA /* ToolPackageOrigin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageOrigin.swift; sourceTree = "<group>"; };
+		E92F112C5E0188708931ECD8 /* ModelCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCredentialsTests.swift; sourceTree = "<group>"; };
 		EC8335D3047ECDA83D5400D6 /* ModelCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCredentials.swift; sourceTree = "<group>"; };
 		ED20588982DBF09C32C820C4 /* ToolInvocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocation.swift; sourceTree = "<group>"; };
 		ED3E59A5748F52849CF4134D /* StorageCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageCommandTests.swift; sourceTree = "<group>"; };
@@ -1210,6 +1212,7 @@
 			isa = PBXGroup;
 			children = (
 				DCD7B1742A804E238FDF1641 /* InjectedValidatorTests.swift */,
+				E92F112C5E0188708931ECD8 /* ModelCredentialsTests.swift */,
 				BA1937DA4FC494E2310FFBCD /* SettingsTests.swift */,
 			);
 			name = Settings;
@@ -2738,6 +2741,7 @@
 				8669BB27B9A8D2366D67BDCF /* InjectedValidatorTests.swift in Sources */,
 				B695B5BD3B553B1747430083 /* LandmarkTests.swift in Sources */,
 				568344F186CA5316F9B1248F /* MigrationTests.swift in Sources */,
+				9A9AB95CBEB0895F1806B530 /* ModelCredentialsTests.swift in Sources */,
 				6BEDC7DDDA0FB496F4640CE9 /* PerformanceDistribution.swift in Sources */,
 				037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */,
 				E4A82FE55F5542D0A143D919 /* PersistentLineIndexTests.swift in Sources */,
@@ -3023,18 +3027,16 @@
 				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptBroker.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_HARDENED_RUNTIME = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"JORT_JS_ALLOW_ADHOC=1",
-				);
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol";
 				INFOPLIST_FILE = "Configuration/JortJavaScriptBroker-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.broker;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.editor.javascript-broker";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -3060,7 +3062,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3075,6 +3077,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.client;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3086,13 +3089,18 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "$(JORT_APP_ENTITLEMENTS)";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 3;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Jort/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor;
 				SDKROOT = macosx;
 			};
@@ -3102,13 +3110,18 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "$(JORT_APP_ENTITLEMENTS)";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 3;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Jort/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.editor;
 				SDKROOT = macosx;
 			};
@@ -3119,21 +3132,18 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"JORT_JS_ALLOW_ADHOC=1",
-				);
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/Sources/JortJavaScriptProtocol";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.client;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3169,7 +3179,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3179,6 +3189,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.settings;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3224,7 +3235,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3234,6 +3245,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.settings;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3307,6 +3319,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -3318,6 +3331,10 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				JORT_APP_ENTITLEMENTS = Configuration/JortLocal.entitlements;
+				JORT_BUILD_AUDIENCE = "local-only";
+				JORT_CREDENTIAL_ENVIRONMENT = development;
+				JORT_PRODUCTION_TEAM_ID = "";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -3339,6 +3356,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -3350,8 +3368,9 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				OTHER_CODE_SIGN_FLAGS = "--identifier $(PRODUCT_BUNDLE_IDENTIFIER)";
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.worker;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.editor.javascript-worker";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -3400,7 +3419,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3410,6 +3429,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolruntime;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3438,6 +3458,7 @@
 				CODE_SIGN_ENTITLEMENTS = Configuration/JortJavaScriptBroker.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -3449,7 +3470,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.broker;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.editor.javascript-broker";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -3489,7 +3511,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3499,6 +3521,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.persistence;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3564,6 +3587,10 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				JORT_APP_ENTITLEMENTS = Configuration/JortLocal.entitlements;
+				JORT_BUILD_AUDIENCE = "local-only";
+				JORT_CREDENTIAL_ENVIRONMENT = development;
+				JORT_PRODUCTION_TEAM_ID = "";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -3597,7 +3624,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3607,6 +3634,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.appkit;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3619,7 +3647,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3629,6 +3657,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.document;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3708,7 +3737,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3718,6 +3747,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolruntime;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3748,6 +3778,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -3759,8 +3790,9 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				OTHER_CODE_SIGN_FLAGS = "--identifier $(PRODUCT_BUNDLE_IDENTIFIER)";
-				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.javascript.worker;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.jort.editor.javascript-worker";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -3770,7 +3802,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3780,6 +3812,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolcontracts;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3792,7 +3825,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3802,6 +3835,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.toolcontracts;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3880,7 +3914,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3890,6 +3924,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.appkit;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3902,7 +3937,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3912,6 +3947,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.persistence;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3995,7 +4031,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -4005,6 +4041,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.jort.document;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;

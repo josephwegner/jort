@@ -41,10 +41,10 @@ dispatcher; they remain available to a user for direct manual diagnosis:
 
 ```sh
 ./scripts/test-ui.sh  # Builds and ad-hoc signs an isolated accessibility test app/runner
-./scripts/build.sh    # Produces dist/Jort.app, unsigned and local-only
+./scripts/build.sh    # Produces dist/Jort.app, ad-hoc signed and local-only
 ```
 
-The UI smoke test uses `JORT_DATA_DIRECTORY` to isolate its text. It may require normal macOS developer/accessibility permissions. Do not disable Gatekeeper or remove security attributes to run it. Signing/notarization for public distribution remain deferred.
+The UI smoke test uses `JORT_DATA_DIRECTORY` to isolate its text. It may require normal macOS developer/accessibility permissions. Do not disable Gatekeeper or remove security attributes to run it. Local signatures exercise the nested helper entitlement topology but do not identify a publisher or make the app distributable. See [release operations](docs/release-operations.md) for the separate Developer ID/notarization workflow.
 
 **Quit older Jort builds before launching version 0.2.** The new process lock cannot constrain the old 0.1 binary, which did not implement locking. On first 0.2 launch, the old store migrates without deleting its original files.
 
@@ -99,7 +99,7 @@ Tool discovery and syntax validation run asynchronously and never gate editor re
 
 See [review implementation status](docs/review-status.md), [normative line identity](docs/line-identity.md), and [performance budgets](docs/performance.md). CI configuration includes clean generation checks, tests, static analysis, sanitizer checks, accessibility smoke testing, and a fresh Release package. This workspace is not yet a Git repository, so remote CI has not been executed here.
 
-See [engineering guardrails](docs/engineering-guardrails.md) for formatting, analyzer ownership, SQLite test teardown, and local/CI check enforcement.
+See [engineering guardrails](docs/engineering-guardrails.md) for formatting, analyzer ownership, SQLite test teardown, and local/CI check enforcement. Public/community package import remains disabled until both the JavaScript-containment and signed-release gates are independently verified.
 
 ### Tool package history and recovery
 

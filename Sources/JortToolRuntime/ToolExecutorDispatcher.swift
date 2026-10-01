@@ -44,6 +44,8 @@ public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
       let output = try await provider().execute(request)
       try Task.checkCancellation()
       return .init(output: try request.validateOutput(output))
+    } catch let failure as ModelCredentialStoreFailure {
+      return .init(failure: .init(.credentialStore, message: failure.message))
     } catch let failure as ModelFailure {
       if failure == .authentication { await authenticationFailed() }
       return .init(failure: failure.toolFailure)
