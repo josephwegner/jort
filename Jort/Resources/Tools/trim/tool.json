@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.trim",
+  "version": 1,
+  "name": "Trim",
+  "command": "/trim",
+  "description": "Remove horizontal whitespace from both ends of each line, including indentation",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

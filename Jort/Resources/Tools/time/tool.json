@@ -1,14 +1,18 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
+  "executor": "javascript",
   "id": "dev.jort.time",
-  "version": 1,
+  "version": 2,
   "name": "Time",
   "command": "/time",
-  "description": "Current UTC time (HH:mm:ssZ)",
-  "entryContract": 1,
+  "description": "Insert local time, such as 10:28am",
+  "entryContract": 2,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",
   "maximumInputBytes": 262144,
   "maximumOutputBytes": 262144,
-  "maximumOutputLines": 10000
+  "maximumOutputLines": 10000,
+  "capturedData": [
+    "localTime"
+  ]
 }

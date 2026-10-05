@@ -55,6 +55,8 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
   public var sourceHash: String
   public var timestamp: Date
   public var message: String?
+  public var capturedArguments: [String: ToolArgumentValue]? = nil
+  public var acceptanceSeparator: ToolAnchoredRange? = nil
   public var selection: ToolAnchoredRange?
   public var viewportLineID: UUID?
   public var viewportOffset: Double?
@@ -76,6 +78,8 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
     sourceHash = invocation.sourceHash
     timestamp = invocation.timestamp
     message = invocation.message
+    capturedArguments = invocation.capturedArguments
+    acceptanceSeparator = invocation.acceptanceSeparator
     self.selection = selection
     self.viewportLineID = viewportLineID
     self.viewportOffset = viewportOffset
@@ -91,6 +95,8 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
     value.generation = generation
     value.timestamp = timestamp
     value.message = message
+    value.capturedArguments = capturedArguments
+    value.acceptanceSeparator = acceptanceSeparator
     return value
   }
 }
@@ -114,6 +120,12 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
   public var outputHash: String?
   public var timestamp: Date = Date()
   public var message: String?
+  /// Only validated submission values are durable; unfinished field text belongs to the UI.
+  public var capturedArguments: [String: ToolArgumentValue]? = nil
+  public var acceptanceSeparator: ToolAnchoredRange? = nil
+  public var actionStatus: ToolActionStatus? = nil
+  public var actionKind: String? = nil
+  public var outputLandmark: ToolOutputLandmark? = nil
   public var restoration: ToolInvocationRestoration?
   public var isLocked: Bool { phase != .inputting }
   public init(
@@ -135,7 +147,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
   }
   public func validated(in snapshot: DocumentSnapshot) -> Bool {
-    guard packageID.utf8.count <= 256, packageVersion > 0, entryContract == 1,
+    guard packageID.utf8.count <= 256, packageVersion > 0, (1...2).contains(entryContract),
       ["javascript", "model"].contains(executor ?? "javascript"),
       packageID.range(of: #"^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$"#, options: .regularExpression)
         != nil,
@@ -146,7 +158,14 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
       ["contained", "contextual", "ephemeralSingleLine", "ephemeralMultiline"].contains(inputMode),
       ["replace-invocation", "replace-context", "insert-at-invocation"].contains(outputOperation),
       outputOperation != "replace-context" || inputMode == "contextual",
-      message?.utf8.count ?? 0 <= 2048,
+      message?.utf8.count ?? 0 <= 1_048_576,
+      Self.validArguments(capturedArguments),
+      actionKind == nil
+        || ["clipboard.rich", "file.export", "notification.schedule"].contains(actionKind!),
+      (actionStatus == nil) == (actionKind == nil),
+      actionStatus != .dispatched || [.submitted, .processing].contains(phase),
+      actionStatus != .acknowledged && actionStatus != .unknown || phase == .completed,
+      outputLandmark == nil || phase == .pending,
       let token = token.resolve(in: snapshot), let scope = scope.resolve(in: snapshot),
       NSMaxRange(scope) <= snapshot.utf16Count, token.location >= scope.location,
       NSMaxRange(token) <= NSMaxRange(scope),
@@ -158,9 +177,10 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     if let restoration {
       guard restoration.packageID.utf8.count <= 256, restoration.packageVersion > 0,
         ["javascript", "model"].contains(restoration.executor ?? "javascript"),
-        restoration.entryContract == 1, restoration.command.utf8.count <= 65,
+        (1...2).contains(restoration.entryContract), restoration.command.utf8.count <= 65,
         restoration.timestamp.timeIntervalSinceReferenceDate.isFinite,
         restoration.message?.utf8.count ?? 0 <= 2048,
+        Self.validArguments(restoration.capturedArguments),
         restoration.token.resolve(in: snapshot) != nil,
         restoration.scope.resolve(in: snapshot) != nil,
         restoration.selection?.resolve(in: snapshot) != nil || restoration.selection == nil,
@@ -173,6 +193,12 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
         range.location == (inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token)),
         (try? snapshot.text(in: range)).map(Self.hash) == outputHash
       else { return false }
+      if let landmark = outputLandmark {
+        guard Landmark.isValidEmoji(landmark.emoji),
+          let text = try? snapshot.text(in: range),
+          Self.outputLineOffset(landmark.line, in: text) != nil
+        else { return false }
+      }
       let intersection = NSIntersectionRange(scope, range)
       if intersection.length > 0 {
         source = (source as NSString).replacingCharacters(
@@ -182,6 +208,30 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
       }
     }
     return Self.hash(source) == sourceHash
+  }
+  private static func validArguments(_ arguments: [String: ToolArgumentValue]?) -> Bool {
+    guard let arguments else { return true }
+    guard arguments.count <= 32, arguments.keys.allSatisfy({ $0.utf8.count <= 64 }),
+      let data = try? JSONEncoder().encode(arguments)
+    else { return false }
+    return data.count <= 65_536
+  }
+  /// Return a UTF-16 offset without splitting a CRLF pair.
+  static func outputLineOffset(_ line: Int, in text: String) -> Int? {
+    guard line >= 0 else { return nil }
+    if line == 0 { return 0 }
+    let units = Array(text.utf16)
+    var index = 0, current = 0
+    while index < units.count {
+      let unit = units[index]
+      index += 1
+      if unit == 13, index < units.count, units[index] == 10 { index += 1 }
+      if [10, 13, 0x85, 0x2028, 0x2029].contains(unit) {
+        current += 1
+        if current == line { return index < units.count ? index : nil }
+      }
+    }
+    return nil
   }
   public static func sanitized(_ values: [Self], in snapshot: DocumentSnapshot) -> [Self] {
     guard values.count <= 1000 else { return [] }
@@ -266,6 +316,13 @@ public enum ToolRangeEditing {
       else { return nil }
       value.token = token
       value.scope = scope
+      if let separator = value.acceptanceSeparator {
+        if let source = separator.resolve(in: old), NSIntersectionRange(source, edit).length == 0 {
+          value.acceptanceSeparator = range(separator, grow: false)
+        } else {
+          value.acceptanceSeparator = nil
+        }
+      }
       if let output = value.output { value.output = range(output, grow: false) }
       if var restoration = value.restoration {
         guard let token = range(restoration.token, grow: false),
@@ -273,6 +330,9 @@ public enum ToolRangeEditing {
         else { return nil }
         restoration.token = token
         restoration.scope = scope
+        if let separator = restoration.acceptanceSeparator {
+          restoration.acceptanceSeparator = range(separator, grow: false)
+        }
         if let selection = restoration.selection {
           restoration.selection = range(selection, grow: false)
         }

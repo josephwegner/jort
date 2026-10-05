@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.json",
+  "version": 1,
+  "name": "Pretty-print JSON",
+  "command": "/json",
+  "description": "Format JSON with 1–8 spaces (default 2), preserving every number’s exact precision",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "arguments": [
+    {
+      "name": "indent",
+      "type": "integer",
+      "label": "Indentation spaces",
+      "defaultValue": 2,
+      "minimum": 1,
+      "maximum": 8
+    }
+  ]
+}

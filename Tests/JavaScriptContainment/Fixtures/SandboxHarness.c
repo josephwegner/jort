@@ -12,8 +12,17 @@ static bool allocation_request(const char *path, bool exhaust) {
     // Both requests use the same program. Only the requested allocation changes:
     // 32 MiB must exceed the shipping 16 MiB heap; 1 MiB must remain usable.
     static const char source[] = "export default async function(input) {"
-        " const block = 'x'.repeat(Number(input.content));"
-        " return {output: String(block.length)}; }";
+        " const block = new Uint8Array(Number(input.content));"
+        " return {output: String(block.byteLength)}; }";
+    static const char contract[] = "{\"schemaVersion\":1,\"entryContract\":1,"
+        "\"id\":\"dev.jort.heap-probe\",\"version\":1,\"name\":\"Heap probe\","
+        "\"command\":\"/heap-probe\",\"description\":\"Nonshipping heap qualification\","
+        "\"inputMode\":\"contained\",\"outputOperation\":\"replace-invocation\","
+        "\"maximumInputBytes\":64,\"maximumOutputBytes\":64,\"maximumOutputLines\":1}";
+    static const char clock[] = "1970-01-01T00:00:00Z";
+    static const char uuid[] = "00000000-0000-0000-0000-000000000001";
+    static const char metadata[] = "{}";
+    static const char expected[] = "{\"output\":\"1048576\"}";
     const char *amount = exhaust ? "33554432" : "1048576";
     Run run = {0};
     if (pthread_mutex_init(&run.lock, NULL)) return false;
@@ -25,12 +34,18 @@ static bool allocation_request(const char *path, bool exhaust) {
     memset(run.request.nonce, exhaust ? 1 : 2, sizeof(run.request.nonce));
     memset(run.request.invocation, exhaust ? 3 : 4, sizeof(run.request.invocation));
     memset(run.request.generation, exhaust ? 5 : 6, sizeof(run.request.generation));
-    run.request.fields[0] = (uint8_t *)"{}";
-    run.request.lengths[0] = 2;
+    run.request.fields[0] = (uint8_t *)contract;
+    run.request.lengths[0] = sizeof(contract) - 1;
     run.request.fields[1] = (uint8_t *)source;
     run.request.lengths[1] = sizeof(source) - 1;
     run.request.fields[2] = (uint8_t *)amount;
     run.request.lengths[2] = (uint32_t)strlen(amount);
+    run.request.fields[3] = (uint8_t *)clock;
+    run.request.lengths[3] = sizeof(clock) - 1;
+    run.request.fields[4] = (uint8_t *)uuid;
+    run.request.lengths[4] = sizeof(uuid) - 1;
+    run.request.fields[5] = (uint8_t *)metadata;
+    run.request.lengths[5] = sizeof(metadata) - 1;
     run.deadline = jort_js_monotonic() + 3;
     int input = -1, output = -1;
     bool verified = false;
@@ -63,8 +78,8 @@ static bool allocation_request(const char *path, bool exhaust) {
             && run.response.lengths[1] <= JORT_JS_ERROR_MAX;
     } else {
         verified = run.response.tag == JORT_JS_OK && run.response.lengths[1] == 0
-            && run.response.lengths[0] == strlen(amount)
-            && !memcmp(run.response.fields[0], amount, strlen(amount));
+            && run.response.lengths[0] == sizeof(expected) - 1
+            && !memcmp(run.response.fields[0], expected, sizeof(expected) - 1);
     }
 finish:
     close_fd(&input);

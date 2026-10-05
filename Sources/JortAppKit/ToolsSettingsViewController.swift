@@ -500,7 +500,7 @@ public final class ToolsSettingsViewController: SettingsPaneViewController, NSTa
         var manifest =
           $0.manifest
           ?? ToolManifest(id: $0.id.rawValue, name: $0.displayName, command: "/" + $0.commandName)
-        manifest.schemaVersion = 2
+        manifest.schemaVersion = max(2, manifest.schemaVersion)
         manifest.executor = type
         manifest.modelID = type == .model ? ModelCatalog.defaultModelID : nil
         $0.manifest = manifest

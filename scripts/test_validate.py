@@ -37,6 +37,16 @@ class ValidateTests(unittest.TestCase):
         plan = validate.changed_plan(["Sources/NewModule/Thing.swift"])
         self.assertEqual(["format", "foundation", "native"], [item.name for item in plan])
 
+    def test_packaged_ui_changes_build_release_before_launching_it(self):
+        for path in ("Tests/UI/PackagedJortUITests.swift", "scripts/test-packaged-ui.sh"):
+            with self.subTest(path=path):
+                plan = validate.changed_plan([path])
+                self.assertEqual(["format", "release", "containment-binary-release", "packaged-ui"],
+                                 [item.name for item in plan])
+        for lane in ("package", "ci-test", "all"):
+            self.assertLess(validate.LANES[lane].index("release"),
+                            validate.LANES[lane].index("packaged-ui"))
+
     def test_focused_arguments_are_enumerated(self):
         parser = validate.build_parser()
         with self.assertRaises(SystemExit):

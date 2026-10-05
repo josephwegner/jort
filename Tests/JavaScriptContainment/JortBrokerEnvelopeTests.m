@@ -31,10 +31,11 @@
     xpc_dictionary_set_data(request, "input", input, inputLength);
     xpc_dictionary_set_data(request, "clock", clock, sizeof(clock) - 1);
     xpc_dictionary_set_data(request, "uuid", uuid, sizeof(uuid) - 1);
+    xpc_dictionary_set_data(request, "metadata", NULL, 0);
     xpc_dictionary_set_uint64(request, "deadlineMilliseconds", 1000);
     xpc_dictionary_set_uint64(request, "outputBytes", JORT_JS_OUTPUT_MAX);
     xpc_dictionary_set_uint64(request, "outputLines", JORT_JS_LINES_MAX);
-    XCTAssertEqual(xpc_dictionary_get_count(request), 13u);
+    XCTAssertEqual(xpc_dictionary_get_count(request), 14u);
     return request;
 }
 
@@ -53,7 +54,7 @@
     jort_js_frame_destroy(&frame);
 }
 
-- (void)testRejectsRequestsWithoutTheExactVersionedThirteenKeyShape {
+- (void)testRejectsRequestsWithoutTheExactVersionedFourteenKeyShape {
     static const char input[] = "{}";
 
     xpc_object_t missing = [self validRequestWithOperation:JORT_JS_EXECUTE input:input inputLength:2];

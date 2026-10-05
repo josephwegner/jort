@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 3,
+  "executor": "model",
+  "id": "dev.jort.simplify",
+  "version": 1,
+  "name": "Simplify",
+  "command": "/simplify",
+  "description": "Rewrite in plainer language while retaining the supplied information",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "modelID": "openai/gpt-5.4-mini"
+}

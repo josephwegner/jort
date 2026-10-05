@@ -11,12 +11,21 @@ public struct InvocationGeneration: Equatable, Hashable, Sendable {
 }
 
 public enum ToolInvocationPhase: String, Codable, Sendable {
-  case inputting, submitted, processing, error, pending
+  case inputting, submitted, processing, error, pending, completed
+}
+
+/// Dispatch survives restoration; an absent acknowledgement never authorizes replay.
+public enum ToolActionStatus: String, Codable, Sendable {
+  case dispatched, acknowledged, unknown, failed, cancelled
 }
 
 public enum InvocationDocumentOperation: Equatable, Sendable {
   case accept, submit, processing, failure(String), publish(String), merge, dismiss, remove
   case reconcile(version: Int, interrupted: Bool), preserveOutput
+  case publishLandmarked(String, ToolOutputLandmark)
+  case report(String), dispatchAction(ToolHostAction), actionAcknowledged(String)
+  case actionFailed(String, cancelled: Bool), actionUnknown, done
+  case completionMessage(String)
 }
 
 public struct InvocationDocumentEffect: Equatable, Sendable {
@@ -33,12 +42,17 @@ public struct InvocationLifecycleState: Equatable, Sendable {
   public private(set) var terminal = false
   public private(set) var removed = false
   public private(set) var pendingEffect: InvocationDocumentEffect?
+  public private(set) var actionStatus: ToolActionStatus?
   private var sequence: UInt64 = 0
 
-  public init(identity: InvocationGeneration, phase: ToolInvocationPhase) {
+  public init(
+    identity: InvocationGeneration, phase: ToolInvocationPhase,
+    actionStatus: ToolActionStatus? = nil
+  ) {
     self.identity = identity
     self.phase = phase
-    terminal = phase == .pending || phase == .error
+    self.actionStatus = actionStatus
+    terminal = phase == .pending || phase == .error || phase == .completed || actionStatus != nil
   }
 
   public enum Action: Equatable, Sendable {
@@ -47,9 +61,16 @@ public struct InvocationLifecycleState: Equatable, Sendable {
     case validation(InvocationGeneration, error: String?)
     case processing(InvocationGeneration)
     case result(InvocationGeneration, output: String)
+    case landmarkResult(InvocationGeneration, output: String, landmark: ToolOutputLandmark)
+    case report(InvocationGeneration, message: String)
+    case hostAction(InvocationGeneration, ToolHostAction)
+    case hostAcknowledged(InvocationGeneration, message: String)
+    case hostFailed(InvocationGeneration, message: String, cancelled: Bool)
     case failure(InvocationGeneration, message: String)
     case cancel
     case merge
+    case done
+    case completionMessage(String)
     case dismiss
     case restored(hasLiveJob: Bool)
     case reconcile(InvocationPackageReference, candidate: ToolManifest?, hasLiveJob: Bool)
@@ -61,13 +82,14 @@ public struct InvocationLifecycleState: Equatable, Sendable {
     case validate(InvocationGeneration)
     case execute(InvocationGeneration)
     case cancel(InvocationGeneration)
+    case hostAction(InvocationGeneration, ToolHostAction)
     case document(InvocationDocumentEffect)
   }
 
   /// Pending mutations are acknowledged before execution or a dependent mutation.
   /// The first terminal event reserves the generation, including before publication.
   public mutating func reduce(_ action: Action) -> [Effect] {
-    func bounded(_ text: String) -> String { String(text.prefix(512)) }
+    func bounded(_ text: String) -> String { UTF8Bounds.prefix(text, maximumBytes: 512) }
     func matches(_ identity: InvocationGeneration) -> Bool { self.identity == identity }
     guard !removed else { return [] }
     switch action {
@@ -87,16 +109,31 @@ public struct InvocationLifecycleState: Equatable, Sendable {
         return [.execute(identity)]
       case .processing: phase = .processing
       case .failure: phase = .error
-      case .publish: phase = .pending
+      case .publish, .publishLandmarked: phase = .pending
+      case .report: phase = .completed
+      case .dispatchAction(let action):
+        actionStatus = .dispatched
+        return [.hostAction(identity, action)]
+      case .actionAcknowledged:
+        actionStatus = .acknowledged
+        phase = .completed
+      case .actionFailed(_, let cancelled):
+        actionStatus = cancelled ? .cancelled : .failed
+        phase = .inputting
+      case .actionUnknown:
+        actionStatus = .unknown
+        phase = .completed
+      case .completionMessage: break
       case .dismiss:
         phase = .inputting
         // A later submission must create a fresh generation, never revive this one.
         terminal = true
         warning = nil
-      case .merge, .remove, .preserveOutput: removed = true
+      case .merge, .remove, .preserveOutput, .done: removed = true
       case .reconcile(_, let interrupted):
         if interrupted {
-          phase = .error
+          phase = actionStatus == .dispatched ? .completed : .error
+          if actionStatus == .dispatched { actionStatus = .unknown }
           terminal = true
         }
       }
@@ -109,6 +146,9 @@ public struct InvocationLifecycleState: Equatable, Sendable {
       pendingEffect = nil
       return [.cancel(identity)]
     case .cancel:
+      if actionStatus == .dispatched, pendingEffect == nil {
+        return [.cancel(identity)] + document(.actionUnknown)
+      }
       guard !terminal else { return [] }
       terminal = true
       validating = false
@@ -138,6 +178,26 @@ public struct InvocationLifecycleState: Equatable, Sendable {
       guard matches(token), [.submitted, .processing].contains(phase), !terminal else { return [] }
       terminal = true
       return document(.publish(output))
+    case .landmarkResult(let token, let output, let landmark):
+      guard matches(token), [.submitted, .processing].contains(phase), !terminal else { return [] }
+      terminal = true
+      return document(.publishLandmarked(output, landmark))
+    case .report(let token, let message):
+      guard matches(token), [.submitted, .processing].contains(phase), !terminal else { return [] }
+      terminal = true
+      return document(.report(message))
+    case .hostAction(let token, let action):
+      guard matches(token), [.submitted, .processing].contains(phase), !terminal,
+        actionStatus == nil
+      else { return [] }
+      terminal = true
+      return document(.dispatchAction(action))
+    case .hostAcknowledged(let token, let message):
+      guard matches(token), actionStatus == .dispatched, pendingEffect == nil else { return [] }
+      return document(.actionAcknowledged(message))
+    case .hostFailed(let token, let message, let cancelled):
+      guard matches(token), actionStatus == .dispatched, pendingEffect == nil else { return [] }
+      return document(.actionFailed(bounded(message), cancelled: cancelled))
     case .failure(let token, let message):
       guard matches(token), [.submitted, .processing].contains(phase), !terminal else { return [] }
       terminal = true
@@ -145,14 +205,25 @@ public struct InvocationLifecycleState: Equatable, Sendable {
     case .merge:
       guard phase == .pending, pendingEffect == nil else { return [] }
       return document(.merge)
+    case .done:
+      guard phase == .completed, pendingEffect == nil else { return [] }
+      return document(.done)
+    case .completionMessage(let message):
+      guard phase == .completed, pendingEffect == nil else { return [] }
+      return document(.completionMessage(bounded(message)))
     case .dismiss:
       guard pendingEffect == nil else { return [] }
+      if actionStatus == .dispatched {
+        return [.cancel(identity)] + document(.actionUnknown)
+      }
       if phase == .inputting { return document(.remove) }
       terminal = true
       return [.cancel(identity)] + document(.dismiss)
     case .reconcile(let reference, let candidate, let hasLiveJob):
       guard pendingEffect == nil else { return [] }
       if hasLiveJob, [.submitted, .processing].contains(phase) { return [] }
+      if actionStatus == .dispatched { return document(.actionUnknown) }
+      if phase == .completed { return [] }
       if let candidate, reference.accepts(candidate) {
         let interrupted = [.submitted, .processing].contains(phase)
         guard candidate.version != reference.version || interrupted else { return [] }
@@ -165,7 +236,8 @@ public struct InvocationLifecycleState: Equatable, Sendable {
         return []
       }
       terminal = true
-      return document(.failure("Execution was interrupted."))
+      return document(
+        actionStatus == .dispatched ? .actionUnknown : .failure("Execution was interrupted."))
     }
   }
 

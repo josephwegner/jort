@@ -9,16 +9,34 @@ import JortSettings
   var coordinator: any ToolInvocationCoordinating = UnavailableInvocationCoordinator()
   var executionInputFactory: (String) -> ToolExecutionInput = { ToolExecutionInput(content: $0) }
   private var knownIDs = Set<UUID>()
+  private var arguments: [UUID: [String: String]] = [:]
   init(editor: EditorViewController) { self.editor = editor }
   func documentChanged() {
     guard let editor else { return }
     let ids = Set(editor.state.invocations.map(\.id))
     for id in knownIDs where !ids.contains(id) {
+      arguments.removeValue(forKey: id)
       coordinator.remove(id)
       coordinator.transient.remove(id)
     }
     knownIDs = ids
     for invocation in editor.state.invocations {
+      if arguments[invocation.id] == nil, let captured = invocation.capturedArguments {
+        arguments[invocation.id] = captured.mapValues { value in
+          switch value {
+          case .integer(let number): return String(number)
+          case .string(let text):
+            // Use the same small escape vocabulary as the argument parser.
+            // JSONEncoder also emits escapes such as \/ that it does not accept.
+            let escaped = text.replacingOccurrences(of: "\\", with: "\\\\")
+              .replacingOccurrences(of: "\"", with: "\\\"")
+              .replacingOccurrences(of: "\n", with: "\\n")
+              .replacingOccurrences(of: "\r", with: "\\r")
+              .replacingOccurrences(of: "\t", with: "\\t")
+            return "\"" + escaped + "\""
+          }
+        }
+      }
       coordinator.transient.reconcile(
         invocation.id, inputting: invocation.phase == .inputting,
         content: content(invocation))
@@ -82,6 +100,11 @@ import JortSettings
         location: range.location + package.manifest.command.utf16.count + (space ? 1 : 0), length: 0
       ))
     if package.manifest.inputMode.isEphemeral { setPrompt("", for: identity.invocationID) }
+    if package.manifest.inputMode == .contextual, !(package.manifest.arguments?.isEmpty ?? true) {
+      editor.toolPresentation.requestArgumentFocus(for: identity.invocationID)
+      editor.textView.scrollRangeToVisible(editor.textView.selectedRange())
+      editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+    }
     editor.refreshToolPresentation()
   }
 
@@ -97,9 +120,34 @@ import JortSettings
       let content = content(invocation)
     else { return }
     clearWarning(id)
+    let submittedArguments = arguments[id] ?? [:]
     let identity = InvocationGeneration(invocationID: id, generation: UUID())
+    let input: ToolExecutionInput
+    do {
+      let definitions = package.manifest.arguments ?? []
+      let parsed: [String: ToolArgumentValue]
+      if definitions.isEmpty {
+        parsed = [:]
+      } else if package.manifest.inputMode == .contextual {
+        parsed = try parsedArguments(for: id, definitions: definitions)
+      } else {
+        parsed = try ToolArguments.parse(content, definitions: definitions)
+      }
+      input = executionInputFactory(content).withArguments(parsed)
+    } catch {
+      setWarning(
+        (error as? ToolFailure)?.message ?? "Check the tool arguments.", content: content, for: id)
+      let invalid = (package.manifest.arguments ?? []).first { definition in
+        do {
+          _ = try parsedArguments(for: id, definitions: [definition])
+          return false
+        } catch { return true }
+      }
+      editor.toolPresentation.focusArguments(for: id, name: invalid?.name)
+      return
+    }
     coordinator.submit(
-      identity: identity, package: package, input: executionInputFactory(content),
+      identity: identity, package: package, input: input,
       apply: { [weak self] effect in
         guard let self, let editor = self.editor,
           var current = editor.state.invocations.first(where: { $0.id == id })
@@ -109,10 +157,13 @@ import JortSettings
           case .submit:
             guard current.phase == .inputting, current.generation == invocation.generation,
               current.sourceHash == invocation.sourceHash,
-              self.content(current) == content
+              self.content(current) == content,
+              (self.arguments[id] ?? [:]) == submittedArguments
             else { return false }
             current.packageVersion = package.manifest.version
             current.executor = package.manifest.executorType.rawValue
+            // Contract 1 has no argument metadata; keep its Undo restoration exact.
+            current.capturedArguments = package.manifest.entryContract == 2 ? input.arguments : nil
             let selection = try? ToolAnchoredRange(
               editor.textView.selectedRange(), lines: editor.state.lines)
             let viewport = editor.linePresentation.viewportAnchor()
@@ -135,7 +186,8 @@ import JortSettings
         guard let self, let current = self.editor?.state.invocations.first(where: { $0.id == id }),
           current.phase == .inputting, current.generation == invocation.generation,
           current.sourceHash == invocation.sourceHash,
-          self.content(current) == content
+          self.content(current) == content,
+          (self.arguments[id] ?? [:]) == submittedArguments
         else { return }
         self.setWarning(warning, content: content, for: id)
       })
@@ -174,10 +226,36 @@ import JortSettings
   }
 
   func cancel(_ id: UUID) {
+    let dispatched =
+      editor?.state.invocations.first(where: { $0.id == id })?.actionStatus == .dispatched
     coordinator.remove(id)
     setPrompt(nil, for: id)
     clearWarning(id)
+    if dispatched {
+      // Coordinator removal records unknown outcome. Keep that receipt visible;
+      // cancellation cannot prove an already dispatched external effect did not occur.
+      editor?.refreshToolPresentation()
+      return
+    }
     try? perform(.detach, id: id)
+  }
+
+  func cancelReminder(_ id: UUID) {
+    guard let editor,
+      let invocation = editor.state.invocations.first(where: { $0.id == id }),
+      invocation.phase == .completed, invocation.actionKind == "notification.schedule",
+      let cancel = editor.cancelToolReminder
+    else { return }
+    let identity = InvocationGeneration(invocationID: id, generation: invocation.generation)
+    Task { [weak self] in
+      let message = await cancel(identity)
+      guard let self, let editor = self.editor,
+        let current = editor.state.invocations.first(where: { $0.id == id }),
+        current.phase == .completed, current.generation == identity.generation
+      else { return }
+      try? self.perform(.completionMessage(UTF8Bounds.prefix(message, maximumBytes: 512)), id: id)
+      editor.refreshToolPresentation()
+    }
   }
 
   /// Deletes only the requested characters and drops the whole affected pending
@@ -205,6 +283,27 @@ import JortSettings
   func merge(_ id: UUID) throws {
     try perform(.merge, id: id)
     setPrompt(nil, for: id)
+  }
+
+  func done(_ id: UUID) throws { try perform(.done, id: id) }
+
+  func argumentValues(for id: UUID) -> [String: String] { arguments[id] ?? [:] }
+
+  func setArgument(_ value: String, name: String, for id: UUID) {
+    arguments[id, default: [:]][name] = value
+    clearWarning(id)
+  }
+
+  private func parsedArguments(for id: UUID, definitions: [ToolArgumentDefinition]) throws
+    -> [String: ToolArgumentValue]
+  {
+    var parsed: [String: ToolArgumentValue] = [:]
+    let raw = argumentValues(for: id)
+    for definition in definitions {
+      let field = try ToolArguments.parse(raw[definition.name] ?? "", definitions: [definition])
+      parsed.merge(field) { _, new in new }
+    }
+    return try ToolArguments.validate(parsed, definitions: definitions)
   }
 
   func moveBoundary(_ id: UUID, start: Bool, to requested: Int) throws {

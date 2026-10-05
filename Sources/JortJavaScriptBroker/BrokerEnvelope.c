@@ -5,23 +5,23 @@
 
 static const char *const keys[] = {
     "version", "operation", "nonce", "invocation", "generation", "contract", "source",
-    "input", "clock", "uuid", "deadlineMilliseconds", "outputBytes", "outputLines"
+    "input", "clock", "uuid", "deadlineMilliseconds", "outputBytes", "outputLines", "metadata"
 };
-static const char *const payload_keys[] = {"contract", "source", "input", "clock", "uuid"};
+static const char *const payload_keys[] = {"contract", "source", "input", "clock", "uuid", "metadata"};
 
 bool jort_broker_decode_request(xpc_object_t message, JortJSFrame *frame) {
     memset(frame, 0, sizeof(*frame));
-    if (xpc_get_type(message) != XPC_TYPE_DICTIONARY || xpc_dictionary_get_count(message) != 13) return false;
+    if (xpc_get_type(message) != XPC_TYPE_DICTIONARY || xpc_dictionary_get_count(message) != 14) return false;
     __block bool shape_valid = true;
     xpc_dictionary_apply(message, ^bool(const char *key, xpc_object_t value) {
         size_t index = 0;
-        while (index < 13 && strcmp(key, keys[index]) != 0) index++;
-        if (index == 13) { shape_valid = false; return false; }
-        bool is_data = index >= 2 && index <= 9;
+        while (index < 14 && strcmp(key, keys[index]) != 0) index++;
+        if (index == 14) { shape_valid = false; return false; }
+        bool is_data = (index >= 2 && index <= 9) || index == 13;
         if (xpc_get_type(value) != (is_data ? XPC_TYPE_DATA : XPC_TYPE_UINT64)) shape_valid = false;
         return shape_valid;
     });
-    if (!shape_valid || xpc_dictionary_get_uint64(message, "version") != 1) return false;
+    if (!shape_valid || xpc_dictionary_get_uint64(message, "version") != JORT_JS_VERSION) return false;
     uint64_t operation = xpc_dictionary_get_uint64(message, "operation");
     uint64_t deadline = xpc_dictionary_get_uint64(message, "deadlineMilliseconds");
     uint64_t bytes = xpc_dictionary_get_uint64(message, "outputBytes");
@@ -33,16 +33,16 @@ bool jort_broker_decode_request(xpc_object_t message, JortJSFrame *frame) {
     const void *invocation = xpc_dictionary_get_data(message, "invocation", &invocation_length);
     const void *generation = xpc_dictionary_get_data(message, "generation", &generation_length);
     if (nonce_length != 16 || invocation_length != 16 || generation_length != 16) return false;
-    const size_t maxima[] = {16 * 1024, 256 * 1024, 1024 * 1024, 4096, 36};
-    const void *payloads[5];
-    size_t lengths[5], total = 16 + 16 + 8 + 6 * 8, metadata = 0;
-    for (size_t i = 0; i < 5; i++) {
+    const size_t maxima[] = {JORT_JS_CONTRACT_MAX, JORT_JS_SOURCE_MAX, JORT_JS_INPUT_MAX, JORT_JS_METADATA_MAX, 36, JORT_JS_METADATA_MAX};
+    const void *payloads[JORT_JS_FIELD_COUNT];
+    size_t lengths[JORT_JS_FIELD_COUNT], total = JORT_JS_HEADER_SIZE, metadata = 0;
+    for (size_t i = 0; i < JORT_JS_FIELD_COUNT; i++) {
         payloads[i] = xpc_dictionary_get_data(message, payload_keys[i], &lengths[i]);
-        if (lengths[i] > maxima[i] || lengths[i] > (1536 * 1024) - total) return false;
+        if (lengths[i] > maxima[i] || lengths[i] > JORT_JS_REQUEST_MAX - total) return false;
         total += lengths[i];
         if (i >= 3) metadata += lengths[i];
     }
-    if (metadata > 4096 || lengths[0] == 0 || lengths[1] == 0 || lengths[4] != 36) return false;
+    if (metadata > JORT_JS_METADATA_MAX || lengths[0] == 0 || lengths[1] == 0 || lengths[4] != 36) return false;
     frame->kind = 1;
     frame->tag = (uint32_t)operation;
     memcpy(frame->nonce, nonce, 16);
@@ -51,7 +51,7 @@ bool jort_broker_decode_request(xpc_object_t message, JortJSFrame *frame) {
     frame->deadline_ms = (uint32_t)deadline;
     frame->output_bytes = (uint32_t)bytes;
     frame->output_lines = (uint32_t)lines;
-    for (size_t i = 0; i < 5; i++) {
+    for (size_t i = 0; i < JORT_JS_FIELD_COUNT; i++) {
         frame->lengths[i] = (uint32_t)lengths[i];
         if (!lengths[i]) continue;
         frame->fields[i] = calloc(lengths[i] + 1, 1);
@@ -64,7 +64,7 @@ bool jort_broker_decode_request(xpc_object_t message, JortJSFrame *frame) {
 xpc_object_t jort_broker_create_reply(xpc_object_t request, const JortJSFrame *response) {
     xpc_object_t reply = xpc_dictionary_create_reply(request);
     if (!reply) return NULL;
-    xpc_dictionary_set_uint64(reply, "version", 1);
+    xpc_dictionary_set_uint64(reply, "version", JORT_JS_VERSION);
     xpc_dictionary_set_data(reply, "nonce", response->nonce, 16);
     xpc_dictionary_set_data(reply, "invocation", response->invocation, 16);
     xpc_dictionary_set_data(reply, "generation", response->generation, 16);

@@ -4,6 +4,138 @@ import JortDocument
 import JortToolContracts
 
 @MainActor final class ToolDocumentEffectTests: XCTestCase {
+  private func acceptedUtility(
+    command: String, content: String,
+    mode: ToolInputMode = .contextual
+  ) throws -> DocumentCoordinator {
+    let owner = try DocumentCoordinator()
+    let before = try owner.apply(
+      .init(
+        baseRevision: 0, origin: .native,
+        mutation: .replace(range: NSRange(location: 0, length: 0), text: command + content))
+    ).after
+    var manifest = ToolManifest(
+      id: "dev.test.utility", name: "Utility", command: command,
+      inputMode: mode)
+    manifest.schemaVersion = 3
+    manifest.entryContract = 2
+    manifest.executor = .javascript
+    let identity = InvocationGeneration(invocationID: UUID(), generation: UUID())
+    var lifecycle = InvocationLifecycleState(identity: identity, phase: .inputting)
+    _ = lifecycle.reduce(.accept)
+    let plan = try XCTUnwrap(
+      ToolDocumentEffects.accept(
+        try XCTUnwrap(lifecycle.pendingEffect),
+        package: .init(manifest: manifest, source: "export default () => ({report:'ok'});"),
+        token: NSRange(location: 0, length: command.utf16.count), space: true, in: before))
+    try owner.apply(plan.transaction)
+    return owner
+  }
+
+  @discardableResult private func perform(
+    _ action: InvocationLifecycleState.Action,
+    on owner: DocumentCoordinator
+  ) throws -> ToolDocumentPlan {
+    let invocation = try XCTUnwrap(owner.snapshot.invocations.first)
+    var lifecycle = invocation.lifecycle
+    _ = lifecycle.reduce(action)
+    let plan = try ToolDocumentEffects.prepare(
+      try XCTUnwrap(lifecycle.pendingEffect),
+      in: owner.snapshot, expected: invocation)
+    try owner.apply(plan.transaction)
+    return plan
+  }
+
+  private func submitUtility(_ owner: DocumentCoordinator) throws {
+    let invocation = try XCTUnwrap(owner.snapshot.invocations.first)
+    var lifecycle = invocation.lifecycle
+    _ = lifecycle.reduce(.submit)
+    _ = lifecycle.reduce(.validation(lifecycle.identity, error: nil))
+    let plan = try ToolDocumentEffects.prepare(
+      try XCTUnwrap(lifecycle.pendingEffect),
+      in: owner.snapshot, expected: invocation)
+    try owner.apply(plan.transaction)
+  }
+
+  func testReportDoneAndUndoPreserveExactUnicodeContentAndCompletedFeedback() throws {
+    let source = "  family 👨‍👩‍👧‍👦\r\nsecond line"
+    let owner = try acceptedUtility(command: "/count", content: source)
+    XCTAssertEqual(
+      owner.snapshot.invocations[0].capturedContent(in: owner.snapshot, prompt: nil),
+      String(source.prefix(while: { $0 != "\r\n" })))
+    try submitUtility(owner)
+    let identity = owner.snapshot.invocations[0].lifecycle.identity
+    try perform(.report(identity, message: "Five words"), on: owner)
+    let completed = owner.snapshot
+    XCTAssertEqual(completed.text, "/count " + source)
+    XCTAssertEqual(completed.invocations[0].phase, .completed)
+    XCTAssertEqual(completed.invocations[0].message, "Five words")
+    XCTAssertNil(completed.invocations[0].output)
+    let encoded = try JSONEncoder().encode(completed.invocations)
+    XCTAssertEqual(
+      try JSONDecoder().decode([ToolInvocation].self, from: encoded), completed.invocations)
+    try perform(.done, on: owner)
+    XCTAssertEqual(owner.snapshot.text, source)
+    XCTAssertTrue(owner.snapshot.invocations.isEmpty)
+    try owner.apply(
+      .init(
+        baseRevision: owner.snapshot.revision, origin: .undo,
+        undoPolicy: .replay, mutation: .restore(completed)))
+    XCTAssertEqual(owner.snapshot.invocations[0].message, "Five words")
+    var restored = owner.snapshot.invocations[0].lifecycle
+    XCTAssertTrue(restored.reduce(.restored(hasLiveJob: false)).isEmpty)
+  }
+
+  func testDailyLandmarkExistsOnlyAfterMergeAndTextMetadataUndoTogether() throws {
+    let owner = try acceptedUtility(command: "/daily", content: "", mode: .contained)
+    try submitUtility(owner)
+    let identity = owner.snapshot.invocations[0].lifecycle.identity
+    let text = "# Sat, Sept 12\n\n"
+    try perform(
+      .landmarkResult(identity, output: text, landmark: .init(line: 0, emoji: "📅")), on: owner)
+    let pending = owner.snapshot
+    XCTAssertTrue(pending.landmarks.isEmpty)
+    try perform(.merge, on: owner)
+    let merged = owner.snapshot
+    XCTAssertEqual(merged.text, text)
+    XCTAssertEqual(merged.landmarks.count, 1)
+    XCTAssertEqual(merged.landmarks[0].lineID, merged.lines[0].id)
+    XCTAssertEqual(merged.landmarks[0].emoji, "📅")
+    try owner.apply(
+      .init(
+        baseRevision: merged.revision, origin: .undo,
+        undoPolicy: .replay, mutation: .restore(pending)))
+    XCTAssertEqual(owner.snapshot.text, pending.text)
+    XCTAssertTrue(owner.snapshot.landmarks.isEmpty)
+    try owner.apply(
+      .init(
+        baseRevision: owner.snapshot.revision, origin: .redo,
+        undoPolicy: .replay, mutation: .restore(merged)))
+    XCTAssertEqual(owner.snapshot.landmarks, merged.landmarks)
+    XCTAssertEqual(owner.snapshot.text, text)
+  }
+
+  func testInterruptedActionRestoresUnknownAndCancelledExportStaysEditable() throws {
+    for cancelled in [false, true] {
+      let owner = try acceptedUtility(command: "/export", content: "exact source")
+      try submitUtility(owner)
+      let identity = owner.snapshot.invocations[0].lifecycle.identity
+      try perform(
+        .hostAction(identity, .init(kind: "file.export", content: "exact source")), on: owner)
+      XCTAssertEqual(owner.snapshot.invocations[0].actionStatus, .dispatched)
+      if cancelled {
+        try perform(.hostFailed(identity, message: "Save cancelled", cancelled: true), on: owner)
+        XCTAssertEqual(owner.snapshot.invocations[0].phase, .inputting)
+        XCTAssertEqual(owner.snapshot.invocations[0].actionStatus, .cancelled)
+      } else {
+        try perform(.restored(hasLiveJob: false), on: owner)
+        XCTAssertEqual(owner.snapshot.invocations[0].phase, .completed)
+        XCTAssertEqual(owner.snapshot.invocations[0].actionStatus, .unknown)
+        XCTAssertTrue(owner.snapshot.invocations[0].message?.contains("unknown") == true)
+      }
+      XCTAssertEqual(owner.snapshot.text, "/export exact source")
+    }
+  }
   func testMultipleReplacementsAreAtomicAndBounded() throws {
     let owner = try DocumentCoordinator()
     try owner.apply(

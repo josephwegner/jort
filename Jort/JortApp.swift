@@ -27,6 +27,7 @@ enum JortApp {
   var toolCatalogTask: Task<Void, Never>?
   var settingsWindow: SettingsWindowController?
   private var settingsRequested = false
+  private var toolHostActions: NativeToolHostActions?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
@@ -43,9 +44,6 @@ enum JortApp {
       validator: RuntimePackageValidator(),
       bundledDirectory: Bundle.main.resourceURL!.appendingPathComponent("Tools"),
       installedDirectory: directory.appendingPathComponent("Tools"))
-    Task { [weak self] in
-      self?.editor.toolPackages = (try? await packageRegistry.inspect().executable) ?? []
-    }
     let toolRoot = Bundle.main.resourceURL!.appendingPathComponent("Tools")
     settingsStore = PackageSettingsStore(
       registry: packageRegistry, preferences: SQLiteSettingsStore(directory: directory))
@@ -79,11 +77,27 @@ enum JortApp {
       credentials = UnavailableModelCredentialStore()
     }
     let connection = OpenRouterConnection(credentials: credentials, settings: settingsStore)
+    let reminders = try? NativeToolReminders(
+      receiptURL: directory.appendingPathComponent("tool-reminder-receipts.json"),
+      onActivation: { [weak self] receipt in self?.showReminder(receipt) })
+    let actions = NativeToolHostActions(
+      reminders: reminders,
+      beforeDispatch: { [weak self] identity in
+        guard let self else { return false }
+        return await self.commitToolAction(identity)
+      })
+    toolHostActions = actions
+    editor.cancelToolReminder = { identity in
+      guard let reminders else { return "Reminder storage is unavailable." }
+      let result = await reminders.cancel(identifier: NativeToolReminders.identifier(for: identity))
+      return result.report ?? result.error ?? "Cancellation could not be confirmed."
+    }
     editor.toolInvocationCoordinator = ToolInvocationCoordinator(
       executor: ToolExecutorDispatcher(
         modelAvailable: { await connection.available() },
         provider: { OpenRouterProvider(credentials: credentials) },
-        authenticationFailed: { await connection.markAuthenticationFailure() }))
+        authenticationFailed: { await connection.markAuthenticationFailure() }),
+      hostActions: actions)
     Task { [weak self] in
       let templates = await Task.detached {
         let templates: [ToolTemplate] =
@@ -173,6 +187,42 @@ enum JortApp {
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool
   {
     window.makeKeyAndOrderFront(nil)
+    return true
+  }
+
+  private func showReminder(_ receipt: NativeReminderReceipt) {
+    NSApp.activate(ignoringOtherApps: true)
+    window?.makeKeyAndOrderFront(nil)
+    let alert = NSAlert()
+    alert.messageText = "Reminder"
+    alert.informativeText = "Captured when you submitted /remind. Your note has not been changed."
+    let text = NSTextView(frame: NSRect(x: 0, y: 0, width: 420, height: 220))
+    text.string = receipt.content
+    text.isEditable = false
+    text.isSelectable = true
+    text.isRichText = false
+    text.font = .systemFont(ofSize: 13)
+    text.setAccessibilityLabel("Full reminder content")
+    let scroll = NSScrollView(frame: text.frame)
+    scroll.hasVerticalScroller = true
+    scroll.documentView = text
+    text.isVerticallyResizable = true
+    text.textContainer?.widthTracksTextView = true
+    alert.accessoryView = scroll
+    alert.addButton(withTitle: "Done")
+    if let window { alert.beginSheetModal(for: window) } else { alert.runModal() }
+  }
+
+  /// Record dispatch before touching another app, a file, or the notification OS.
+  /// Recheck after the disk await: Undo or cancellation may have removed the run.
+  private func commitToolAction(_ identity: InvocationGeneration) async -> Bool {
+    let saved = await withCheckedContinuation { continuation in
+      persistence.flush { continuation.resume(returning: $0) }
+    }
+    guard saved, !Task.isCancelled,
+      let invocation = editor.state.invocations.first(where: { $0.id == identity.invocationID }),
+      invocation.generation == identity.generation, invocation.actionStatus == .dispatched
+    else { return false }
     return true
   }
   func windowShouldClose(_ sender: NSWindow) -> Bool {

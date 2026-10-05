@@ -156,10 +156,9 @@ static void reply(JortJSClient *c, xpc_object_t message) {
     if (!valid || xpc_dictionary_get_uint64(message, "version") != JORT_JS_VERSION ||
         nn != 16 || ni != 16 || memcmp(nonce, c->nonce, 16) || memcmp(invocation, c->invocation, 16) ||
         ng != 16 || memcmp(generation, c->generation, 16) || status > JORT_JS_ENGINE_LIMIT ||
-        no > c->output_bytes || ne > JORT_JS_ERROR_MAX ||
+        no > JORT_JS_RESPONSE_MAX - JORT_JS_HEADER_SIZE || ne > JORT_JS_ERROR_MAX ||
         (status == JORT_JS_OK ? ne != 0 : no != 0 || ne == 0) ||
         !jort_js_utf8_valid(output, no) || !jort_js_utf8_valid(error, ne)) { fail(c, JORT_JS_PROTOCOL); return; }
-    if (!jort_js_lines_valid(output, no, c->output_lines)) { fail(c, JORT_JS_OUTPUT_LIMIT); return; }
     finish(c, (uint32_t)status, output, no, error, ne);
 }
 
@@ -173,9 +172,9 @@ void jort_js_client_send(JortJSClient *c, const JortJSClientRequest *r,
         memcpy(f.generation, r->generation, 16);
         memcpy(f.nonce, r->nonce, 16); memcpy(f.invocation, r->invocation, 16);
         f.deadline_ms = r->deadline_ms; f.output_bytes = r->output_bytes; f.output_lines = r->output_lines;
-        const uint8_t *fields[] = {r->contract, r->source, r->input, r->clock, r->uuid};
-        size_t lengths[] = {r->contract_length, r->source_length, r->input_length, r->clock_length, r->uuid_length};
-        for (unsigned i = 0; i < 5; i++) {
+        const uint8_t *fields[] = {r->contract, r->source, r->input, r->clock, r->uuid, r->metadata};
+        size_t lengths[] = {r->contract_length, r->source_length, r->input_length, r->clock_length, r->uuid_length, r->metadata_length};
+        for (unsigned i = 0; i < JORT_JS_FIELD_COUNT; i++) {
             if (lengths[i] > UINT32_MAX) valid = false;
             f.fields[i] = (uint8_t *)fields[i]; f.lengths[i] = (uint32_t)lengths[i];
         }
@@ -191,8 +190,8 @@ void jort_js_client_send(JortJSClient *c, const JortJSClientRequest *r,
         xpc_dictionary_set_uint64(message, "deadlineMilliseconds", f.deadline_ms);
         xpc_dictionary_set_uint64(message, "outputBytes", f.output_bytes);
         xpc_dictionary_set_uint64(message, "outputLines", f.output_lines);
-        const char *keys[] = {"contract", "source", "input", "clock", "uuid"};
-        for (unsigned i = 0; i < 5; i++) xpc_dictionary_set_data(message, keys[i], f.fields[i], f.lengths[i]);
+        const char *keys[] = {"contract", "source", "input", "clock", "uuid", "metadata"};
+        for (unsigned i = 0; i < JORT_JS_FIELD_COUNT; i++) xpc_dictionary_set_data(message, keys[i], f.fields[i], f.lengths[i]);
     }
     retain(c);
     // Captured frame contains borrowed pointers; only scalar identity/limits are

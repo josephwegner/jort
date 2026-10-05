@@ -18,4 +18,9 @@ char *jort_js_run_text(const char *source, const char *content, const char *cloc
                       size_t output_bytes, size_t output_lines, JortJSCancellation *token,
                       int *status);
 void jort_js_free(char *value);
+// Protocol 2 returns sanitized exclusive result JSON, never arbitrary script JSON.
+char *jort_js_run_captured(const char *source, const char *content, const char *clock,
+                         const char *uuid, const char *contract, const char *metadata,
+                         const char *entry, double timeout_seconds, size_t output_bytes,
+                         size_t output_lines, JortJSCancellation *token, int *status);
 #endif

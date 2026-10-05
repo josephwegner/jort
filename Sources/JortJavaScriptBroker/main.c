@@ -184,11 +184,7 @@ static void supervise(Run *run) {
     if (result != JORT_JS_IO_OK) { if (result == JORT_JS_IO_TIMEOUT) status = JORT_JS_TIMEOUT; goto finish; }
     if (run->response.kind != JORT_JS_RESPONSE || memcmp(run->response.nonce, run->request.nonce, 16)
         || memcmp(run->response.invocation, run->request.invocation, 16)
-        || memcmp(run->response.generation, run->request.generation, 16)
-        || run->response.lengths[0] > run->request.output_bytes) goto finish;
-    if (!jort_js_lines_valid(run->response.fields[0], run->response.lengths[0], run->request.output_lines)) {
-        status = JORT_JS_OUTPUT_LIMIT; goto finish;
-    }
+        || memcmp(run->response.generation, run->request.generation, 16)) goto finish;
     result = jort_js_expect_eof(output, execution_deadline);
     if (result != JORT_JS_IO_OK) { if (result == JORT_JS_IO_TIMEOUT) status = JORT_JS_TIMEOUT; goto finish; }
     complete = true;

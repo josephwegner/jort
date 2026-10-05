@@ -103,18 +103,16 @@ int main(int argc, char **argv) {
     memcpy(response.invocation, request.invocation, sizeof(response.invocation));
     int status = JORT_JS_IMPLEMENTATION;
     char *result = NULL;
-    if (request.tag == JORT_JS_VALIDATE) {
-        result = jort_js_validate((const char *)request.fields[1]);
-        status = result ? JORT_JS_IMPLEMENTATION : JORT_JS_OK;
-        if (!result) result = strdup("");
-    } else {
+    {
         JortJSCancellation *token = jort_js_cancellation_new();
         if (token) {
-            result = jort_js_run_text((const char *)request.fields[1],
+            result = jort_js_run_captured((const char *)request.fields[1],
                 request.fields[2] ? (const char *)request.fields[2] : "",
                 request.fields[3] ? (const char *)request.fields[3] : "",
                 request.fields[4] ? (const char *)request.fields[4] : "",
-                request.tag == JORT_JS_VALIDATE_INPUT ? "validate" : "default",
+                (const char *)request.fields[0],
+                request.fields[5] ? (const char *)request.fields[5] : "{}",
+                request.tag == JORT_JS_VALIDATE ? "compile" : request.tag == JORT_JS_VALIDATE_INPUT ? "validate" : "default",
                 milliseconds / 1000.0, request.output_bytes, request.output_lines, token, &status);
             jort_js_cancellation_free(token);
         }
@@ -123,7 +121,7 @@ int main(int argc, char **argv) {
     if (!result) { jort_js_frame_destroy(&request); return 71; }
     size_t length = strlen(result);
     if (!jort_js_utf8_valid((const uint8_t *)result, length) ||
-        (status == JORT_JS_OK ? length > request.output_bytes : length > JORT_JS_ERROR_MAX)) {
+        (status == JORT_JS_OK ? length > JORT_JS_RESPONSE_MAX - JORT_JS_HEADER_SIZE : length > JORT_JS_ERROR_MAX)) {
         jort_js_clear(result, length); jort_js_free(result);
         status = JORT_JS_PROTOCOL; result = strdup("JavaScript returned an invalid result.");
         if (!result) { jort_js_frame_destroy(&request); return 71; }

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.tts",
+  "version": 1,
+  "name": "Tabs to spaces",
+  "command": "/tts",
+  "description": "Replace each tab with 1–16 spaces; default 4, without tab-stop alignment",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "arguments": [
+    {
+      "name": "width",
+      "type": "integer",
+      "label": "Spaces per tab",
+      "defaultValue": 4,
+      "minimum": 1,
+      "maximum": 16
+    }
+  ]
+}

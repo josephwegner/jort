@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.copy-rich",
+  "version": 1,
+  "name": "Copy rich text",
+  "command": "/copy-rich",
+  "description": "Copy this Markdown block to the clipboard as rich and readable plain text",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "insert-at-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "hostActions": [
+    "clipboard.rich"
+  ]
+}

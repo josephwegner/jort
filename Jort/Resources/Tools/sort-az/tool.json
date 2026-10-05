@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.sort-az",
+  "version": 1,
+  "name": "Sort A–Z",
+  "command": "/sort-az",
+  "description": "Sort lines alphabetically in the captured locale, ignoring case; blanks last, ties stable",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "capturedData": [
+    "analysis"
+  ]
+}

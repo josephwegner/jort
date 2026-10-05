@@ -30,6 +30,9 @@ public struct ToolManifest: Codable, Equatable, Sendable {
   public var command: String
   public var description: String
   public var entryContract: Int = 1
+  public var arguments: [ToolArgumentDefinition]? = nil
+  public var capturedData: [String]? = nil
+  public var hostActions: [String]? = nil
   public var inputMode: ToolInputMode
   public var outputOperation: ToolOutputOperation
   public var maximumInputBytes: Int = 262_144
@@ -52,10 +55,23 @@ public struct ToolManifest: Codable, Equatable, Sendable {
   }
 
   public func validate() throws {
-    guard (1...2).contains(schemaVersion), entryContract == 1,
-      schemaVersion == 2 || executorType == .javascript,
+    guard (1...3).contains(schemaVersion), (1...2).contains(entryContract),
+      entryContract == 1 || schemaVersion == 3,
+      schemaVersion >= 2 || executorType == .javascript,
       schemaVersion == 1 || executor != nil
     else { throw ToolPackageError.unsupportedContract }
+    guard entryContract == 2 || (arguments == nil && capturedData == nil && hostActions == nil),
+      (arguments?.count ?? 0) <= 16,
+      Set(arguments?.map(\.name) ?? []).count == (arguments?.count ?? 0),
+      (capturedData?.count ?? 0) <= 3,
+      Set(capturedData ?? []).count == (capturedData?.count ?? 0),
+      capturedData?.allSatisfy({ ["localTime", "entropy", "analysis"].contains($0) }) ?? true,
+      (hostActions?.count ?? 0) <= 3,
+      Set(hostActions ?? []).count == (hostActions?.count ?? 0),
+      hostActions?.allSatisfy({ ToolHostAction.allowedKinds.contains($0) }) ?? true,
+      executorType != .model || (hostActions?.isEmpty ?? true)
+    else { throw ToolPackageError.invalidManifest }
+    for argument in arguments ?? [] { try argument.validate() }
     guard version > 0, id.utf8.count <= 256, (basedOnTemplateID?.utf8.count ?? 0) <= 256,
       id.range(of: #"^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$"#, options: .regularExpression) != nil,
       command.range(of: #"^/[a-z][a-z0-9-]{0,63}$"#, options: .regularExpression) != nil,

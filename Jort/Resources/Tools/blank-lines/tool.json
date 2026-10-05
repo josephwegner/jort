@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.blank-lines",
+  "version": 1,
+  "name": "Remove blank lines",
+  "command": "/blank-lines",
+  "description": "Remove whitespace-only lines; preserve retained text and terminal-newline presence",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.count-characters",
+  "version": 1,
+  "name": "Count characters",
+  "command": "/count-characters",
+  "description": "Report Unicode grapheme counts, including and excluding whitespace",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "insert-at-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "capturedData": [
+    "analysis"
+  ]
+}

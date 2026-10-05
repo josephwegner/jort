@@ -354,6 +354,19 @@ def generate(root, settings, app, production=False, team_id=None, metadata=None,
     for name, location in sorted(graph.items()):
         values, role = resolved[name], policy['roles'][name]
         require(values.get('CONFIGURATION') == 'Release', 'Release settings required')
+        if production and name in PEER_EDGES:
+            # Check the resolved compiler input, not merely the nominal setting.
+            # Reject missing, duplicate, unresolved, or enabled fallback defines.
+            definitions = values.get('GCC_PREPROCESSOR_DEFINITIONS', [])
+            if isinstance(definitions, str):
+                definitions = shlex.split(definitions)
+            require(isinstance(definitions, list) and all(isinstance(value, str) for value in definitions),
+                    'invalid peer compiler definitions')
+            fallback = [value for value in definitions
+                        if value.split('=', 1)[0] == 'JORT_JS_ALLOW_ADHOC']
+            require(str(values.get('JORT_JS_ALLOW_ADHOC')) == '0'
+                    and fallback == ['JORT_JS_ALLOW_ADHOC=0'],
+                    'production ad-hoc peer fallback forbidden: ' + name)
         identifier = values.get('PRODUCT_BUNDLE_IDENTIFIER')
         require(identifier and '$' not in identifier, 'unresolved bundle identifier')
         require(identifier == role.get('identifier', identifier), 'stable identity drift: ' + name)

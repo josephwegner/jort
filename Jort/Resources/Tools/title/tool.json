@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.title",
+  "version": 1,
+  "name": "Title case",
+  "command": "/title",
+  "description": "English title case per line with editable minor words; preserve acronyms, may change code/URLs",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

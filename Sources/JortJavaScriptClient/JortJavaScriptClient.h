@@ -15,6 +15,7 @@ typedef struct {
     const uint8_t *input; size_t input_length;
     const uint8_t *clock; size_t clock_length;
     const uint8_t *uuid; size_t uuid_length;
+    const uint8_t *metadata; size_t metadata_length;
 } JortJSClientRequest;
 typedef void (^JortJSClientCompletion)(uint32_t status, const uint8_t *output,
     size_t output_length, const uint8_t *error, size_t error_length)

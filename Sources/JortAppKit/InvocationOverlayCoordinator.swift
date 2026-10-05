@@ -1,5 +1,6 @@
 import AppKit
 import JortDocument
+import JortToolContracts
 
 /// Native overlay actions carry their originating invocation projection. The
 /// adapter validates generation before routing them to the headless lifecycle.
@@ -7,12 +8,17 @@ enum InvocationOverlayAction {
   case prompt(UUID, String), submit(UUID), cancel(UUID)
   case adjustBoundary(UUID, Bool, Int), moveBoundary(UUID, Bool, NSPoint)
   case focusBoundary(UUID, Bool)
+  case argument(UUID, String, String), returnToEditor(UUID)
 }
 
 @MainActor final class InvocationOverlayCoordinator {
   private weak var textView: JortTextView?
   private weak var parent: NSView?
   private var prompts: [UUID: ToolPromptView] = [:]
+  private var argumentForms: [UUID: ToolArgumentFormView] = [:]
+  private var knownArguments = Set<UUID>()
+  private var requestedArgumentFocus = Set<UUID>()
+  private var visibleArguments = Set<UUID>()
   private var handles: [String: ToolScopeHandle] = [:]
   private var knownPrompts = Set<UUID>()
   private var visiblePrompts = Set<UUID>()
@@ -24,16 +30,57 @@ enum InvocationOverlayAction {
     self.parent = parent
   }
   func begin() {
+    visibleArguments = []
     visiblePrompts = []
     visibleHandles = []
   }
   func reconcile(
     invocation: ToolInvocation, snapshot: DocumentSnapshot,
     token: NSRange, scope: NSRange, sourceEndsLine: Bool, tokenRect: NSRect?,
-    boundaries: [(Bool, Int, NSRect)], promptValue: String?, isCurrent: @escaping () -> Bool
+    boundaries: [(Bool, Int, NSRect)], promptValue: String?,
+    argumentDefinitions: [ToolArgumentDefinition] = [], argumentValues: [String: String] = [:],
+    description: String = "", isCurrent: @escaping () -> Bool
   ) -> (views: [NSView], connectors: [NSRect]) {
     guard let textView, let parent else { return ([], []) }
     var views: [NSView] = [], connectors: [NSRect] = []
+    if !argumentDefinitions.isEmpty, invocation.inputMode == "contextual",
+      invocation.phase == .inputting, let tokenRect
+    {
+      visibleArguments.insert(invocation.id)
+      knownArguments.insert(invocation.id)
+      let form =
+        argumentForms[invocation.id]
+        ?? ToolArgumentFormView(
+          definitions: argumentDefinitions, values: argumentValues, description: description)
+      argumentForms[invocation.id] = form
+      let viewport = textView.visibleRect
+      let width = min(360, max(160, viewport.width - 16))
+      let height = min(form.preferredHeight, max(100, viewport.height))
+      let x = max(viewport.minX + 8, min(tokenRect.maxX, viewport.maxX - width))
+      let below = tokenRect.maxY + 4
+      let y =
+        below + height <= viewport.maxY
+        ? below : max(viewport.minY, tokenRect.minY - height - 4)
+      form.frame = parent.convert(NSRect(x: x, y: y, width: width, height: height), from: textView)
+      form.changed = { [weak self] name, value in
+        guard isCurrent() else { return }
+        self?.send?(.argument(invocation.id, name, value))
+      }
+      form.submit = { [weak self] in
+        guard isCurrent() else { return }
+        self?.send?(.submit(invocation.id))
+      }
+      form.returnToEditor = { [weak self] in
+        guard isCurrent() else { return }
+        self?.send?(.returnToEditor(invocation.id))
+      }
+      form.nextKeyView = textView
+      if let last = form.subviews.last { last.nextKeyView = textView }
+      if form.superview !== parent { parent.addSubview(form, positioned: .above, relativeTo: nil) }
+      form.layoutSubtreeIfNeeded()
+      if requestedArgumentFocus.remove(invocation.id) != nil { form.focusFirst() }
+      views.append(form)
+    }
     if invocation.inputMode == "contextual", invocation.phase == .inputting {
       for (start, offset, position) in boundaries {
         let key = invocation.id.uuidString + (start ? ".start" : ".end")
@@ -127,6 +174,23 @@ enum InvocationOverlayAction {
   func finish(snapshot: DocumentSnapshot) -> [NSView] {
     var retainedFocus: [NSView] = []
     let valid = Set(snapshot.invocations.filter { $0.phase == .inputting }.map(\.id))
+    knownArguments.formIntersection(valid)
+    requestedArgumentFocus.formIntersection(valid)
+    for id in argumentForms.keys.filter({ !valid.contains($0) || !visibleArguments.contains($0) }) {
+      guard let form = argumentForms[id] else { continue }
+      let responder = parent?.window?.firstResponder as? NSView
+      let focused =
+        responder?.isDescendant(of: form) == true
+        || form.fields.contains(where: {
+          $0.field.currentEditor() === parent?.window?.firstResponder
+        })
+      if valid.contains(id), focused {
+        retainedFocus.append(form)
+      } else {
+        if focused { parent?.window?.makeFirstResponder(textView) }
+        argumentForms.removeValue(forKey: id)?.removeFromSuperview()
+      }
+    }
     knownPrompts.formIntersection(valid)
     for id in prompts.keys.filter({ !valid.contains($0) }) {
       guard let prompt = prompts.removeValue(forKey: id) else { continue }
@@ -159,6 +223,17 @@ enum InvocationOverlayAction {
   func remove(for invocationIDs: Set<UUID>) -> [NSView] {
     var removed: [NSView] = []
     for id in invocationIDs {
+      knownArguments.remove(id)
+      visibleArguments.remove(id)
+      if let form = argumentForms.removeValue(forKey: id) {
+        if form.fields.contains(where: {
+          $0.field.currentEditor() === parent?.window?.firstResponder
+        }) {
+          parent?.window?.makeFirstResponder(textView)
+        }
+        form.removeFromSuperview()
+        removed.append(form)
+      }
       knownPrompts.remove(id)
       visiblePrompts.remove(id)
       guard let prompt = prompts.removeValue(forKey: id) else { continue }
@@ -178,5 +253,13 @@ enum InvocationOverlayAction {
       removed.append(handle)
     }
     return removed
+  }
+
+  func requestArgumentFocus(for id: UUID) { requestedArgumentFocus.insert(id) }
+
+  func focusArguments(for id: UUID, name: String? = nil, backwards: Bool = false) -> Bool {
+    guard let form = argumentForms[id] else { return false }
+    if backwards { form.focusLastControl() } else { form.focusArgument(named: name) }
+    return true
   }
 }

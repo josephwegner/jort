@@ -289,10 +289,11 @@
     XCTAssertEqual(jort_js_header_encode(&response, header), JORT_JS_IO_OK);
 
     // Output length is a big-endian 32-bit integer at header offset 64.
-    header[64] = 0x00;
-    header[65] = 0x10;
-    header[66] = 0x00;
-    header[67] = 0x01;
+    uint32_t oversized = JORT_JS_RESPONSE_MAX - JORT_JS_HEADER_SIZE + 1;
+    header[64] = (uint8_t)(oversized >> 24);
+    header[65] = (uint8_t)(oversized >> 16);
+    header[66] = (uint8_t)(oversized >> 8);
+    header[67] = (uint8_t)oversized;
     JortJSFrame decoded = {0};
     XCTAssertEqual(jort_js_header_decode(header, &decoded), JORT_JS_IO_INVALID);
 }

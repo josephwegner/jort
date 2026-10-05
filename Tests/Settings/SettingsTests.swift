@@ -242,3 +242,170 @@ final class SettingsTests: StoreTestCase {
     }
   }
 }
+
+private struct SettingsPackageValidator: ToolPackageValidator {
+  func validatePackage(_ package: ToolPackage) async throws { try package.validate() }
+}
+
+extension SettingsTests {
+  private func packageRegistry(at root: URL) -> ToolPackageRegistry {
+    ToolPackageRegistry(
+      validator: SettingsPackageValidator(),
+      bundledDirectory: root.appendingPathComponent("bundled"),
+      installedDirectory: root.appendingPathComponent("installed"))
+  }
+
+  private func seedCompatibilityPackages(at root: URL) throws {
+    for name in ["date", "uuid", "calc", "sort", "dedupe", "time", "ask", "rewrite"] {
+      let directory = root.appendingPathComponent("bundled/" + name)
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      let manifest = ToolManifest(id: "dev.jort." + name, name: name, command: "/" + name)
+      try JSONEncoder().encode(manifest).write(to: directory.appendingPathComponent("tool.json"))
+      try Data("export default function(input) { return {output: input.content}; }".utf8)
+        .write(to: directory.appendingPathComponent("tool.js"))
+    }
+  }
+
+  func testCompatibilityDefaultsAreDisabledOnFreshInstallAndPersistExplicitChoice() async throws {
+    let root = try root()
+    try seedCompatibilityPackages(at: root)
+    let registry = packageRegistry(at: root)
+    let fresh = try await registry.inspect()
+    XCTAssertEqual(Set(fresh.executable.map(\.manifest.command)), ["/time", "/ask", "/rewrite"])
+    _ = try await registry.setEnabled(id: "dev.jort.date", enabled: true)
+    let reopened = try await packageRegistry(at: root).inspect()
+    XCTAssertTrue(try XCTUnwrap(reopened.packages.first { $0.id == "dev.jort.date" }).isEnabled)
+    XCTAssertFalse(try XCTUnwrap(reopened.packages.first { $0.id == "dev.jort.calc" }).isEnabled)
+  }
+
+  func testCompatibilityMigrationPreservesOldIndexEffectiveEnablement() async throws {
+    for version in [1, 2] {
+      let root = try root()
+      try seedCompatibilityPackages(at: root)
+      let installed = root.appendingPathComponent("installed")
+      try FileManager.default.createDirectory(at: installed, withIntermediateDirectories: true)
+      let old: [String: Any] = [
+        "schemaVersion": version, "installed": [:],
+        "disabled": ["dev.jort.uuid"],
+      ]
+      try JSONSerialization.data(withJSONObject: old).write(
+        to: installed.appendingPathComponent("index.json"))
+      let migrated = try await packageRegistry(at: root).inspect()
+      XCTAssertEqual(migrated.executable.count, 7)
+      XCTAssertFalse(try XCTUnwrap(migrated.packages.first { $0.id == "dev.jort.uuid" }).isEnabled)
+      let reopened = try await packageRegistry(at: root).inspect()
+      XCTAssertEqual(reopened.packages, migrated.packages)
+      let persisted = try XCTUnwrap(
+        JSONSerialization.jsonObject(
+          with:
+            Data(contentsOf: installed.appendingPathComponent("index.json"))) as? [String: Any])
+      XCTAssertNotNil(persisted["compatibilityDefaults"])
+    }
+  }
+
+  func testLegacySettingsWithoutPackageIndexPreserveEffectiveEnablement() async throws {
+    let root = try root()
+    try seedCompatibilityPackages(at: root)
+    var date = template
+    date.id = ToolID("dev.jort.date")
+    let preferences = ownStore(SQLiteSettingsStore(directory: root, templates: [date]))
+    _ = try await preferences.load()
+    _ = try await preferences.setTemplateEnabled(id: date.id, enabled: false)
+    let registry = packageRegistry(at: root)
+    let early = try await registry.inspect()
+    XCTAssertFalse(try XCTUnwrap(early.packages.first { $0.id == date.id.rawValue }).isEnabled)
+    XCTAssertTrue(try XCTUnwrap(early.packages.first { $0.id == "dev.jort.uuid" }).isEnabled)
+    let store = PackageSettingsStore(registry: registry, preferences: preferences)
+    let migrated = try await store.load()
+    XCTAssertEqual(migrated.templateOverrides[date.id], false)
+    XCTAssertEqual(migrated.templateOverrides[ToolID("dev.jort.uuid")], true)
+    try await store.close()
+    let reopened = try await packageRegistry(at: root).inspect()
+    XCTAssertFalse(try XCTUnwrap(reopened.packages.first { $0.id == date.id.rawValue }).isEnabled)
+    XCTAssertTrue(try XCTUnwrap(reopened.packages.first { $0.id == "dev.jort.uuid" }).isEnabled)
+  }
+
+  func testCustomCompatibilityOverrideWinsAndRestoreKeepsExplicitChoice() async throws {
+    let root = try root()
+    try seedCompatibilityPackages(at: root)
+    let registry = packageRegistry(at: root)
+    let before = try ToolPackage.load(from: root.appendingPathComponent("bundled/date"))
+    var override = before
+    override.manifest.version = 2
+    override.source = "export default function() { return {output: 'custom'}; }"
+    let installed = try await registry.save(override)
+    XCTAssertTrue(try XCTUnwrap(installed.packages.first { $0.id == "dev.jort.date" }).isEnabled)
+    _ = try await registry.setEnabled(id: "dev.jort.date", enabled: false)
+    let restored = try await registry.restore(id: "dev.jort.date")
+    let date = try XCTUnwrap(restored.packages.first { $0.id == "dev.jort.date" })
+    XCTAssertTrue(date.isBundled)
+    XCTAssertFalse(date.isEnabled)
+    XCTAssertEqual(date.package, before)
+    XCTAssertEqual(try ToolPackage.load(from: root.appendingPathComponent("bundled/date")), before)
+  }
+
+  func testSchemaThreeSourceEditDuplicateAndRestorePreserveContractMetadata() async throws {
+    let root = try root()
+    try seedCompatibilityPackages(at: root)
+    var manifest = ToolManifest(
+      id: "dev.jort.utility", version: 4, name: "Utility", command: "/utility")
+    manifest.schemaVersion = 3
+    manifest.entryContract = 2
+    manifest.executor = .javascript
+    manifest.arguments = [
+      .init(
+        name: "count", type: .integer, label: "Count",
+        description: "How many", defaultValue: .integer(2), minimum: 1, maximum: 8),
+      .init(name: "separator", type: .string, label: "Separator", defaultValue: .string(" ")),
+      .init(
+        name: "style", type: .enum, label: "Style", required: true, choices: ["short", "long"]),
+    ]
+    manifest.capturedData = ["localTime", "entropy", "analysis"]
+    manifest.hostActions = ["clipboard.rich", "file.export", "notification.schedule"]
+    manifest.compatibleVersions = [3]
+    let directory = root.appendingPathComponent("bundled/utility")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try JSONEncoder().encode(manifest).write(to: directory.appendingPathComponent("tool.json"))
+    let source = "export default function(input) { return {output: input.content}; }"
+    try Data(source.utf8).write(to: directory.appendingPathComponent("tool.js"))
+    let registry = packageRegistry(at: root)
+    let preferences = ownStore(SQLiteSettingsStore(directory: root))
+    let store = PackageSettingsStore(registry: registry, preferences: preferences)
+    _ = try await store.load()
+    var template = ToolTemplate(
+      id: ToolID(manifest.id), version: manifest.version,
+      displayName: manifest.name, commandName: "utility", source: source)
+    template.manifest = manifest
+    var duplicate = ToolCatalogBuilder().duplicate(template, avoiding: [])
+    XCTAssertEqual(duplicate.definition.manifest, manifest)
+    XCTAssertFalse(duplicate.definition.isEnabled)
+    duplicate.definition.source = source + "\n// edited"
+    var saved = try await store.save(duplicate.definition, expectedRevision: nil)
+    var custom = try XCTUnwrap(saved.customTools.first { $0.id == duplicate.definition.id })
+    XCTAssertEqual(custom.manifest?.schemaVersion, 3)
+    XCTAssertEqual(custom.manifest?.entryContract, 2)
+    XCTAssertEqual(custom.manifest?.version, 5)
+    XCTAssertEqual(custom.manifest?.arguments, manifest.arguments)
+    XCTAssertEqual(custom.manifest?.capturedData, manifest.capturedData)
+    XCTAssertEqual(custom.manifest?.hostActions, manifest.hostActions)
+    XCTAssertNil(custom.manifest?.compatibleVersions)
+    XCTAssertEqual(custom.manifest?.id, custom.id.rawValue)
+    XCTAssertEqual(custom.manifest?.command, "/utility-copy")
+    custom.source += "\n// second edit"
+    saved = try await store.save(custom, expectedRevision: custom.revision)
+    custom = try XCTUnwrap(saved.customTools.first { $0.id == custom.id })
+    XCTAssertEqual(custom.manifest?.version, 6)
+    XCTAssertEqual(custom.manifest?.arguments, manifest.arguments)
+    XCTAssertEqual(custom.manifest?.capturedData, manifest.capturedData)
+    XCTAssertEqual(custom.manifest?.hostActions, manifest.hostActions)
+    var override = duplicate.definition
+    override.id = template.id
+    override.commandName = template.commandName
+    override.isEnabled = true
+    _ = try await store.save(override, expectedRevision: nil)
+    let restored = try await registry.restore(id: template.id.rawValue)
+    XCTAssertEqual(
+      restored.packages.first { $0.id == template.id.rawValue }?.package.manifest, manifest)
+    try await store.close()
+  }
+}

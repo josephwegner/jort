@@ -32,7 +32,8 @@ final class WorkerProcessJavaScriptTransport: JavaScriptBrokerTransport, @unchec
     let key = Key(invocation: request.invocationID, generation: request.generation)
     let nonce = UUID()
     let fields = [
-      request.contract, request.source, request.input, request.clock, request.uuid, Data(),
+      request.contract, request.source, request.input, request.clock, request.uuid,
+      request.metadata,
     ]
     let frame = Self.requestFrame(
       operation: operation, nonce: nonce, invocation: invocation, generation: generation,
@@ -50,7 +51,7 @@ final class WorkerProcessJavaScriptTransport: JavaScriptBrokerTransport, @unchec
 
     guard
       let ready = try? Self.readExactly(24, from: output.fileHandleForReading),
-      ready.count == 24, ready.prefix(8) == Data([74, 74, 82, 49, 0, 1, 0, 1]),
+      ready.count == 24, ready.prefix(8) == Data([74, 74, 82, 49, 0, 2, 0, 1]),
       Self.uint32(ready, 8) == 0
     else {
       process.terminate()
@@ -93,7 +94,7 @@ final class WorkerProcessJavaScriptTransport: JavaScriptBrokerTransport, @unchec
   ) -> Data {
     var header = Data(repeating: 0, count: 128)
     header.replaceSubrange(0..<4, with: Data("JJS1".utf8))
-    header[5] = 1
+    header[5] = 2
     header[7] = 1
     put(operation.protocolTag, in: &header, at: 8)
     let nonceBytes = data(nonce), invocationBytes = data(invocation),
@@ -116,13 +117,13 @@ final class WorkerProcessJavaScriptTransport: JavaScriptBrokerTransport, @unchec
   private static func parse(
     _ frame: Data, nonce: UUID, invocation: UUID, generation: UUID, maximumOutputBytes: Int
   ) -> ToolExecutionResult {
-    guard frame.count >= 128, frame.prefix(4) == Data("JJS1".utf8), frame[5] == 1, frame[7] == 2,
+    guard frame.count >= 128, frame.prefix(4) == Data("JJS1".utf8), frame[5] == 2, frame[7] == 2,
       frame.subdata(in: 12..<28) == data(nonce), frame.subdata(in: 28..<44) == data(invocation),
       frame.subdata(in: 44..<52) + frame.subdata(in: 88..<96) == data(generation)
     else { return failure(.protocolError) }
     let status = uint32(frame, 8)
     let lengths = (0..<6).map { Int(uint32(frame, 64 + 4 * $0)) }
-    guard lengths.dropFirst(2).allSatisfy({ $0 == 0 }), lengths[0] <= maximumOutputBytes,
+    guard lengths.dropFirst(2).allSatisfy({ $0 == 0 }), lengths[0] <= 1_179_520,
       lengths[1] <= 512, 128 + lengths.reduce(0, +) == frame.count
     else { return failure(.protocolError) }
     let payload = frame.dropFirst(128)
@@ -136,7 +137,12 @@ final class WorkerProcessJavaScriptTransport: JavaScriptBrokerTransport, @unchec
       !output.contains(0), !error.contains(0), status <= 14,
       status == 0 ? error.isEmpty : output.isEmpty && !error.isEmpty
     else { return failure(.protocolError) }
-    if status == 0 { return .init(output: outputText) }
+    if status == 0 {
+      guard let result = try? JSONDecoder().decode(ToolExecutionResult.self, from: output) else {
+        return failure(.protocolError)
+      }
+      return result
+    }
     return .init(failure: .init(failureCode(status), message: errorText))
   }
 
@@ -204,8 +210,14 @@ extension ToolRuntime {
     validationOnly: Bool = false,
     identity: InvocationGeneration = .init(invocationID: UUID(), generation: UUID())
   ) async -> ToolExecutionResult {
-    await execute(
-      package, input: input, timeout: timeout, validationOnly: validationOnly,
+    let prepared: ToolExecutionInput
+    do {
+      prepared = try ToolExecutorDispatcher.prepareInput(input, for: package.manifest)
+    } catch let failure as ToolFailure { return .init(failure: failure) } catch {
+      return .init(failure: .init(.invalidInput, message: "Invalid captured input."))
+    }
+    return await execute(
+      package, input: prepared, timeout: timeout, validationOnly: validationOnly,
       client: .testWorker, identity: identity)
   }
 }

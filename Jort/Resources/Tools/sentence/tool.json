@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.sentence",
+  "version": 1,
+  "name": "Sentence case",
+  "command": "/sentence",
+  "description": "Heuristically capitalize sentence starts; preserve other casing, may change code/URLs",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

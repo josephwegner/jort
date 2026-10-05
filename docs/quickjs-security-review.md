@@ -53,7 +53,16 @@ update was approved. A failed or incomplete item blocks release qualification.
   ArrayBuffer/Atomics use-after-free](https://github.com/bellard/quickjs/issues/508).
   Jort installs an interrupt handler and an independent OS CPU limit; it accepts
   source text, not externally supplied bytecode; and its reduced intrinsic set
-  does not install Atomics/TypedArrays. These are reachability assessments, not
+  removes Atomics and SharedArrayBuffer globals after typed-array setup.
+  Contract 2 enables RegExp and typed arrays for pure
+  text processing (including the URL scanner's bounded character mask).
+  RegExp uses the installed interrupt callback; typed-array allocations share
+  the 16 MiB engine heap. A pathological backtracking expression and an
+  oversized Uint8Array allocation are exercised through the real worker.
+  Typed arrays are now reachable, so the earlier typed-array exclusion is no
+  longer a mitigation for the upstream report above. No new native binding,
+  entitlement, Date, Math.random, or dynamic-evaluation capability is added.
+  These are reachability assessments, not
   proof that vendored QuickJS is free of native defects. The worker sandbox and
   disposable process remain mandatory.
 - Local patch decision: no new QuickJS source patch in this review. The two

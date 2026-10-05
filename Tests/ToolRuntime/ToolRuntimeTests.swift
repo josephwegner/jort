@@ -25,6 +25,154 @@ private actor RecordingBroker: JavaScriptBrokerTransport {
 }
 
 final class ToolRuntimeTests: XCTestCase {
+  private func v2Package(_ body: String) -> ToolPackage {
+    var value = package(source: "export default async function(input) { " + body + " }")
+    value.manifest.schemaVersion = 3
+    value.manifest.entryContract = 2
+    value.manifest.executor = .javascript
+    return value
+  }
+
+  func testProtocolTwoCapturesAreDeeplyFrozenAndArgumentsAreJSONPrimitives() async {
+    var value = v2Package(
+      """
+      const values = [input, input.arguments, input.localTime, input.entropy,
+        input.analysis, input.analysis.alphabeticalOrder, input.analysis.alphabeticalRanks];
+      if (!values.every(Object.isFrozen)) return {error: 'Mutable capture'};
+      return {report: typeof input.arguments.count + ':' + typeof input.arguments.separator};
+      """)
+    value.manifest.arguments = [
+      .init(name: "count", type: .integer, label: "Count", defaultValue: .integer(2)),
+      .init(name: "separator", type: .string, label: "Separator", defaultValue: .string(" · ")),
+    ]
+    value.manifest.capturedData = ["localTime", "entropy", "analysis"]
+    value.manifest.inputMode = .contextual
+    let result = await ToolRuntime.testExecute(value, input: .init(content: "Apple\napple"))
+    XCTAssertEqual(result.report, "number:string", result.error ?? "")
+    XCTAssertNil(result.output)
+  }
+
+  func testProtocolTwoRejectsMixedUnknownGetterAndUndeclaredActionResults() async {
+    for body in [
+      "return {output:'text', report:'count'};",
+      "return {report:'count', extra:true};",
+      "return {get output() { while(true) {} }};",
+      "return {action:{kind:'file.export',content:input.content}};",
+      "return {output:'text',landmark:{line:0,emoji:'📅',extra:1}};",
+    ] {
+      let result = await ToolRuntime.testExecute(v2Package(body), input: .init(content: "exact"))
+      XCTAssertEqual(result.failure?.code, .protocolError, body)
+      XCTAssertNil(result.output)
+      XCTAssertNil(result.action)
+    }
+    let legacy = await ToolRuntime.testExecute(
+      package(source: "export default async function() { return {report:'count'}; }"),
+      input: .init(content: ""))
+    XCTAssertEqual(legacy.failure?.code, .protocolError)
+  }
+
+  func testProtocolTwoActionIsInertExactContentAndAllowlisted() async {
+    var value = v2Package(
+      "return {action:{kind:'file.export',content:input.content,filename:'note.md'}};")
+    value.manifest.hostActions = ["file.export"]
+    let result = await ToolRuntime.testExecute(value, input: .init(content: "# exact\n"))
+    XCTAssertEqual(
+      result.action, .init(kind: "file.export", content: "# exact\n", filename: "note.md"))
+    for body in [
+      "return {action:{kind:'file.export',content:'different'}};",
+      "return {action:{kind:'file.export',content:input.content,filename:'../note.md'}};",
+      "return {action:{kind:'file.export',content:input.content,filename:'folder\\\\note.md'}};",
+      "return {action:{kind:'file.export',content:input.content,extra:'value'}};",
+    ] {
+      value.source = "export default async function(input) { " + body + " }"
+      let rejected = await ToolRuntime.testExecute(value, input: .init(content: "exact"))
+      XCTAssertEqual(rejected.failure?.code, .protocolError, body)
+    }
+  }
+
+  func testProtocolTwoCannotChangeValidatorIntrinsicsOrUseToJSONToChangeVariant() async {
+    let value = v2Package(
+      """
+      let denied = 0;
+      for (const object of [Object.prototype, String.prototype, Array.prototype, RegExp.prototype]) {
+        try { object.untrusted = true; } catch { denied++; }
+      }
+      if (denied !== 4) return {error:'Mutable validator intrinsics'};
+      return {output:'exact', toJSON() { return {action:{kind:'file.export',content:'stolen'}}; }};
+      """)
+    let result = await ToolRuntime.testExecute(value, input: .init(content: "exact"))
+    XCTAssertEqual(result.failure?.code, .protocolError)
+  }
+
+  func testProtocolTwoIgnoresInheritedOptionalFieldsWithoutCallingGetters() async {
+    let text = await ToolRuntime.testExecute(
+      v2Package(
+        """
+        return Object.assign(Object.create({
+          get landmark() { throw Error('Inherited getter must not run'); }
+        }), {output:'exact'});
+        """), input: .init(content: "exact"))
+    XCTAssertEqual(text.output, "exact", text.error ?? "")
+    XCTAssertNil(text.landmark)
+
+    var value = v2Package(
+      """
+      const action = Object.assign(Object.create({
+        get filename() { throw Error('Inherited getter must not run'); },
+        get minutes() { throw Error('Inherited getter must not run'); }
+      }), {kind:'file.export',content:input.content});
+      return {action};
+      """)
+    value.manifest.hostActions = ["file.export"]
+    let action = await ToolRuntime.testExecute(value, input: .init(content: "exact"))
+    XCTAssertEqual(action.action, .init(kind: "file.export", content: "exact"), action.error ?? "")
+  }
+
+  func testProtocolTwoInheritedFieldsCannotSupplyRequiredAuthority() async {
+    for body in [
+      "return Object.create({output:'inherited'});",
+      "return {action:Object.assign(Object.create({kind:'file.export'}),{content:input.content})};",
+      "return {action:Object.assign(Object.create({content:input.content}),{kind:'file.export'})};",
+      "return {action:Object.assign(Object.create({minutes:1}),{kind:'notification.schedule',content:input.content})};",
+      "return {output:'text',landmark:Object.assign(Object.create({line:0}),{emoji:'📅'})};",
+      "return {output:'text',landmark:Object.assign(Object.create({emoji:'📅'}),{line:0})};",
+    ] {
+      var value = v2Package(body)
+      value.manifest.hostActions = ["file.export", "notification.schedule"]
+      let result = await ToolRuntime.testExecute(value, input: .init(content: "exact"))
+      XCTAssertEqual(result.failure?.code, .protocolError, body)
+      XCTAssertNil(result.output)
+      XCTAssertNil(result.action)
+    }
+  }
+
+  func testProtocolTwoRegExpUsesInterruptAndTypedArraysUseHeapLimit() async {
+    let regexp = await ToolRuntime.testExecute(
+      v2Package(
+        """
+        return {output: String(/^(a+)+$/.test('a'.repeat(30000) + '!'))};
+        """), input: .init(content: ""), timeout: 0.05)
+    XCTAssertEqual(regexp.failure?.code, .timeout)
+    let allocation = await ToolRuntime.testExecute(
+      v2Package(
+        """
+        const bytes = new Uint8Array(20000000); return {output: String(bytes.length)};
+        """), input: .init(content: ""))
+    XCTAssertNotNil(allocation.failure)
+    XCTAssertNil(allocation.output)
+  }
+
+  func testProtocolTwoReportsRespectTextLimitsAndJSONExpansionHasIndependentCap() async {
+    var value = v2Package("return {report:'🌲a'};")
+    value.manifest.maximumOutputBytes = 4
+    let report = await ToolRuntime.testExecute(value, input: .init(content: ""))
+    XCTAssertEqual(report.failure?.code, .outputLimit)
+    value.manifest.maximumOutputBytes = 1_048_576
+    value.source = "export default async function() { return {output:'\\t'.repeat(600000)}; }"
+    let expansion = await ToolRuntime.testExecute(value, input: .init(content: ""))
+    XCTAssertEqual(expansion.failure?.code, .outputLimit)
+  }
+
   private func package(
     source: String = "export default async function(input) { return {output: input.content}; }"
   ) -> ToolPackage {
@@ -203,9 +351,9 @@ final class ToolRuntimeTests: XCTestCase {
     let ambient = await ToolRuntime.testExecute(
       package(
         source:
-          "export default async function() { return {output: [typeof fetch, typeof process, typeof require, typeof std, typeof os, typeof Date, typeof Math.random].join(',')}; }"
+          "export default async function() { return {output: [typeof fetch, typeof process, typeof require, typeof std, typeof os, typeof Date, typeof Math.random, typeof Atomics, typeof SharedArrayBuffer].join(',')}; }"
       ), input: .init(content: ""))
-    XCTAssertEqual(ambient.output, Array(repeating: "undefined", count: 7).joined(separator: ","))
+    XCTAssertEqual(ambient.output, Array(repeating: "undefined", count: 9).joined(separator: ","))
 
     let imported = await ToolRuntime.testExecute(
       package(source: "export default async function() { return await import('std'); }"),

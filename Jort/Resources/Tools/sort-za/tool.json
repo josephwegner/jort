@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.sort-za",
+  "version": 1,
+  "name": "Sort Z–A",
+  "command": "/sort-za",
+  "description": "Sort lines alphabetically descending; blanks last, duplicates and tied order retained",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "capturedData": [
+    "analysis"
+  ]
+}

@@ -52,6 +52,15 @@ public actor ToolPackageRegistry {
     var schemaVersion = 2
     var installed: [String: InstalledGenerations] = [:]
     var disabled: Set<String> = []
+    // Nil identifies the old catalog, whose bundled entries defaulted to enabled.
+    var compatibilityDefaults: [String: Bool]? = nil
+  }
+  private static let compatibilityIDs: Set<String> = [
+    "dev.jort.date", "dev.jort.uuid", "dev.jort.calc", "dev.jort.sort", "dev.jort.dedupe",
+  ]
+
+  private func bundledEnabled(_ id: String, in index: Index) -> Bool {
+    !index.disabled.contains(id) && (index.compatibilityDefaults?[id] ?? true)
   }
   private struct ResolutionCandidate {
     var inspection: ToolPackageCandidate
@@ -67,6 +76,7 @@ public actor ToolPackageRegistry {
   private var recoveryHeld = false
   private var trusted = false
   private var snapshot = ToolRegistrySnapshot()
+  private var previousTemplateEnablement: [String: Bool]? = nil
 
   public init(
     validator: any ToolPackageValidator = UnavailableToolValidator(),
@@ -77,6 +87,9 @@ public actor ToolPackageRegistry {
     self.inject = inject
     self.bundledDirectory = bundledDirectory
     self.installedDirectory = installedDirectory
+    self.previousTemplateEnablement = SQLiteSettingsStore.existingTemplateEnablement(
+      at: installedDirectory.deletingLastPathComponent()
+        .appendingPathComponent("Settings/Settings.sqlite"))
   }
 
   private var operationActive = false
@@ -96,9 +109,12 @@ public actor ToolPackageRegistry {
     defer { release() }
     return try await inspectLocked()
   }
-  public func reload() async throws {
+  public func reload(previousTemplateEnablement: [String: Bool]? = nil) async throws {
     await acquire()
     defer { release() }
+    if let previousTemplateEnablement {
+      self.previousTemplateEnablement = previousTemplateEnablement
+    }
     try await reloadLocked()
   }
   public func save(
@@ -134,8 +150,18 @@ public actor ToolPackageRegistry {
     let names = try storage.children(parent)
     recoveryHeld = names.contains { $0.hasPrefix("Recovery-") }
     guard names.contains("index.json") else {
-      index = Index()
+      index = Index(
+        compatibilityDefaults: Dictionary(
+          uniqueKeysWithValues: Self.compatibilityIDs.map { id in
+            (id, previousTemplateEnablement.map { $0[id] ?? true } ?? false)
+          }))
       snapshot = await resolve(index)
+      // Record the catalog baseline even if the user never edits Settings.
+      if snapshot.candidates.contains(where: {
+        $0.packageID.map(Self.compatibilityIDs.contains) ?? false
+      }) {
+        try await commit(index)
+      }
       loaded = true
       if recoveryHeld { addRecoveryDiagnostic() }
       return
@@ -143,13 +169,16 @@ public actor ToolPackageRegistry {
     let data = try storage.read("index.json", parent: parent)
     struct Header: Decodable { let schemaVersion: Int }
     let version = try JSONDecoder().decode(Header.self, from: data).schemaVersion
-    let candidate: Index
+    var candidate: Index
     if version == 1 {
       let legacy = try JSONDecoder().decode(LegacyIndex.self, from: data)
       candidate = Index(
         installed: legacy.installed.mapValues {
           InstalledGenerations(current: $0)
-        }, disabled: legacy.disabled)
+        }, disabled: legacy.disabled,
+        compatibilityDefaults: Dictionary(
+          uniqueKeysWithValues:
+            Self.compatibilityIDs.map { ($0, true) }))
       try validate(candidate)
       for (id, generations) in candidate.installed {
         let package = try ToolPackage.load(
@@ -172,6 +201,12 @@ public actor ToolPackageRegistry {
       guard version == 2 else { throw ToolPackageError.unsupportedContract }
       candidate = try JSONDecoder().decode(Index.self, from: data)
       try validate(candidate)
+      if candidate.compatibilityDefaults == nil {
+        candidate.compatibilityDefaults = Dictionary(
+          uniqueKeysWithValues:
+            Self.compatibilityIDs.map { ($0, true) })
+        try await commit(candidate)
+      }
       index = candidate
       snapshot = await resolve(candidate)
       trusted = true
@@ -188,6 +223,7 @@ public actor ToolPackageRegistry {
 
   private func validate(_ value: Index) throws {
     guard value.schemaVersion == 2, value.installed.count <= 1000,
+      value.compatibilityDefaults.map({ Set($0.keys).isSubset(of: Self.compatibilityIDs) }) ?? true,
       value.disabled.count <= 2000,
       value.disabled.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 256 })
     else {
@@ -275,7 +311,10 @@ public actor ToolPackageRegistry {
     let history = old.map { (validCurrent ? [$0.current] : []) + $0.previous } ?? []
     next.installed[id] = InstalledGenerations(
       current: generation, previous: Array(history.prefix(5)))
-    if let enabled { if enabled { next.disabled.remove(id) } else { next.disabled.insert(id) } }
+    if let enabled {
+      if enabled { next.disabled.remove(id) } else { next.disabled.insert(id) }
+      if Self.compatibilityIDs.contains(id) { next.compatibilityDefaults?[id] = enabled }
+    }
     try await commit(next)
     return snapshot
   }
@@ -287,6 +326,7 @@ public actor ToolPackageRegistry {
     }
     var next = index
     if enabled { next.disabled.remove(id) } else { next.disabled.insert(id) }
+    if Self.compatibilityIDs.contains(id) { next.compatibilityDefaults?[id] = enabled }
     try await commit(next)
     return snapshot
   }
@@ -296,7 +336,7 @@ public actor ToolPackageRegistry {
     guard index.installed[id] != nil else { throw ToolPackageError.unavailable }
     var next = index
     next.installed.removeValue(forKey: id)
-    next.disabled.remove(id)
+    if !Self.compatibilityIDs.contains(id) { next.disabled.remove(id) }
     try await commit(next)
     return snapshot
   }
@@ -450,7 +490,7 @@ public actor ToolPackageRegistry {
         let candidate = ResolutionCandidate(
           inspection: .init(
             packageID: package.manifest.id, origin: .bundled,
-            isOverride: false, isEnabled: !index.disabled.contains(package.manifest.id),
+            isOverride: false, isEnabled: bundledEnabled(package.manifest.id, in: index),
             validation: .valid, diagnostic: nil), package: package)
         bundles[package.manifest.id, default: []].append(candidates.count)
         candidates.append(candidate)
@@ -461,7 +501,7 @@ public actor ToolPackageRegistry {
           .init(
             inspection: .init(
               packageID: id, origin: .bundled,
-              isOverride: false, isEnabled: id.map { !index.disabled.contains($0) } ?? true,
+              isOverride: false, isEnabled: id.map { bundledEnabled($0, in: index) } ?? true,
               validation: .invalid, diagnostic: message), package: nil))
         appendDiagnostic(message)
       }
@@ -472,7 +512,7 @@ public actor ToolPackageRegistry {
       if indices.count == 1, let package = candidates[indices[0]].package {
         resolved[id] = .init(
           package: package, isOverride: false, isBundled: true,
-          isEnabled: !index.disabled.contains(id))
+          isEnabled: bundledEnabled(id, in: index))
         resolvedCandidate[id] = indices[0]
       } else {
         let message = diagnostic("Duplicate bundled ID: \(id.prefix(80))")

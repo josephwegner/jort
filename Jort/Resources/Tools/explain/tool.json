@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 3,
+  "executor": "model",
+  "id": "dev.jort.explain",
+  "version": 1,
+  "name": "Explain",
+  "command": "/explain",
+  "description": "Clarify dense or unfamiliar content, retain key terminology, and identify uncertainty",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "modelID": "openai/gpt-5.4-mini"
+}

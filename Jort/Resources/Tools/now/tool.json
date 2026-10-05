@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.now",
+  "version": 1,
+  "name": "Now",
+  "command": "/now",
+  "description": "Insert local date and time, such as Sept 12, 10:28am",
+  "entryContract": 2,
+  "inputMode": "contained",
+  "outputOperation": "replace-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "capturedData": ["localTime"]
+}

@@ -8,6 +8,33 @@ import JortSettings
 @testable import JortAppKit
 
 @MainActor final class ToolInvocationPresentationTests: ToolInvocationTestCase {
+  func testCustomNativeActionIsDisclosedBeforeSubmissionWithoutRelyingOnDescription()
+    async throws
+  {
+    let (editor, _) = try await editor()
+    var tool = package("tidy", mode: .contextual)
+    tool.manifest.schemaVersion = 3
+    tool.manifest.entryContract = 2
+    tool.manifest.executor = .javascript
+    tool.manifest.description = "Tidy up a thought"
+    tool.manifest.hostActions = ["clipboard.rich", "file.export", "notification.schedule"]
+    editor.toolPackages = [tool]
+    editor.textView.insertText("Note /tidy", replacementRange: NSRange(location: 0, length: 0))
+    try editor.toolController.accept(tool, token: NSRange(location: 5, length: 5), space: true)
+    await settlePresentationAsync(editor)
+    let labels = editor.linePresentation.accessories.values.flatMap {
+      ($0.view as? NSStackView)?.arrangedSubviews ?? []
+    }.compactMap { $0 as? NSTextField }
+    let disclosure = try XCTUnwrap(labels.first { $0.stringValue.contains("This tool may") })
+    XCTAssertTrue(disclosure.stringValue.contains("replace clipboard contents"))
+    XCTAssertTrue(disclosure.stringValue.contains("destination you choose"))
+    XCTAssertTrue(disclosure.stringValue.contains("local notification"))
+    XCTAssertEqual(disclosure.accessibilityLabel(), disclosure.stringValue)
+    XCTAssertEqual(editor.state.text, "Note /tidy ")
+    XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
+    XCTAssertNil(ToolInvocationPresentation.actionDisclosure(for: package("plain").manifest))
+  }
+
   func testFeedbackRendersCompletionErrorAndControlSpacing() async throws {
     let (editor, window) = try await editor()
     defer { window.orderOut(nil) }

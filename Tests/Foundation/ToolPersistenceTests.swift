@@ -1,5 +1,6 @@
 import XCTest
 import JortDocument
+import JortToolContracts
 @testable import JortPersistence
 
 @MainActor final class ToolPersistenceTests: StoreTestCase {
@@ -172,6 +173,29 @@ import JortDocument
     let legacy = try PersistenceFormat.decode(PersistenceFormat.encode(try pending())).snapshot
     XCTAssertEqual(legacy.invocations.count, 1)
     XCTAssertNil(legacy.invocations.first?.restoration)
+  }
+
+  func testContractTwoCapturedArgumentsAndRestorationRoundTrip() throws {
+    let pending = try pending()
+    var invocation = pending.invocations[0]
+    invocation.entryContract = 2
+    invocation.packageVersion = 3
+    invocation.capturedArguments = [
+      "count": .integer(4), "separator": .string(""),
+      "style": .string("short"),
+    ]
+    var inputting = invocation
+    inputting.phase = .inputting
+    inputting.output = nil
+    inputting.outputHash = nil
+    invocation.restoration = ToolInvocationRestoration(invocation: inputting)
+    let snapshot = DocumentSnapshot(
+      documentID: pending.documentID, text: pending.text,
+      revision: pending.revision, lines: pending.lines, invocations: [invocation])
+    let decoded = try PersistenceFormat.decode(PersistenceFormat.encode(snapshot)).snapshot
+    XCTAssertEqual(decoded, snapshot)
+    XCTAssertEqual(decoded.invocations.first?.capturedArguments, invocation.capturedArguments)
+    XCTAssertEqual(decoded.invocations.first?.restoration?.invocation(id: inputting.id), inputting)
   }
 
   func testLegacyInputtingMessageDecodesAsTransientPresentationState() throws {

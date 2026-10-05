@@ -161,7 +161,7 @@ static int child(const char *path, unsigned milliseconds) {
 static xpc_object_t request(unsigned index, unsigned milliseconds) {
     xpc_object_t message = xpc_dictionary_create(NULL, NULL, 0);
     uint8_t identity[16] = {0}; identity[0] = (uint8_t)index;
-    xpc_dictionary_set_uint64(message, "version", 1);
+    xpc_dictionary_set_uint64(message, "version", JORT_JS_VERSION);
     xpc_dictionary_set_uint64(message, "operation", JORT_JS_EXECUTE);
     const char *ids[] = {"nonce", "invocation", "generation"};
     for (unsigned i = 0; i < 3; i++) xpc_dictionary_set_data(message, ids[i], identity, 16);
@@ -174,6 +174,7 @@ static xpc_object_t request(unsigned index, unsigned milliseconds) {
     }
     xpc_dictionary_set_data(message, "clock", "", 0);
     xpc_dictionary_set_data(message, "uuid", "00000000-0000-0000-0000-000000000001", 36);
+    xpc_dictionary_set_data(message, "metadata", NULL, 0);
     xpc_dictionary_set_uint64(message, "deadlineMilliseconds", milliseconds);
     xpc_dictionary_set_uint64(message, "outputBytes", 1024);
     xpc_dictionary_set_uint64(message, "outputLines", 10);
@@ -235,10 +236,15 @@ static int signed_client_round(const char *broker_path, const char *worker_path,
     uint8_t identity[16] = {1};
     const char *source = interrupt || wait_timeout ? "export default async function() { for (;;) {} }"
         : "export default async function() { return {output: 'fixture-result'}; }";
+    static const char contract[] = "{\"schemaVersion\":1,\"id\":\"dev.test.fixture\",\"version\":1,"
+        "\"name\":\"Fixture\",\"command\":\"/fixture\",\"description\":\"\",\"entryContract\":1,"
+        "\"inputMode\":\"contained\",\"outputOperation\":\"replace-invocation\","
+        "\"maximumInputBytes\":1048576,\"maximumOutputBytes\":1024,\"maximumOutputLines\":10}";
+    static const char expected_payload[] = "{\"output\":\"fixture-result\"}";
     JortJSClientRequest request = {
         .operation = JORT_JS_EXECUTE, .nonce = identity, .invocation = identity, .generation = identity,
         .deadline_ms = interrupt || wait_timeout ? 10000 : 2000, .output_bytes = 1024, .output_lines = 10,
-        .contract = (const uint8_t *)"{}", .contract_length = 2,
+        .contract = (const uint8_t *)contract, .contract_length = sizeof(contract) - 1,
         .source = (const uint8_t *)source, .source_length = strlen(source),
         .uuid = (const uint8_t *)"00000000-0000-0000-0000-000000000001", .uuid_length = 36
     };
@@ -247,8 +253,8 @@ static int signed_client_round(const char *broker_path, const char *worker_path,
         completions++;
         status = result;
         payload_valid = interrupt || wait_timeout ? !output_length && error && error_length > 0
-            && error_length <= JORT_JS_ERROR_MAX : output_length == 14 && output
-            && !memcmp(output, "fixture-result", 14) && !error_length;
+            && error_length <= JORT_JS_ERROR_MAX : output_length == sizeof(expected_payload) - 1 && output
+            && !memcmp(output, expected_payload, sizeof(expected_payload) - 1) && !error_length;
         dispatch_semaphore_signal(completed);
     });
     int failure = 0;

@@ -13,6 +13,7 @@ import JortSettings
 @MainActor final class ToolInvocationPresentation {
   weak var editor: EditorViewController?
   private var controls: [NSView] = []
+  private var completionControls: [UUID: [ToolActionButton]] = [:]
   private var accessibilityViews: [NSView] = []
   private var nextAccessibilityViews: [NSView] = []
   private var index = InvocationPresentationIndex()
@@ -27,6 +28,28 @@ import JortSettings
   private let styleReconciler = InvocationStyleReconciler()
   private var focusedBoundary: (UUID, Bool)?
   private var errorAccessoryIDs = Set<UUID>()
+  /// Declarations, not a tool's editable description, identify possible native effects.
+  static func actionDisclosure(for manifest: ToolManifest) -> String? {
+    let destinations = (manifest.hostActions ?? []).compactMap { action -> String? in
+      switch action {
+      case "clipboard.rich": return "replace clipboard contents with rich text"
+      case "file.export": return "save a file at a destination you choose"
+      case "notification.schedule": return "schedule a local notification"
+      default: return nil
+      }
+    }
+    guard !destinations.isEmpty else { return nil }
+    return "This tool may " + destinations.joined(separator: "; ") + "."
+  }
+
+  private func actionDisclosure(for invocation: ToolInvocation) -> String? {
+    guard invocation.phase == .inputting,
+      let manifest = editor?.toolController.packages.first(where: {
+        $0.manifest.id == invocation.packageID
+      })?.manifest
+    else { return nil }
+    return Self.actionDisclosure(for: manifest)
+  }
   func invalidateStyles() { styleReconciler.invalidate() }
   func clearChangedStyles(before: DocumentSnapshot, after: DocumentSnapshot) {
     guard let editor, let storage = editor.textView.textStorage else { return }
@@ -44,6 +67,15 @@ import JortSettings
   private func routeOverlay(_ action: InvocationOverlayAction) {
     guard let editor else { return }
     switch action {
+    case .argument(let id, let name, let value):
+      editor.toolController.setArgument(value, name: name, for: id)
+    case .returnToEditor(let id):
+      if let invocation = editor.state.invocations.first(where: { $0.id == id }),
+        let token = invocation.token.resolve(in: editor.state)
+      {
+        editor.textView.setSelectedRange(NSRange(location: NSMaxRange(token), length: 0))
+      }
+      editor.view.window?.makeFirstResponder(editor.textView)
     case .prompt(let id, let value): editor.toolController.setPrompt(value, for: id)
     case .submit(let id): editor.toolController.submit(id)
     case .cancel(let id): editor.toolController.cancel(id)
@@ -107,6 +139,10 @@ import JortSettings
       try? editor?.toolController.dismiss(invocation.id)
       return true
     }
+    if let invocation = editor?.toolController.focused(), invocation.phase == .completed {
+      try? editor?.toolController.done(invocation.id)
+      return true
+    }
     if let invocation = editor?.toolController.focused(), invocation.phase == .inputting {
       editor?.toolController.cancel(invocation.id)
       return true
@@ -118,12 +154,29 @@ import JortSettings
     guard let editor else { return false }
     updateCompletion()
     let key = event.charactersIgnoringModifiers ?? ""
+    if event.keyCode == 48, let invocation = editor.toolController.focused(),
+      invocation.phase == .completed, let buttons = completionControls[invocation.id],
+      let button = event.modifierFlags.contains(.shift) ? buttons.last : buttons.first
+    {
+      editor.view.window?.makeFirstResponder(button)
+      return true
+    }
+    if event.keyCode == 48, let invocation = editor.toolController.focused(),
+      invocation.phase == .inputting,
+      overlays.focusArguments(for: invocation.id, backwards: event.modifierFlags.contains(.shift))
+    {
+      return true
+    }
     if key == "/" { completionController.completionArmed = editor.toolController.focused() == nil }
     if key == "\r", event.modifierFlags.contains(.shift) {
       if editor.view.window?.firstResponder is ToolScopeHandle, let (id, _) = focusedBoundary {
         editor.toolController.submit(id)
       } else if let invocation = editor.toolController.focused() {
-        editor.toolController.submit(invocation.id)
+        if invocation.phase == .completed {
+          try? editor.toolController.done(invocation.id)
+        } else {
+          editor.toolController.submit(invocation.id)
+        }
       }
       return true
     }
@@ -218,6 +271,7 @@ import JortSettings
     var shapes: [InvocationPaintSnapshot.Shape] = []
     mounts.begin()
     controls = []
+    completionControls = [:]
     nextAccessibilityViews = []
     defer {
       mounts.finish()
@@ -286,7 +340,9 @@ import JortSettings
       case .inputting:
         if inlineActions {
           addButton(
-            "play.fill", LocalizedCopy.text("ToolInvocationPresentation.run", fallback: "Run"),
+            "play.fill",
+            actionDisclosure(for: invocation).map { "Run: " + $0 }
+              ?? LocalizedCopy.text("ToolInvocationPresentation.run", fallback: "Run"),
             frame: controlFrame.offsetBy(dx: 10, dy: 0)
           ) {
             [weak editor] in editor?.toolController.submit(invocation.id)
@@ -346,16 +402,52 @@ import JortSettings
               ?? LocalizedCopy.text("invocation.execution_error", fallback: "Execution error")),
           frame: controlFrame
         ) { [weak editor] in try? editor?.toolController.dismiss(invocation.id) }
+      case .completed:
+        var buttons: [ToolActionButton] = []
+        if let done = addButton(
+          "checkmark", "Done", frame: controlFrame,
+          action: { [weak editor] in
+            try? editor?.toolController.done(invocation.id)
+          })
+        {
+          buttons.append(done)
+        }
+        if invocation.actionKind == "notification.schedule", editor.cancelToolReminder != nil {
+          if let cancel = addButton(
+            "bell.slash", "Cancel Reminder", frame: controlFrame.offsetBy(dx: 30, dy: 0),
+            action: {
+              [weak editor] in editor?.toolController.cancelReminder(invocation.id)
+            })
+          {
+            buttons.append(cancel)
+          }
+        }
+        for (index, button) in buttons.enumerated() {
+          let next: NSView = index + 1 < buttons.count ? buttons[index + 1] : editor.textView
+          let previous: NSView = index > 0 ? buttons[index - 1] : editor.textView
+          button.nextKeyView = next
+          button.moveFocus = { [weak next, weak previous, weak editor] backwards in
+            editor?.view.window?.makeFirstResponder(backwards ? previous : next)
+          }
+          button.returnToEditor = { [weak editor] in
+            editor?.view.window?.makeFirstResponder(editor?.textView)
+          }
+        }
+        completionControls[invocation.id] = buttons
       }
       let boundaries = [(true, scope.location), (false, NSMaxRange(scope))].compactMap {
         start, offset -> (Bool, Int, NSRect)? in
         rects(NSRange(location: offset, length: 0)).first.map { (start, offset, $0) }
       }
+      let package = editor.toolController.packages.first { $0.manifest.id == invocation.packageID }
       let overlay = overlays.reconcile(
         invocation: invocation, snapshot: snapshot,
         token: token, scope: scope, sourceEndsLine: sourceEndsLine,
         tokenRect: rects(token).last, boundaries: boundaries,
-        promptValue: editor.toolController.prompt(for: invocation.id), isCurrent: controlIsCurrent)
+        promptValue: editor.toolController.prompt(for: invocation.id),
+        argumentDefinitions: package?.manifest.arguments ?? [],
+        argumentValues: editor.toolController.argumentValues(for: invocation.id),
+        description: package?.manifest.description ?? "", isCurrent: controlIsCurrent)
       nextAccessibilityViews += overlay.views
       if !overlay.connectors.isEmpty {
         shapes.append(
@@ -377,7 +469,8 @@ import JortSettings
             ($0.manifest.command as NSString).size(withAttributes: [
               .font: NSFont.monospacedSystemFont(ofSize: 14, weight: .medium)
             ]).width
-              + ($0.manifest.name as NSString).size(withAttributes: [
+              + (($0.manifest.description.isEmpty ? $0.manifest.name : $0.manifest.description)
+              as NSString).size(withAttributes: [
                 .font: NSFont.systemFont(ofSize: 13)
               ]).width + 56
           }.max() ?? 180))
@@ -412,7 +505,10 @@ import JortSettings
             action: {})
         }
         button.command = package.manifest.command
-        button.name = package.manifest.name
+        button.name =
+          package.manifest.description.isEmpty
+          ? package.manifest.name : package.manifest.description
+        button.toolTip = package.manifest.description
         button.setAccessibilityLabel(
           LocalizedCopy.format("completion.row", fallback: "%@  %@", button.command, button.name))
         button.selected = index + first == selected
@@ -439,6 +535,7 @@ import JortSettings
     let messages = Dictionary(
       grouping: snapshot.invocations.filter {
         $0.message != nil || editor.toolController.warning(for: $0.id) != nil
+          || actionDisclosure(for: $0) != nil
       }, by: { $0.token.start.lineID })
     let previous = errorAccessoryIDs
     errorAccessoryIDs = Set(messages.keys)
@@ -450,10 +547,10 @@ import JortSettings
       rows.spacing = 4
       var height: CGFloat = 8
       for invocation in invocations {
-        let message =
-          invocation.message ?? editor.toolController.warning(for: invocation.id)
-          ?? LocalizedCopy.text(
-            "ToolInvocationPresentation.execution_failed", fallback: "Execution failed")
+        let message = [
+          invocation.message ?? editor.toolController.warning(for: invocation.id),
+          actionDisclosure(for: invocation),
+        ].compactMap { $0 }.joined(separator: "\n")
         let label = NSTextField(wrappingLabelWithString: "\(invocation.command): \(message)")
         label.font = .systemFont(ofSize: 12)
         let width = max(
@@ -466,7 +563,11 @@ import JortSettings
               with: NSSize(width: width, height: 1024), options: [.usesLineFragmentOrigin],
               attributes: [.font: label.font!]
             ).height) + 6)
-        label.textColor = invocation.phase == .error ? .systemRed : .systemOrange
+        label.textColor =
+          invocation.phase == .completed || invocation.phase == .inputting
+          ? .secondaryLabelColor
+          : invocation.phase == .error ? .systemRed : .systemOrange
+        label.isSelectable = invocation.phase == .completed
         label.setAccessibilityLabel(label.stringValue)
         rows.addArrangedSubview(label)
       }
@@ -474,10 +575,10 @@ import JortSettings
     }
     editor.linePresentation.setAccessories(Array(values), deferLayout: true)
   }
-  private func addButton(
+  @discardableResult private func addButton(
     _ symbol: String, _ label: String, frame: NSRect, action: @escaping () -> Void
-  ) {
-    guard let editor else { return }
+  ) -> ToolActionButton? {
+    guard let editor else { return nil }
     let current = controlIsCurrent
     let button: ToolActionButton = mounts.view(
       key: controlIdentity + "." + label, in: editor.textView
@@ -495,6 +596,7 @@ import JortSettings
     button.frame = NSRect(
       x: frame.minX, y: frame.minY, width: symbol == "play.fill" ? 36 : 24,
       height: max(24, frame.height))
+    return button
   }
   private func rects(_ range: NSRange) -> [NSRect] {
     editor?.linePresentation.canonicalRects(for: range).map { frame in
@@ -510,6 +612,12 @@ import JortSettings
   func containsDecoration(at point: NSPoint, pending: Bool) -> Bool {
     paintSnapshot.contains(point, pending: pending)
   }
+
+  func focusArguments(for id: UUID, name: String? = nil) {
+    _ = overlays.focusArguments(for: id, name: name)
+  }
+
+  func requestArgumentFocus(for id: UUID) { overlays.requestArgumentFocus(for: id) }
   func draw(_ rect: NSRect) { paintSnapshot.draw(rect) }
   var controlSnapshot: [PresentationGeometry.Control] { mounts.snapshot }
   static func union(_ rectangles: [NSRect]) -> NSBezierPath { InvocationGeometry.union(rectangles) }

@@ -56,23 +56,27 @@ final class ToolPackageTests: StoreTestCase {
       installedDirectory: installed
     )
     let initial = try await registry.inspect()
-    XCTAssertEqual(initial.executable.count, 8, initial.diagnostics.joined(separator: " | "))
-    var edited = try XCTUnwrap(initial.executable.first { $0.manifest.command == "/calc" })
+    XCTAssertEqual(initial.executable.count, 42, initial.diagnostics.joined(separator: " | "))
+    XCTAssertEqual(initial.packages.count, 47)
+    let enabled = try await registry.setEnabled(id: "dev.jort.calc", enabled: true)
+    XCTAssertEqual(enabled.executable.count, 43)
+    var edited = try XCTUnwrap(enabled.executable.first { $0.manifest.command == "/calc" })
     edited.source = "export default async function() { return {output: 'custom'}; }"
     var snapshot = try await registry.save(edited)
     XCTAssertTrue(try XCTUnwrap(snapshot.packages.first { $0.id == edited.manifest.id }).isOverride)
     snapshot = try await registry.setEnabled(id: edited.manifest.id, enabled: false)
-    XCTAssertEqual(snapshot.executable.count, 7)
+    XCTAssertEqual(snapshot.executable.count, 42)
     let reopened = ToolPackageRegistry(
       validator: RuntimePackageValidator(client: .testWorker), bundledDirectory: bundled,
       installedDirectory: installed
     )
     snapshot = try await reopened.inspect()
-    XCTAssertEqual(snapshot.executable.count, 7)
+    XCTAssertEqual(snapshot.executable.count, 42)
     XCTAssertEqual(
       snapshot.packages.first { $0.id == edited.manifest.id }?.package.source, edited.source)
     snapshot = try await reopened.restore(id: edited.manifest.id)
-    XCTAssertEqual(snapshot.executable.count, 8)
+    XCTAssertEqual(snapshot.executable.count, 42)
+    XCTAssertFalse(try XCTUnwrap(snapshot.packages.first { $0.id == edited.manifest.id }).isEnabled)
     XCTAssertNotEqual(
       snapshot.packages.first { $0.id == edited.manifest.id }?.package.source, edited.source)
   }
@@ -107,7 +111,7 @@ final class ToolPackageTests: StoreTestCase {
     let registry = ToolPackageRegistry(
       validator: RuntimePackageValidator(client: .testWorker), bundledDirectory: directory,
       installedDirectory: try root())
-    let snapshot = try await registry.inspect()
+    let snapshot = try await registry.setEnabled(id: "dev.jort.calc", enabled: true)
     XCTAssertEqual(snapshot.executable.count, 1)
     XCTAssertEqual(snapshot.diagnostics.count, 1)
     let invalid = try XCTUnwrap(snapshot.candidates.first { $0.validation == .invalid })
@@ -146,8 +150,8 @@ final class ToolPackageTests: StoreTestCase {
     for (name, input, expected) in [
       ("sort", "b\na\nb\n", "a\nb\nb\n"), ("sort", "🌲\nA\na", "A\na\n🌲"),
       ("dedupe", "a\n\na\n\nb\n", "a\n\nb\n"), ("dedupe", "", ""),
-      ("date", " ", "1970-01-01 "), ("time", "", "00:00:00Z"),
-      ("date", " next\nline", "1970-01-01 next\nline"), ("time", " reminder", "00:00:00Z reminder"),
+      ("date", " ", "1970-01-01 "), ("time", "", "3:04am"),
+      ("date", " next\nline", "1970-01-01 next\nline"), ("time", " \t\n", "3:04am"),
       ("uuid", " apples", "00000000-0000-0000-0000-000000000001 apples"),
       ("uuid", "", "00000000-0000-0000-0000-000000000001"),
     ] {
@@ -156,9 +160,18 @@ final class ToolPackageTests: StoreTestCase {
         package,
         input: .init(
           content: input, date: Date(timeIntervalSince1970: 0),
-          uuid: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!))
+          uuid: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+          localTime: name == "time"
+            ? ToolLocalTime(
+              date: Date(timeIntervalSince1970: 3 * 3600 + 4 * 60),
+              timeZone: try XCTUnwrap(TimeZone(secondsFromGMT: 0)),
+              locale: Locale(identifier: "en_US")) : nil))
       XCTAssertEqual(result.output, expected, "\(name): \(result.error ?? "no error")")
     }
+    let time = try ToolPackage.load(from: bundled.appendingPathComponent("time"))
+    let rejected = await ToolRuntime.testExecute(time, input: .init(content: " reminder"))
+    XCTAssertNil(rejected.output)
+    XCTAssertNotNil(rejected.error)
   }
 
   func testSettingsUsesRegistryForEditableOverridesAndConflicts() async throws {
@@ -170,6 +183,7 @@ final class ToolPackageTests: StoreTestCase {
       PackageSettingsStore(
         registry: registry, preferences: ownStore(SQLiteSettingsStore(directory: directory))))
     _ = try await store.load()
+    _ = try await store.setTemplateEnabled(id: ToolID("dev.jort.calc"), enabled: true)
     let catalog = try await registry.inspect()
     let original = try XCTUnwrap(catalog.executable.first { $0.manifest.command == "/calc" })
     var definition = UserToolDefinition(
@@ -185,7 +199,7 @@ final class ToolPackageTests: StoreTestCase {
     snapshot = try await store.save(definition, expectedRevision: definition.revision)
     let edited = try XCTUnwrap(snapshot.customTools.first)
     XCTAssertEqual(edited.manifest?.inputMode, .ephemeralMultiline)
-    XCTAssertEqual(edited.revision, RecordRevision(2))
+    XCTAssertEqual(edited.revision, RecordRevision(3))
     do {
       _ = try await store.save(definition, expectedRevision: definition.revision)
       XCTFail("Expected conflict")
@@ -238,7 +252,8 @@ final class ToolPackageTests: StoreTestCase {
         validator: RuntimePackageValidator(client: .testWorker), bundledDirectory: bundled,
         installedDirectory: installed)
       let snapshot = try await registry.inspect()
-      XCTAssertEqual(snapshot.executable.count, 8)
+      XCTAssertEqual(snapshot.executable.count, 42)
+      XCTAssertEqual(snapshot.packages.count, 47)
       discovery.append(clock() - start)
       start = clock()
       try ToolRuntime.validate(package)
@@ -264,7 +279,7 @@ final class ToolPackageTests: StoreTestCase {
       validator: RuntimePackageValidator(client: .testWorker), bundledDirectory: shipped,
       installedDirectory: installed
     )
-    let initial = try await registry.inspect()
+    let initial = try await registry.setEnabled(id: "dev.jort.calc", enabled: true)
     var user = try XCTUnwrap(initial.executable.first)
     user.source = "export default async function() { return {output:'custom'}; }"
     _ = try await registry.save(user)
@@ -326,11 +341,14 @@ final class ToolPackageTests: StoreTestCase {
     let shipped = try root(), installed = try root()
     let package = try ToolPackage.load(from: bundled.appendingPathComponent("calc"))
     _ = try write(package, named: "first", to: shipped)
-    _ = try write(package, named: "second", to: shipped)
-    let snapshot = try await ToolPackageRegistry(
+    let registry = ToolPackageRegistry(
       validator: RuntimePackageValidator(client: .testWorker),
       bundledDirectory: shipped, installedDirectory: installed
-    ).inspect()
+    )
+    _ = try await registry.setEnabled(id: package.manifest.id, enabled: true)
+    _ = try write(package, named: "second", to: shipped)
+    try await registry.reload()
+    let snapshot = try await registry.inspect()
     XCTAssertTrue(snapshot.packages.isEmpty)
     XCTAssertTrue(snapshot.executable.isEmpty)
     XCTAssertEqual(

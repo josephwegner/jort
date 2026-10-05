@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.unescape",
+  "version": 1,
+  "name": "Unescape HTML",
+  "command": "/unescape",
+  "description": "Decode supported named and valid numeric HTML entities once; retain unknown entities",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

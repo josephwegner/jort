@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.url-md",
+  "version": 1,
+  "name": "URLs to Markdown",
+  "command": "/url-md",
+  "description": "Wrap bare HTTP(S) URLs as Markdown links; skip links, images, autolinks, and code",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

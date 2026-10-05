@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.strip-ws",
+  "version": 1,
+  "name": "Strip whitespace",
+  "command": "/strip-ws",
+  "description": "Remove all Unicode whitespace, including line breaks and interior spacing",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

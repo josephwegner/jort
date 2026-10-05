@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.toc",
+  "version": 1,
+  "name": "Table of contents",
+  "command": "/toc",
+  "description": "Insert Markdown links for this block’s headings; keep the source headings",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "insert-at-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

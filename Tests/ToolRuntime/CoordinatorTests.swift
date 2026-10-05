@@ -25,7 +25,122 @@ private actor ControlledExecutor: ToolExecuting {
   var executing: Bool { !executions.isEmpty }
 }
 
+@MainActor private final class ControlledHostActions: ToolHostActionExecuting {
+  var dispatched: [InvocationGeneration] = []
+  var captured: [ToolExecutionInput] = []
+  private var reply: CheckedContinuation<ToolExecutionResult, Never>?
+  func execute(action: ToolHostAction, identity: InvocationGeneration, input: ToolExecutionInput)
+    async -> ToolExecutionResult
+  {
+    dispatched.append(identity)
+    captured.append(input)
+    return await withCheckedContinuation { reply = $0 }
+  }
+  func finish(_ result: ToolExecutionResult) {
+    reply?.resume(returning: result)
+    reply = nil
+  }
+}
+
 @MainActor final class CoordinatorTests: XCTestCase {
+  private var actionPackage: ToolPackage {
+    var value = package
+    value.manifest.schemaVersion = 3
+    value.manifest.entryContract = 2
+    value.manifest.executor = .javascript
+    value.manifest.hostActions = ["file.export"]
+    return value
+  }
+
+  func testHostActionDispatchRequiresDocumentAcknowledgementAndCompletesWithoutText() async throws {
+    for acknowledge in [false, true] {
+      let executor = ControlledExecutor(), host = ControlledHostActions()
+      let owner = ToolInvocationCoordinator(executor: executor, hostActions: host)
+      let identity = InvocationGeneration(invocationID: UUID(), generation: UUID())
+      var operations: [InvocationDocumentOperation] = []
+      owner.submit(
+        identity: identity, package: actionPackage, input: .init(content: "source"),
+        apply: {
+          operations.append($0.operation)
+          if case .dispatchAction = $0.operation { return acknowledge }
+          return true
+        }, warning: { _ in })
+      try await wait { await executor.validating }
+      await executor.validation(.init(output: ""))
+      try await wait { await executor.executing }
+      let action = ToolHostAction(kind: "file.export", content: "source")
+      await executor.result(.init(action: action))
+      try await wait { operations.count >= 2 }
+      if acknowledge {
+        try await wait { host.dispatched.count == 1 }
+        XCTAssertEqual(operations, [.submit, .dispatchAction(action)])
+        XCTAssertEqual(host.captured.first?.content, "source")
+        host.finish(.init(report: "Saved"))
+        try await wait { operations.count == 3 }
+        XCTAssertEqual(operations.last, .actionAcknowledged("Saved"))
+        owner.remove(identity.invocationID)
+        owner.submit(
+          identity: identity, package: actionPackage, input: .init(content: "source"),
+          apply: { _ in
+            XCTFail("Same action generation replayed")
+            return true
+          }, warning: { _ in })
+        XCTAssertEqual(host.dispatched, [identity])
+        XCTAssertFalse(owner.hasJob(identity.invocationID))
+      } else {
+        XCTAssertTrue(host.dispatched.isEmpty)
+      }
+    }
+  }
+
+  func testCancelAfterDispatchRecordsUnknownAndIgnoresLateAcknowledgement() async throws {
+    let executor = ControlledExecutor(), host = ControlledHostActions()
+    let owner = ToolInvocationCoordinator(executor: executor, hostActions: host)
+    let identity = InvocationGeneration(invocationID: UUID(), generation: UUID())
+    var operations: [InvocationDocumentOperation] = []
+    owner.submit(
+      identity: identity, package: actionPackage, input: .init(content: "source"),
+      apply: {
+        operations.append($0.operation)
+        return true
+      }, warning: { XCTFail($0) })
+    try await wait { await executor.validating }
+    await executor.validation(.init(output: ""))
+    try await wait { await executor.executing }
+    await executor.result(.init(action: .init(kind: "file.export", content: "source")))
+    try await wait { host.dispatched.count == 1 }
+    owner.remove(identity.invocationID)
+    XCTAssertEqual(operations.last, .actionUnknown)
+    host.finish(.init(report: "Saved late"))
+    try await Task.sleep(for: .milliseconds(20))
+    XCTAssertEqual(operations.count, 3)
+  }
+
+  func testCapturedHostServicesRemainIdenticalAcrossValidationAndExecution() async throws {
+    let executor = ControlledExecutor(), owner = ToolInvocationCoordinator(executor: executor)
+    var utility = actionPackage
+    utility.manifest.hostActions = nil
+    utility.manifest.capturedData = ["localTime", "entropy", "analysis"]
+    var operations: [InvocationDocumentOperation] = []
+    owner.submit(
+      identity: .init(invocationID: UUID(), generation: UUID()), package: utility,
+      input: .init(content: "hello world"),
+      apply: {
+        operations.append($0.operation)
+        return true
+      }, warning: { XCTFail($0) })
+    try await wait { await executor.validating }
+    await executor.validation(.init(output: ""))
+    try await wait { await executor.executing }
+    let inputs = await executor.inputs
+    XCTAssertEqual(inputs[0].entropy?.count, 16_384)
+    XCTAssertEqual(inputs[0].entropy, inputs[1].entropy)
+    XCTAssertEqual(inputs[0].localTime, inputs[1].localTime)
+    XCTAssertEqual(inputs[0].analysis, inputs[1].analysis)
+    await executor.result(.init(report: "Two words"))
+    try await wait { operations.count == 2 }
+    XCTAssertEqual(operations.last, .report("Two words"))
+  }
   private var package: ToolPackage {
     .init(
       manifest: .init(id: "dev.test.run", name: "Run", command: "/run"),

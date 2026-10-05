@@ -16,11 +16,15 @@ settings:
     CURRENT_PROJECT_VERSION: 3
     ARCHS: '$(ARCHS_STANDARD)'
     JORT_APP_ENTITLEMENTS: Configuration/JortLocal.entitlements
+    # Default-deny. Debug and the local packaging script explicitly opt in;
+    # production packaging requires the resolved compiler flag to remain 0.
+    JORT_JS_ALLOW_ADHOC: '0'
   configs:
     # Routine builds are deliberately ad-hoc signed: they exercise the nested
     # helper entitlement topology but neither select publisher credentials nor
     # produce a distributable artifact.
     Debug:
+      JORT_JS_ALLOW_ADHOC: '1'
       CODE_SIGN_IDENTITY: '-'
       JORT_BUILD_AUDIENCE: local-only
       JORT_CREDENTIAL_ENVIRONMENT: development
@@ -86,9 +90,7 @@ targets:
         MARKETING_VERSION: 0.3.0
         CURRENT_PROJECT_VERSION: 3
         HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptProtocol'
-      configs:
-        Debug:
-          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
+        GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=$(JORT_JS_ALLOW_ADHOC)']
   JortToolRuntimeTests:
     type: bundle.unit-test
     platform: macOS
@@ -138,9 +140,7 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         INFOPLIST_FILE: Configuration/JortJavaScriptBroker-Info.plist
         HEADER_SEARCH_PATHS: '$(SRCROOT)/Sources/JortJavaScriptProtocol'
-      configs:
-        Debug:
-          GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=1']
+        GCC_PREPROCESSOR_DEFINITIONS: ['$(inherited)', 'JORT_JS_ALLOW_ADHOC=$(JORT_JS_ALLOW_ADHOC)']
   JortJavaScriptWorker:
     type: tool
     platform: macOS

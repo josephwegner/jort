@@ -162,7 +162,11 @@ import XCTest
     editor.click()
     app.typeKey(",", modifierFlags: .command)
     XCTAssertTrue(app.windows["Jort Settings"].waitForExistence(timeout: 3))
-    app.buttons["New Tool"].click()
+    let newTool = app.buttons["New Tool"]
+    let toolsReady = XCTNSPredicateExpectation(
+      predicate: NSPredicate { _, _ in newTool.exists && newTool.isEnabled }, object: nil)
+    XCTAssertEqual(XCTWaiter.wait(for: [toolsReady], timeout: 30), .completed)
+    newTool.click()
     let name = app.textFields["Tool name"], command = app.textFields["Command name"],
       source = app.textViews["JavaScript source"]
     XCTAssertTrue(name.waitForExistence(timeout: 2))
@@ -180,6 +184,8 @@ import XCTest
     source.typeText("export default async function(input) { return {output: input.content}; }")
     XCTAssertTrue(app.buttons["Save"].isEnabled)
     app.buttons["Save"].click()
+    let saveFeedback = app.staticTexts["Tool saved. Saving does not run it."]
+    XCTAssertTrue(saveFeedback.waitForExistence(timeout: 30))
     XCTAssertTrue(app.staticTexts["UI Tool"].waitForExistence(timeout: 3))
     XCTAssertEqual(app.sheets.count, 0)
     let enabled = app.checkBoxes["Enabled"]
@@ -188,17 +194,17 @@ import XCTest
     enabled.click()
     XCTAssertTrue(app.buttons["Save"].isEnabled)
     app.buttons["Save"].click()
-    XCTAssertTrue(
-      app.staticTexts["Tool saved. Saving does not run it."].waitForExistence(timeout: 3))
+    XCTAssertTrue(saveFeedback.waitForExistence(timeout: 30))
     enabled.click()
     XCTAssertTrue(app.buttons["Save"].isEnabled)
     app.buttons["Save"].click()
+    XCTAssertTrue(saveFeedback.waitForExistence(timeout: 30))
     app.windows["Jort Settings"].buttons[XCUIIdentifierCloseWindow].click()
     XCTAssertTrue(app.textViews["Jort document"].exists)
     let document = app.textViews["Jort document"]
     document.click()
     document.typeText("/ui-tool")
-    XCTAssertTrue(app.buttons["/ui-tool  UI Tool"].waitForExistence(timeout: 3))
+    XCTAssertTrue(app.buttons["/ui-tool  UI Tool"].waitForExistence(timeout: 30))
     app.typeKey(.return, modifierFlags: [])
     XCTAssertEqual(document.value as? String, "/ui-tool ")
     document.typeText("hello")
@@ -215,19 +221,28 @@ import XCTest
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
     editor.click()
-    editor.typeText("I need /calc")
-    XCTAssertTrue(app.buttons["/calc  Calc"].waitForExistence(timeout: 3))
-    editor.typeText(" 3+3 ")
+    editor.typeText("I need /lorem")
+    let completion = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "/lorem  "))
+      .firstMatch
+    // The larger catalog is compile-validated before its first publication.
+    // Wait for the actual completion, not merely an editable document window.
+    XCTAssertTrue(completion.waitForExistence(timeout: 30))
+    editor.typeText(" 1 ")
     app.typeKey(.return, modifierFlags: .shift)
     let merge = app.buttons["Merge"]
     XCTAssertTrue(merge.waitForExistence(timeout: 5))
-    XCTAssertEqual(editor.value as? String, "I need /calc 3+3 6")
+    let pending = try XCTUnwrap(editor.value as? String)
+    let prefix = "I need /lorem 1 "
+    XCTAssertTrue(pending.hasPrefix(prefix))
+    let output = String(pending.dropFirst(prefix.count))
+    XCTAssertTrue(output.hasPrefix("Lorem ipsum"))
+    let expected = "I need " + output
     XCTAssertTrue(merge.isHittable)
     merge.hover()
     XCTAssertTrue(app.buttons["Dismiss"].isHittable)
     app.buttons["Dismiss"].hover()
     merge.click()
-    XCTAssertEqual(editor.value as? String, "I need 6")
+    XCTAssertEqual(editor.value as? String, expected)
     app.typeKey("s", modifierFlags: .command)
     let durable = XCTNSPredicateExpectation(
       predicate: NSPredicate { _, _ in
@@ -242,13 +257,13 @@ import XCTest
           let envelope = try? JSONSerialization.jsonObject(with: recovery) as? [String: Any],
           let document = envelope["document"] as? [String: Any]
         else { return false }
-        return document["content"] as? String == "I need 6"
+        return document["content"] as? String == expected
       }, object: nil)
     XCTAssertEqual(XCTWaiter.wait(for: [durable], timeout: 5), .completed)
     app.terminate()
     app.launch()
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
-    XCTAssertEqual(editor.value as? String, "I need 6")
+    XCTAssertEqual(editor.value as? String, expected)
   }
   func testModelsSettingsAndBundledModelDiscovery() throws {
     let app = XCUIApplication()
@@ -260,7 +275,7 @@ import XCTest
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
     editor.click()
     editor.typeText("/ask")
-    XCTAssertTrue(app.buttons["/ask  Ask"].waitForExistence(timeout: 3))
+    XCTAssertTrue(app.buttons["/ask  Ask a question"].waitForExistence(timeout: 30))
     app.typeKey(.escape, modifierFlags: [])
     app.typeKey(",", modifierFlags: .command)
     let settings = app.windows["Jort Settings"]
@@ -278,6 +293,37 @@ import XCTest
     app.staticTexts["Tools"].firstMatch.click()
     XCTAssertTrue(app.buttons["New Tool"].waitForExistence(timeout: 3))
     settings.buttons[XCUIIdentifierCloseWindow].click()
+  }
+
+  func testContextualArgumentsAcceptEscapeReenterAndSubmitUsingKeyboard() throws {
+    let app = XCUIApplication()
+    app.launchEnvironment["JORT_DATA_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.appendingPathComponent("ArgumentsUI-\(UUID())").path
+    app.launch()
+    defer { app.terminate() }
+    let editor = app.textViews["Jort document"]
+    XCTAssertTrue(editor.waitForExistence(timeout: 5))
+    editor.click()
+    editor.typeText("apples,oranges /split")
+    let completion = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "/split  "))
+      .firstMatch
+    XCTAssertTrue(completion.waitForExistence(timeout: 30))
+    app.typeKey(.return, modifierFlags: [])
+    let delimiter = app.textFields["Delimiter"]
+    XCTAssertTrue(delimiter.waitForExistence(timeout: 3))
+    app.typeText(",")
+    XCTAssertEqual(delimiter.value as? String, ",")
+    let source = editor.value as? String
+    XCTAssertEqual(source, "apples,oranges /split ")
+    app.typeKey(.escape, modifierFlags: [])
+    app.typeKey(.tab, modifierFlags: [])
+    XCTAssertEqual(delimiter.value as? String, ",")
+    app.typeKey(.return, modifierFlags: .shift)
+    XCTAssertTrue(app.buttons["Merge"].waitForExistence(timeout: 5))
+    let pending = editor.value as? String ?? ""
+    // Contextual output sits immediately after the token, before its owned space.
+    XCTAssertTrue(pending.hasPrefix("apples,oranges /split"))
+    XCTAssertTrue(pending.contains("apples\noranges"))
   }
 
 }

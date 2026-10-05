@@ -10,11 +10,13 @@ import subprocess
 ROOT = Path(__file__).resolve().parent.parent
 CONTAINMENT_TARGETS = {'JortJavaScriptBroker', 'JortJavaScriptWorker'}
 ALLOWED = {
-    'JortToolContracts': {'Foundation'},
+    # CoreFoundation supplies locale-aware pure text segmentation, not host I/O.
+    'JortToolContracts': {'Foundation', 'CoreFoundation'},
     'JortToolRuntime': {'Foundation', 'CryptoKit', 'Security', 'Darwin', 'JortToolContracts', 'JortJavaScriptClient'},
     'JortSettings': {'Foundation', 'CryptoKit', 'Security', 'Darwin', 'SQLite3', 'JortToolContracts'},
     'JortDocument': {'Foundation', 'CryptoKit', 'os', 'JortToolContracts'},
-    'JortAppKit': {'Foundation', 'AppKit', 'QuartzCore', 'CoreText', 'UniformTypeIdentifiers', 'JortDocument', 'JortPersistence', 'JortSettings', 'JortToolContracts'},
+    # Only the app-composed native adapter may schedule OS notifications.
+    'JortAppKit': {'Foundation', 'AppKit', 'QuartzCore', 'CoreText', 'UniformTypeIdentifiers', 'UserNotifications', 'JortDocument', 'JortPersistence', 'JortSettings', 'JortToolContracts'},
 }
 
 
@@ -114,16 +116,21 @@ def credential_canary_errors(source):
 
 
 def peer_identity_build_errors(project_text):
-    """Keep the ad-hoc peer exception out of every shipping Release target."""
+    """Require default-deny peer admission and explicit local opt-in."""
     errors = []
+    settings = project_text.split('targets:', 1)[0]
+    if not re.search(r"^    JORT_JS_ALLOW_ADHOC: '0'$", settings, re.M):
+        errors.append('global peer admission must default to denying ad-hoc signatures')
+    debug = settings.split('    Debug:', 1)[-1].split('    Release:', 1)[0]
+    if "JORT_JS_ALLOW_ADHOC: '1'" not in debug:
+        errors.append('Debug lacks explicit local peer admission')
+    release = settings.split('    Release:', 1)[-1]
+    if re.search(r'^\s+JORT_JS_ALLOW_ADHOC:', release, re.M):
+        errors.append('Release must inherit default-deny peer admission')
     for target in ('JortJavaScriptClient', 'JortJavaScriptBroker'):
         body = target_body(project_text, target)
-        if body.count('JORT_JS_ALLOW_ADHOC=1') != 1:
-            errors.append(f'{target} must define the ad-hoc peer exception only for Debug')
-        if not re.search(
-                r'configs:\n\s+Debug:\n\s+GCC_PREPROCESSOR_DEFINITIONS: '
-                r"\['\$\(inherited\)', 'JORT_JS_ALLOW_ADHOC=1'\]", body):
-            errors.append(f'{target} Debug configuration lacks the explicit local peer exception')
+        if body.count('JORT_JS_ALLOW_ADHOC=$(JORT_JS_ALLOW_ADHOC)') != 1 or 'JORT_JS_ALLOW_ADHOC=1' in body:
+            errors.append(f'{target} must consume the explicit peer-admission build setting')
     return errors
 
 
@@ -238,6 +245,8 @@ def main():
         assert 'CODE_SIGN_ENTITLEMENTS: Configuration/JortJavaScriptWorker.entitlements' in worker_body
         assert not containment_errors(real_project)
         assert not peer_identity_build_errors(real_project)
+        assert peer_identity_build_errors(real_project.replace("JORT_JS_ALLOW_ADHOC: '0'", "JORT_JS_ALLOW_ADHOC: '1'"))
+        assert peer_identity_build_errors(real_project.replace('JORT_JS_ALLOW_ADHOC=$(JORT_JS_ALLOW_ADHOC)', 'JORT_JS_ALLOW_ADHOC=1'))
         assert not release_identity_errors(
             real_project,
             {

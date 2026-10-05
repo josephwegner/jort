@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.remind",
+  "version": 1,
+  "name": "Remind",
+  "command": "/remind",
+  "description": "Schedule this captured block as a local notification in 1–525600 minutes",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "insert-at-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "arguments": [
+    {
+      "name": "minutes",
+      "type": "integer",
+      "label": "Minutes",
+      "description": "Delay after submission in minutes",
+      "minimum": 1,
+      "maximum": 525600,
+      "required": true
+    }
+  ],
+  "hostActions": [
+    "notification.schedule"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.split",
+  "version": 1,
+  "name": "Split",
+  "command": "/split",
+  "description": "Replace a literal non-empty delimiter with line breaks; retain empty segments",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "arguments": [
+    {
+      "name": "delimiter",
+      "type": "string",
+      "label": "Delimiter",
+      "description": "Required literal delimiter; empty is invalid",
+      "required": true
+    }
+  ]
+}

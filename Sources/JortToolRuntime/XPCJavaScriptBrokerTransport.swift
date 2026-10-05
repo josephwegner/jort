@@ -60,7 +60,10 @@ public actor XPCJavaScriptBrokerTransport: JavaScriptBrokerTransport {
         withUUIDBytes(invocation) { invocationBytes in
           withUUIDBytes(generation) { generationBytes in
             withDataPointers(
-              [payload.contract, payload.source, payload.input, payload.clock, payload.uuid]
+              [
+                payload.contract, payload.source, payload.input, payload.clock, payload.uuid,
+                payload.metadata,
+              ]
             ) { fields in
               var request = JortJSClientRequest()
               request.operation = operation.protocolTag
@@ -80,6 +83,8 @@ public actor XPCJavaScriptBrokerTransport: JavaScriptBrokerTransport {
               request.clock_length = payload.clock.count
               request.uuid = fields[4]
               request.uuid_length = payload.uuid.count
+              request.metadata = fields[5]
+              request.metadata_length = payload.metadata.count
               jort_js_client_send(handle, &request) {
                 status, output, outputLength, error, errorLength in
                 let result = Self.result(
@@ -115,7 +120,11 @@ public actor XPCJavaScriptBrokerTransport: JavaScriptBrokerTransport {
     error: UnsafePointer<UInt8>?, errorLength: Int
   ) -> ToolExecutionResult {
     if status == 0 {
-      return .init(output: text(output, count: outputLength))
+      guard let output, outputLength > 0,
+        let result = try? JSONDecoder().decode(
+          ToolExecutionResult.self, from: Data(bytes: output, count: outputLength))
+      else { return .init(failure: .init(.protocolError, message: "Invalid JavaScript result.")) }
+      return result
     }
     let code: ToolFailureCode
     switch status {

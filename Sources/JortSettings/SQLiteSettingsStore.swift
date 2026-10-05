@@ -13,6 +13,34 @@ public enum SettingsStoreError: Error, Equatable, Sendable {
 }
 
 public actor SQLiteSettingsStore: SettingsStore, ToolCatalog {
+  /// Capture legacy choices before startup tasks can create a fresh Settings database.
+  nonisolated static func existingTemplateEnablement(at url: URL) -> [String: Bool]? {
+    guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+    var database: OpaquePointer?
+    guard
+      sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nil)
+        == SQLITE_OK
+    else {
+      if let database { sqlite3_close(database) }
+      return [:]
+    }
+    defer { sqlite3_close(database) }
+    var statement: OpaquePointer?
+    guard
+      sqlite3_prepare_v2(
+        database, "SELECT id,enabled FROM template_overrides", -1,
+        &statement, nil) == SQLITE_OK
+    else { return [:] }
+    defer { sqlite3_finalize(statement) }
+    var choices: [String: Bool] = [:]
+    while sqlite3_step(statement) == SQLITE_ROW {
+      if let id = sqlite3_column_text(statement, 0) {
+        choices[String(cString: id)] = sqlite3_column_int(statement, 1) != 0
+      }
+    }
+    return choices
+  }
+
   public static let schemaVersion = 2
   public let directory: URL
   public let templates: [ToolTemplate]

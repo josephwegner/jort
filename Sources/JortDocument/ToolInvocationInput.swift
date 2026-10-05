@@ -13,6 +13,18 @@ extension ToolInvocation {
     if inputMode.hasPrefix("ephemeral") { return prompt.map(ToolInputNormalization.submitted) }
     if inputMode == "contextual" {
       guard let text = try? snapshot.text(in: scope) else { return nil }
+      if entryContract == 2 {
+        var excluded = token
+        if let separator = acceptanceSeparator?.resolve(in: snapshot),
+          separator.location == NSMaxRange(token), NSMaxRange(separator) <= NSMaxRange(scope),
+          separator.length == 1, (try? snapshot.text(in: separator)) == " "
+        {
+          excluded.length += 1
+        }
+        return (text as NSString).replacingCharacters(
+          in: NSRange(location: excluded.location - scope.location, length: excluded.length),
+          with: "")
+      }
       return ToolInputNormalization.submitted(
         (text as NSString).replacingCharacters(
           in: NSRange(location: token.location - scope.location, length: token.length), with: ""))

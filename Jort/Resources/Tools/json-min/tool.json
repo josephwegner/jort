@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.json-min",
+  "version": 1,
+  "name": "Minify JSON",
+  "command": "/json-min",
+  "description": "Remove JSON whitespace while preserving exact values and number precision",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

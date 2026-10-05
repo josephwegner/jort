@@ -38,6 +38,7 @@ overrides=(
   # inside-out Apple Development pass below, so the outer app seal covers it.
   "CODE_SIGN_IDENTITY=-"
   "JORT_BUILD_AUDIENCE=local-only"
+  "JORT_JS_ALLOW_ADHOC=1"
   "JORT_CREDENTIAL_ENVIRONMENT=development"
   "JORT_APP_ENTITLEMENTS=$app_entitlements"
 )
@@ -63,15 +64,18 @@ if [[ "$identity" != "-" ]]; then
   python3 "$JORT_ROOT/scripts/provisioning_profile.py" embed \
     --profile "$profile" --app "$app"
 fi
-manifest_profile_args=()
+# Keep required arguments in the array: macOS Bash 3.2 treats an empty array
+# expansion as unbound under set -u, even after assigning ().
+manifest_args=(
+  --settings "$stage/build-settings.json"
+  --app "$app"
+  --output "$stage/manifest.json"
+)
 if [[ "$identity" != "-" ]]; then
-  manifest_profile_args=(--team-id "$JORT_DEVELOPMENT_TEAM_ID" --provisioning-profile "$profile" --profile-environment development --signing-identity "$identity")
+  manifest_args+=(--team-id "$JORT_DEVELOPMENT_TEAM_ID" --provisioning-profile "$profile" --profile-environment development --signing-identity "$identity")
 fi
 python3 "$JORT_ROOT/scripts/release_manifest.py" generate \
-  --settings "$stage/build-settings.json" \
-  --app "$app" \
-  "${manifest_profile_args[@]}" \
-  --output "$stage/manifest.json"
+  "${manifest_args[@]}"
 if [[ "$identity" != "-" ]]; then
   python3 "$JORT_ROOT/scripts/sign_development.py" \
     --app "$app" \

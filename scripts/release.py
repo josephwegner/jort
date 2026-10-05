@@ -172,6 +172,7 @@ def boundary(name, injected=None):
 def release_overrides(args):
     return ['ARCHS=' + ' '.join(sorted(set(args.architectures))), 'ONLY_ACTIVE_ARCH=NO',
             'JORT_CREDENTIAL_ENVIRONMENT=production', 'JORT_PRODUCTION_TEAM_ID=' + args.team_id,
+            'JORT_JS_ALLOW_ADHOC=0',
             'JORT_APP_ENTITLEMENTS=Configuration/JortProduction.entitlements',
             'DEVELOPMENT_TEAM=' + args.team_id, 'CODE_SIGNING_ALLOWED=NO']
 

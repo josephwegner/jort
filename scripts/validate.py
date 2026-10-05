@@ -44,6 +44,7 @@ CHECKS = {item.name: item for item in (
     make_check("presentation", ["bash", "scripts/test-presentation.sh"], xcode=True),
     make_check("packaging-tests", ["python3", "scripts/test-packaging.py"]),
     make_check("ui", ["./scripts/test-ui.sh"], xcode=True),
+    make_check("packaged-ui", ["bash", "scripts/test-packaged-ui.sh"], xcode=True),
     make_check("containment-binary-ui", ["python3", "scripts/verify-javascript-containment.py", ".build-ui-tests/Build/Products/Debug/Jort.app"]),
     make_check("containment-binary-release", ["python3", "scripts/verify-javascript-containment.py", "dist/Jort.app"]),
     make_check("first-party-analysis", ["python3", "scripts/analyze.py", "first-party"], xcode=True),
@@ -70,10 +71,12 @@ LANES = {
     "tsan-foundation": ["tsan-foundation"],
     "tsan-native": ["tsan-native"],
     "ui": ["ui", "containment-binary-ui"],
-    "package": ["release", "packaging-tests", "containment-binary-release"],
+    "package": ["release", "packaging-tests", "containment-binary-release", "packaged-ui"],
+    # Rerun only after a fresh package build; ordinary qualification uses package.
+    "packaged-ui": ["packaged-ui"],
     "release-fixtures": ["packaging-tests"],
-    "ci-test": ["format", "project", "foundation", "native", "packaging-tests", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release"],
-    "all": ["format", "project", "foundation", "native", "packaging-tests", "first-party-analysis", "quickjs-audit", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release"],
+    "ci-test": ["format", "project", "foundation", "native", "packaging-tests", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release", "packaged-ui"],
+    "all": ["format", "project", "foundation", "native", "packaging-tests", "first-party-analysis", "quickjs-audit", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release", "packaged-ui"],
     "gate": ["format", "project", "foundation", "native", "packaging-tests", "first-party-analysis", "quickjs-audit", "ui", "containment-binary-ui"],
     "signed-integration": ["signed-integration"],
 }
@@ -155,6 +158,8 @@ def changed_plan(paths: Sequence[str]) -> list[Check]:
         elif path.startswith(("Sources/JortPersistence/", "Tests/Foundation/Recovery", "Tests/Foundation/Storage", "Tests/Foundation/Migration", "Tests/Foundation/StartupPersistence", "Tests/Foundation/ToolPersistence")):
             item = focused_check("foundation", "Debug", FOUNDATION_FILTERS["persistence"], False)
             if item not in focused: focused.append(item)
+        elif path in ("Tests/UI/PackagedJortUITests.swift", "scripts/test-packaged-ui.sh"):
+            add("release"); add("containment-binary-release"); add("packaged-ui")
         elif path.startswith("Tests/UI/"):
             add("ui")
         elif path.startswith(("Sources/JortAppKit/", "Tests/AppKit/", "Jort/")):
@@ -165,7 +170,13 @@ def changed_plan(paths: Sequence[str]) -> list[Check]:
             add("quickjs-audit")
         elif path.startswith("scripts/"):
             add("packaging-tests")
-    return [CHECKS[name] for name in CHECKS if name in names] + focused
+    ordered = [CHECKS[name] for name in CHECKS if name in names] + focused
+    if "packaged-ui" in names:
+        # CHECKS declaration order must not launch this test against stale dist.
+        prerequisites = ("release", "containment-binary-release", "packaged-ui")
+        ordered = [item for item in ordered if item.name not in prerequisites]
+        ordered += [CHECKS[name] for name in prerequisites]
+    return ordered
 
 
 def git_changed_paths(base: str | None) -> list[str]:

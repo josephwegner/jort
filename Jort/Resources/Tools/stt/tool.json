@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.stt",
+  "version": 1,
+  "name": "Spaces to tabs",
+  "command": "/stt",
+  "description": "Replace complete groups of 1–16 leading spaces with tabs; default 4",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "arguments": [
+    {
+      "name": "width",
+      "type": "integer",
+      "label": "Spaces per tab",
+      "defaultValue": 4,
+      "minimum": 1,
+      "maximum": 16
+    }
+  ]
+}

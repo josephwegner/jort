@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.escape",
+  "version": 1,
+  "name": "Escape HTML",
+  "command": "/escape",
+  "description": "Escape ampersands, angle brackets, and both quote types as HTML text",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

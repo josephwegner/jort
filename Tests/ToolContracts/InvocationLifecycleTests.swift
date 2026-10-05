@@ -2,6 +2,60 @@ import XCTest
 import JortToolContracts
 
 final class InvocationLifecycleTests: XCTestCase {
+  func testReportCompletesOnlyAfterAcknowledgementAndDoneNeverExecutes() {
+    var value = state(.submitted)
+    _ = value.reduce(.report(value.identity, message: "Three words"))
+    XCTAssertEqual(value.phase, .submitted)
+    XCTAssertEqual(value.pendingEffect?.operation, .report("Three words"))
+    XCTAssertTrue(value.reduce(.result(value.identity, output: "late")).isEmpty)
+    _ = acknowledge(&value)
+    XCTAssertEqual(value.phase, .completed)
+    XCTAssertTrue(value.reduce(.merge).isEmpty)
+    _ = value.reduce(.done)
+    XCTAssertEqual(value.pendingEffect?.operation, .done)
+    _ = acknowledge(&value)
+    XCTAssertTrue(value.removed)
+  }
+
+  func testHostDispatchWaitsForDocumentAndInterruptedDispatchNeverReplays() {
+    let action = ToolHostAction(kind: "file.export", content: "exact")
+    var value = state(.submitted)
+    _ = value.reduce(.hostAction(value.identity, action))
+    XCTAssertNil(value.actionStatus)
+    XCTAssertEqual(acknowledge(&value), [.hostAction(value.identity, action)])
+    XCTAssertEqual(value.actionStatus, .dispatched)
+    XCTAssertTrue(value.reduce(.hostAction(value.identity, action)).isEmpty)
+    _ = value.reduce(.cancel)
+    XCTAssertEqual(value.pendingEffect?.operation, .actionUnknown)
+    _ = acknowledge(&value)
+    XCTAssertEqual(value.phase, .completed)
+    XCTAssertEqual(value.actionStatus, .unknown)
+    XCTAssertTrue(value.reduce(.hostAcknowledged(value.identity, message: "late")).isEmpty)
+    var restored = InvocationLifecycleState(
+      identity: value.identity, phase: .processing,
+      actionStatus: .dispatched)
+    _ = restored.reduce(.restored(hasLiveJob: false))
+    XCTAssertEqual(restored.pendingEffect?.operation, .actionUnknown)
+    XCTAssertTrue(acknowledge(&restored).isEmpty)
+    XCTAssertEqual(restored.actionStatus, .unknown)
+  }
+
+  func testHostAcknowledgementAndMessageUpdatesCannotRedispatch() {
+    var value = state(.submitted)
+    _ = value.reduce(
+      .hostAction(
+        value.identity,
+        .init(kind: "notification.schedule", content: "remember", minutes: 5)))
+    _ = acknowledge(&value)
+    _ = value.reduce(.hostAcknowledged(value.identity, message: "Scheduled"))
+    _ = acknowledge(&value)
+    XCTAssertEqual(value.actionStatus, .acknowledged)
+    _ = value.reduce(.completionMessage("Reminder cancelled"))
+    XCTAssertEqual(value.pendingEffect?.operation, .completionMessage("Reminder cancelled"))
+    XCTAssertTrue(acknowledge(&value).isEmpty)
+    XCTAssertEqual(value.actionStatus, .acknowledged)
+    XCTAssertTrue(value.reduce(.restored(hasLiveJob: false)).isEmpty)
+  }
   private func state(_ phase: ToolInvocationPhase = .inputting) -> InvocationLifecycleState {
     .init(identity: .init(invocationID: UUID(), generation: UUID()), phase: phase)
   }
@@ -153,7 +207,7 @@ extension InvocationLifecycleTests {
     let request = try ToolExecutionRequest(
       identity: identity, package: package, input: .init(content: "秘密"))
     let payload = try request.javascriptPayload(deadlineMilliseconds: 500)
-    XCTAssertEqual(payload.protocolVersion, 1)
+    XCTAssertEqual(payload.protocolVersion, 2)
     XCTAssertEqual(payload.invocationID, identity.invocationID.uuidString.lowercased())
     XCTAssertEqual(payload.generation, identity.generation.uuidString.lowercased())
     XCTAssertEqual(String(data: payload.input, encoding: .utf8), "秘密")

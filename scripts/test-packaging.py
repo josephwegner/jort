@@ -54,6 +54,9 @@ def fixture(root):
         values.update(CONFIGURATION='Release', EXECUTABLE_NAME=name, FULL_PRODUCT_NAME=product,
                       EXECUTABLE_PATH=executable, ARCHS='arm64', FRAMEWORK_VERSION='A',
                       LD_RUNPATH_SEARCH_PATHS='', ENABLE_HARDENED_RUNTIME='YES')
+        if name in manifests.PEER_EDGES:
+            values.update(JORT_JS_ALLOW_ADHOC='0',
+                          GCC_PREPROCESSOR_DEFINITIONS=['JORT_JS_ALLOW_ADHOC=0'])
         if kind == 'app':
             values['CODE_SIGN_ENTITLEMENTS'] = 'Configuration/JortProduction.entitlements'
         settings.append({'target': name, 'buildSettings': values})
@@ -530,6 +533,47 @@ int main(void) {
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn('Skipping', result.stdout)
 
+    def test_local_manifest_arguments_work_with_system_bash_nounset(self):
+        build = (ROOT / 'scripts/build.sh').read_text()
+        start = build.index('manifest_args=(')
+        end = build.index('if [[ "$identity" != "-" ]]; then\n'
+                          '  python3 "$JORT_ROOT/scripts/sign_development.py"', start)
+        # Exercise the actual assembly and invocation without Xcode or signing.
+        # NUL framing preserves spaces and also detects accidental empty arguments.
+        script = 'python3() { printf "%s\\0" "$@"; }\n' + build[start:end]
+        env = dict(os.environ, JORT_ROOT='/fixture/Project With Spaces',
+                   stage='/fixture/Build Stage', app='/fixture/App Bundle/Jort.app',
+                   profile='/fixture/Signing Profile.mobileprovision',
+                   JORT_DEVELOPMENT_TEAM_ID=TEAM)
+        for identity in ('-', 'Apple Development: Fixture Identity'):
+            with self.subTest(identity=identity):
+                result = subprocess.run(['/bin/bash', '-eu', '-c', script],
+                                        env=dict(env, identity=identity), capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr.decode())
+                expected = [env['JORT_ROOT'] + '/scripts/release_manifest.py', 'generate',
+                            '--settings', env['stage'] + '/build-settings.json',
+                            '--app', env['app'], '--output', env['stage'] + '/manifest.json']
+                if identity != '-':
+                    expected += ['--team-id', TEAM, '--provisioning-profile', env['profile'],
+                                 '--profile-environment', 'development',
+                                 '--signing-identity', identity]
+                self.assertEqual(result.stdout, b''.join(value.encode() + b'\0' for value in expected))
+
+    def test_local_build_explicitly_enables_ad_hoc_peers_for_both_commands(self):
+        build = (ROOT / 'scripts/build.sh').read_text()
+        start = build.index('overrides=(')
+        end = build.index('if [[ "$identity" != "-" ]]; then\n'
+                          '  python3 "$JORT_ROOT/scripts/provisioning_profile.py" embed', start)
+        script = 'xcodebuild() { printf "%s\\0" "$@"; printf "\\n"; }\n' + build[start:end]
+        env = dict(os.environ, JORT_ROOT='/fixture/Project', stage=str(self.root),
+                   derived_data='/fixture/Build', identity='-', app_entitlements='Local.entitlements',
+                   JORT_DEVELOPMENT_TEAM_ID='')
+        result = subprocess.run(['/bin/bash', '-eu', '-c', script], env=env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        # The settings command redirects stdout into the staging fixture.
+        for command in (result.stdout, (self.root / 'build-settings.json').read_bytes()):
+            self.assertEqual(command.split(b'\0').count(b'JORT_JS_ALLOW_ADHOC=1'), 1)
+
     def test_release_staging_disables_xcode_signing_for_build_and_settings(self):
         (self.root / 'dist').mkdir()
         args = SimpleNamespace(fail_at=None, architectures=['arm64'], team_id=TEAM)
@@ -554,7 +598,25 @@ int main(void) {
             self.assertIn('CODE_SIGNING_ALLOWED=NO', command)
             self.assertFalse(any(argument.startswith('CODE_SIGN_IDENTITY=') for argument in command))
             self.assertIn('JORT_CREDENTIAL_ENVIRONMENT=production', command)
+            self.assertIn('JORT_JS_ALLOW_ADHOC=0', command)
             self.assertIn('JORT_APP_ENTITLEMENTS=Configuration/JortProduction.entitlements', command)
+
+    def test_production_manifest_rejects_ad_hoc_peer_fallback(self):
+        for target in manifests.PEER_EDGES:
+            for setting, definitions in (
+                ('1', ['JORT_JS_ALLOW_ADHOC=1']),
+                ('0', ['JORT_JS_ALLOW_ADHOC=1']),
+                ('0', ['JORT_JS_ALLOW_ADHOC=0', 'JORT_JS_ALLOW_ADHOC=1']),
+                ('0', ['JORT_JS_ALLOW_ADHOC=$(JORT_JS_ALLOW_ADHOC)']),
+                ('0', []),
+                (None, ['JORT_JS_ALLOW_ADHOC=0']),
+            ):
+                with self.subTest(target=target, setting=setting, definitions=definitions):
+                    settings = copy.deepcopy(self.settings)
+                    values = next(item['buildSettings'] for item in settings if item['target'] == target)
+                    values.update(JORT_JS_ALLOW_ADHOC=setting, GCC_PREPROCESSOR_DEFINITIONS=definitions)
+                    with self.assertRaisesRegex(ValueError, 'production ad-hoc peer fallback forbidden'):
+                        manifests.generate(ROOT, settings, self.app, True, TEAM)
 
     def test_graph_cases(self):
         policy = json.loads((ROOT / 'Configuration/release-policy.json').read_text())

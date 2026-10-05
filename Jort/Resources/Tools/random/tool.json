@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.random",
+  "version": 1,
+  "name": "Random",
+  "command": "/random",
+  "description": "Insert 1–4096 unambiguous alphanumeric characters from captured entropy; default 12",
+  "entryContract": 2,
+  "inputMode": "contained",
+  "outputOperation": "replace-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "capturedData": [
+    "entropy"
+  ],
+  "arguments": [
+    {
+      "name": "length",
+      "type": "integer",
+      "label": "Length",
+      "description": "1–4096 independently sampled characters (default 12)",
+      "defaultValue": 12,
+      "minimum": 1,
+      "maximum": 4096
+    }
+  ]
+}

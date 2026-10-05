@@ -46,6 +46,7 @@ import JortSettings
   private var historyViewport: NSPoint?
   public var saveStatus: ((PersistenceState) -> Void)?
   public var openSettings: (() -> Void)?
+  public var cancelToolReminder: ((InvocationGeneration) async -> String)?
   var toolController: ToolInvocationController!
   var toolPresentation: ToolInvocationPresentation!
   private var toolCatalogLoaded = false

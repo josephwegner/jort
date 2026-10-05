@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define JORT_JS_VERSION 1u
+#define JORT_JS_VERSION 2u
 #define JORT_JS_POLICY_VERSION 1u
 #define JORT_JS_HEADER_SIZE 128u
 #define JORT_JS_READY_SIZE 24u
@@ -12,8 +12,8 @@
 #define JORT_JS_CONTRACT_MAX 16384u
 #define JORT_JS_SOURCE_MAX 262144u
 #define JORT_JS_INPUT_MAX 1048576u
-#define JORT_JS_METADATA_MAX 4096u
-#define JORT_JS_REQUEST_MAX 1572864u
+#define JORT_JS_METADATA_MAX 1048576u
+#define JORT_JS_REQUEST_MAX 2621440u
 #define JORT_JS_OUTPUT_MAX 1048576u
 #define JORT_JS_LINES_MAX 100000u
 #define JORT_JS_ERROR_MAX 512u
@@ -40,8 +40,8 @@ enum {
 
 // The in-memory representation is never written directly. Wire integers are big endian;
 // the generation UUID occupies bytes 44..51 and 88..95; SHA-256 is bytes 96..127.
-// Request fields: normalized contract, source, exact content, clock, UUID, empty.
-// Response fields: output (success) OR public error (failure); all others empty.
+// Request fields: normalized contract, source, exact content, clock, UUID, captured JSON.
+// Response fields: sanitized result JSON (success) OR public error (failure).
 typedef struct {
     uint16_t kind;
     uint32_t tag;

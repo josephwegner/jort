@@ -71,13 +71,13 @@ static int lengths_valid(const JortJSFrame *f) {
             !f->lengths[0] || f->lengths[0] > JORT_JS_CONTRACT_MAX ||
             !f->lengths[1] || f->lengths[1] > JORT_JS_SOURCE_MAX ||
             f->lengths[2] > JORT_JS_INPUT_MAX ||
-            (uint64_t)f->lengths[3] + f->lengths[4] > JORT_JS_METADATA_MAX ||
-            f->lengths[5] || sum > JORT_JS_REQUEST_MAX) return 0;
+            (uint64_t)f->lengths[3] + f->lengths[4] + f->lengths[5] > JORT_JS_METADATA_MAX ||
+            sum > JORT_JS_REQUEST_MAX) return 0;
         if (f->tag == JORT_JS_VALIDATE && f->lengths[2]) return 0;
     } else if (f->kind == JORT_JS_RESPONSE) {
         if (f->tag > JORT_JS_ENGINE_LIMIT || f->deadline_ms || f->output_bytes || f->output_lines ||
             f->lengths[2] || f->lengths[3] || f->lengths[4] || f->lengths[5] ||
-            f->lengths[0] > JORT_JS_OUTPUT_MAX || f->lengths[1] > JORT_JS_ERROR_MAX ||
+            f->lengths[0] > JORT_JS_RESPONSE_MAX - JORT_JS_HEADER_SIZE || f->lengths[1] > JORT_JS_ERROR_MAX ||
             sum > JORT_JS_RESPONSE_MAX) return 0;
         if (f->tag == JORT_JS_OK ? f->lengths[1] != 0 : (f->lengths[0] != 0 || !f->lengths[1])) return 0;
     } else return 0;

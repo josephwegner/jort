@@ -1,7 +1,28 @@
 import AppKit
 
 @MainActor final class ToolActionButton: NSButton {
+  override var acceptsFirstResponder: Bool { true }
   var invoke: (() -> Void)?
+  var returnToEditor: (() -> Void)?
+  var moveFocus: ((Bool) -> Void)?
+  override func keyDown(with event: NSEvent) {
+    if event.keyCode == 48 {
+      let backwards = event.modifierFlags.contains(.shift)
+      if let moveFocus {
+        moveFocus(backwards)
+      } else if backwards {
+        window?.selectPreviousKeyView(self)
+      } else {
+        window?.selectNextKeyView(self)
+      }
+    } else if event.keyCode == 53, let returnToEditor {
+      returnToEditor()
+    } else if event.keyCode == 36, isEnabled {
+      invoke?()
+    } else {
+      super.keyDown(with: event)
+    }
+  }
   private var hovered = false
   override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
   override func updateTrackingAreas() {

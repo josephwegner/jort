@@ -15,6 +15,8 @@ public actor PackageSettingsStore: SettingsStore {
     self.preferences = preferences
   }
   public func load() async throws -> SettingsSnapshot {
+    let databaseURL = await preferences.databaseURL
+    let upgrading = FileManager.default.fileExists(atPath: databaseURL.path)
     let legacy = try await preferences.load()
     legacyIDs = [:]
     legacyTools = legacy.customTools.map { original in
@@ -31,7 +33,11 @@ public actor PackageSettingsStore: SettingsStore {
       return value
     }
     do {
-      try await registry.reload()
+      try await registry.reload(
+        previousTemplateEnablement: upgrading
+          ? Dictionary(
+            uniqueKeysWithValues: legacy.templateOverrides.map { ($0.key.rawValue, $0.value) })
+          : nil)
       return try await refresh(preferences: legacy.preferences)
     } catch {
       snapshot.availability = .unavailable(
@@ -73,16 +79,18 @@ public actor PackageSettingsStore: SettingsStore {
     }
     var manifest =
       definition.manifest
+      ?? current?.manifest
       ?? ToolManifest(
         id: definition.id.rawValue, name: definition.displayName,
         command: "/" + SettingsValidation.normalizedCommandName(definition.commandName))
     manifest.id = definition.id.rawValue
-    manifest.version = (current?.manifest?.version ?? 0) + 1
+    manifest.version = (current?.manifest?.version ?? definition.manifest?.version ?? 0) + 1
     manifest.name = definition.displayName
     manifest.command = "/" + SettingsValidation.normalizedCommandName(definition.commandName)
     manifest.description = definition.summary
     manifest.basedOnTemplateID = definition.basedOnTemplateID?.rawValue
-    manifest.schemaVersion = 2
+    manifest.schemaVersion = max(2, manifest.schemaVersion)
+    manifest.compatibleVersions = nil
     manifest.executor = manifest.executorType
     let package =
       manifest.executorType == .model

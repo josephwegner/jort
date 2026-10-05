@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.sort-90",
+  "version": 1,
+  "name": "Sort 9–0",
+  "command": "/sort-90",
+  "description": "Sort by each line’s first finite signed number descending; ties stable, blanks last",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000
+}

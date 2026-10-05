@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.count-words",
+  "version": 1,
+  "name": "Count words",
+  "command": "/count-words",
+  "description": "Report Unicode words in the captured locale; contractions count once",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "insert-at-invocation",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "capturedData": [
+    "analysis"
+  ]
+}

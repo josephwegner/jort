@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 3,
+  "executor": "javascript",
+  "id": "dev.jort.join",
+  "version": 1,
+  "name": "Join",
+  "command": "/join",
+  "description": "Join logical lines with a required separator; an empty separator is allowed",
+  "entryContract": 2,
+  "inputMode": "contextual",
+  "outputOperation": "replace-context",
+  "maximumInputBytes": 262144,
+  "maximumOutputBytes": 262144,
+  "maximumOutputLines": 10000,
+  "arguments": [
+    {
+      "name": "separator",
+      "type": "string",
+      "label": "Separator",
+      "description": "Required literal separator; use \"\" to concatenate",
+      "required": true
+    }
+  ]
+}
