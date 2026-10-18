@@ -77,10 +77,14 @@ import JortSettings
   }
   func error(_ editor: EditorViewController, id: UUID) async throws {
     for _ in 0..<500 {
-      if editor.state.invocations.first(where: { $0.id == id })?.phase == .error { return }
+      if let invocation = editor.state.invocations.first(where: { $0.id == id }),
+        invocation.phase == .inputting, invocation.message != nil
+      {
+        return
+      }
       try await Task.sleep(for: .milliseconds(10))
     }
-    XCTFail("Tool did not enter error: \(editor.state.invocations)")
+    XCTFail("Tool did not return to editable input with an error: \(editor.state.invocations)")
   }
 
   /// Captures the existing phase authority before extraction. Illegal repeat actions

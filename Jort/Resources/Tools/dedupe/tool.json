@@ -4,7 +4,7 @@
   "version": 1,
   "name": "Dedupe",
   "command": "/dedupe",
-  "description": "dedupe tool",
+  "description": "Remove duplicate lines while keeping the first occurrence.",
   "entryContract": 1,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

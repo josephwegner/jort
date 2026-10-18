@@ -25,21 +25,27 @@ public struct ModelRequest: Equatable, Sendable {
   public let modelID: String
   public let instructions: String
   public let content: String
+  public let instruction: String?
   public let maximumTokens: Int
   public let maximumBytes: Int
   public let maximumLines: Int
-  public init(package: ToolPackage, content: String, id: UUID = UUID()) throws {
+  public init(
+    package: ToolPackage, content: String, instruction: String? = nil, id: UUID = UUID()
+  ) throws {
     try package.validate()
     guard package.manifest.executorType == .model,
       let model = ModelCatalog.bundled.model(id: package.manifest.modelID ?? "")
     else { throw ModelFailure.malformed }
-    guard content.utf8.count <= package.manifest.maximumInputBytes else { throw ModelFailure.limit }
+    guard content.utf8.count <= package.manifest.maximumInputBytes,
+      instruction.map({ $0.utf8.count <= 16_384 && !$0.contains("\0") }) ?? true
+    else { throw ModelFailure.limit }
     self.id = id
     toolID = package.manifest.id
     version = package.manifest.version
     modelID = model.id
     instructions = package.instructions
     self.content = content
+    self.instruction = instruction
     maximumTokens = min(model.maximumOutputTokens, package.manifest.maximumOutputBytes)
     maximumBytes = package.manifest.maximumOutputBytes
     maximumLines = package.manifest.maximumOutputLines

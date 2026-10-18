@@ -29,7 +29,7 @@ public struct PKCEAttempt: Sendable {
   public func authorizationURL(port: UInt16) -> URL {
     var url = URLComponents(string: "https://openrouter.ai/auth")!
     url.queryItems = [
-      .init(name: "callback_url", value: "http://localhost:\(port)/callback/\(nonce)"),
+      .init(name: "callback_url", value: "http://127.0.0.1:\(port)/callback/\(nonce)"),
       .init(name: "code_challenge", value: challenge),
       .init(name: "code_challenge_method", value: "S256"),
     ]
@@ -138,6 +138,7 @@ public final class LoopbackOAuthCallback: @unchecked Sendable {
 }
 
 public actor OpenRouterConnection: ModelConnection {
+  private enum CredentialRecoveryFailure: Error { case rollbackFailed }
   public let credentials: any ModelCredentialStore
   private let settings: (any ModelConnectionSettings)?
   private let transportFactory: @Sendable () -> any OpenRouterTransport
@@ -183,9 +184,14 @@ public actor OpenRouterConnection: ModelConnection {
       status.credentialMigration = await credentials.migrationOutcome()
       if !busy {
         if value == nil {
-          status.state = .notConnected
+          status.state = status.failure == nil ? .notConnected : .needsAttention
         } else if priorMigration?.blocksUse == true {
           status.state = .unableToVerify
+        } else if status.state == .notConnected {
+          // The credential is the source of truth after restart. A missing or
+          // stale status cache must not make a usable saved connection appear
+          // disconnected.
+          status.state = .connected
         }
       }
       await persist()
@@ -194,6 +200,7 @@ public actor OpenRouterConnection: ModelConnection {
       status.credentialMigration =
         (error as? ModelCredentialStoreFailure)?.migrationOutcome ?? .unavailableIdentity
       status.state = .needsAttention
+      status.failure = Self.failure(for: error)
       await persist()
       throw error
     }
@@ -206,6 +213,7 @@ public actor OpenRouterConnection: ModelConnection {
   }
   public func markAuthenticationFailure() async {
     status.state = .needsAttention
+    status.failure = .authentication
     await persist()
   }
   public func connect(openBrowser: @escaping @Sendable (URL) async -> Bool) async throws {
@@ -227,8 +235,35 @@ public actor OpenRouterConnection: ModelConnection {
       try await exchange(code: code, attempt: attempt)
     } catch {
       status = old
+      status.failure = Self.failure(for: error)
+      if status.state == .notConnected || error is CredentialRecoveryFailure {
+        status.state = .needsAttention
+      }
+      await persist()
+      if error is CredentialRecoveryFailure { throw ModelFailure.credentialStore }
       throw error
     }
+  }
+
+  private static func failure(for error: Error) -> ModelConnectionFailure {
+    if error is CancellationError { return .cancelled }
+    if let failure = error as? ModelFailure {
+      switch failure {
+      case .authentication: return .authentication
+      case .offline: return .offline
+      case .timeout: return .timeout
+      case .cancelled: return .cancelled
+      case .malformed, .limit: return .malformed
+      case .credentialStore: return .credentialStore
+      case .authorization, .disconnected: return .authorization
+      }
+    }
+    if let failure = error as? ModelCredentialStoreFailure,
+      failure == .unavailableIdentity
+    {
+      return .unavailableIdentity
+    }
+    return .credentialStore
   }
   func exchange(code: String, attempt: PKCEAttempt) async throws {
     guard Date() < attempt.expiresAt, !code.isEmpty, code.utf8.count <= 4096 else {
@@ -254,9 +289,35 @@ public actor OpenRouterConnection: ModelConnection {
     let verified = try await verify(key)
     try Task.checkCancellation()
     guard Date() < attempt.expiresAt else { throw ModelFailure.timeout }
-    try await credentials.replace(with: key)
+    let previous = try await credentials.read()
+    try Task.checkCancellation()
+    guard try await credentials.replaceIfCurrent(previous, with: key) else {
+      throw ModelFailure.credentialStore
+    }
+    do {
+      // Confirm the durable value before publishing connected status. A late
+      // cancellation or readback fault restores the previous credential.
+      try Task.checkCancellation()
+      guard let persisted = try await credentials.read(), persisted == key else {
+        throw ModelFailure.credentialStore
+      }
+      try Task.checkCancellation()
+    } catch {
+      let restored = await restoreCredential(expected: key, previous: previous)
+      if !restored { throw CredentialRecoveryFailure.rollbackFailed }
+      throw error
+    }
     status = verified
+    status.failure = nil
     await persist()
+  }
+  private func restoreCredential(expected: String, previous: String?) async -> Bool {
+    let credentials = credentials
+    return await Task.detached {
+      do {
+        return try await credentials.restoreIfCurrent(expected, with: previous)
+      } catch { return false }
+    }.value
   }
   private func verify(_ key: String) async throws -> ModelConnectionStatus {
     var request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/key")!)
@@ -286,9 +347,11 @@ public actor OpenRouterConnection: ModelConnection {
       var verified = try await verify(key)
       verified.credentialMigration = await credentials.migrationOutcome()
       status = verified
+      status.failure = nil
       await persist()
     } catch {
       status.state = (error as? ModelFailure) == .authentication ? .needsAttention : .unableToVerify
+      status.failure = Self.failure(for: error)
       await persist()
       throw error
     }

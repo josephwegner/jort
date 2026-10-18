@@ -74,6 +74,52 @@ public struct ToolArgumentDefinition: Codable, Equatable, Sendable {
 
 /// Positional command text is parsed only from owned input or a separate argument field.
 public enum ToolArguments {
+  /// Read declared positional parameters, then leave the remaining question
+  /// verbatim. This is used by model calls, never to parse their context.
+  public static func parseModelInputs(_ text: String, definitions: [ToolArgumentDefinition]) throws
+    -> (arguments: [String: ToolArgumentValue], instruction: String?)
+  {
+    guard text.utf8.count <= 65_536 else { throw invalid("Arguments exceed the input limit.") }
+    let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !definitions.isEmpty else { return ([:], raw.isEmpty ? nil : raw) }
+    var quoted = false, escaped = false, started = false, count = 0
+    var end = raw.endIndex
+    for index in raw.indices {
+      let character = raw[index]
+      if escaped {
+        escaped = false
+        started = true
+      } else if character == "\\" {
+        escaped = true
+        started = true
+      } else if character == "\"" {
+        quoted.toggle()
+        started = true
+      } else if character.isWhitespace && !quoted {
+        if started {
+          count += 1
+          started = false
+        }
+        if count == definitions.count {
+          end = index
+          break
+        }
+      } else {
+        started = true
+      }
+    }
+    do {
+      let arguments = try parse(String(raw[..<end]), definitions: definitions)
+      let remaining = raw[end...].trimmingCharacters(in: .whitespacesAndNewlines)
+      return (arguments, remaining.isEmpty ? nil : remaining)
+    } catch {
+      // Optional parameters need not be spelled out to ask a plain question.
+      // A required positional parameter still produces its normal inline error.
+      guard definitions.allSatisfy({ $0.required != true }) else { throw error }
+      return (try validate([:], definitions: definitions), raw.isEmpty ? nil : raw)
+    }
+  }
+
   public static func parse(_ text: String, definitions: [ToolArgumentDefinition]) throws
     -> [String: ToolArgumentValue]
   {

@@ -105,6 +105,12 @@ function formatJSON(source, indentWidth) {
   return result;
 }
 
+function publicError(error) {
+  const message = error instanceof Error ? error.message : "";
+  return /^JSON at line [0-9]+, column [0-9]+: /.test(message)
+    ? message : "Enter valid JSON.";
+}
+
 export async function validate(input) {
   const indent = input.arguments?.indent ?? DEFAULT_INDENT;
   if (!Number.isInteger(indent) || indent < 1 || indent > 8) {
@@ -114,7 +120,7 @@ export async function validate(input) {
     formatJSON(input.content, indent);
     return {output: ""};
   } catch (error) {
-    return {error: error.message};
+    return {error: publicError(error)};
   }
 }
 
@@ -126,6 +132,6 @@ export default async function(input) {
   try {
     return {output: formatJSON(input.content, indent)};
   } catch (error) {
-    return {error: error.message};
+    return {error: publicError(error)};
   }
 }

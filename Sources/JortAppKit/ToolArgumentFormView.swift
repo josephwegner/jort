@@ -8,6 +8,7 @@ import JortToolContracts
 /// A small native form. Its values are invocation options, never document text.
 @MainActor final class ToolArgumentFormView: NSView, NSTextFieldDelegate {
   private(set) var fields: [(name: String, field: NSTextField)] = []
+  private let error = NSTextField(wrappingLabelWithString: "")
   private let title = NSTextField(labelWithString: "Arguments")
   private var labels: [NSTextField] = []
   private let fieldScroll = NSScrollView()
@@ -18,15 +19,21 @@ import JortToolContracts
   var submit: (() -> Void)?
   var returnToEditor: (() -> Void)?
   override var isFlipped: Bool { true }
-  var preferredHeight: CGFloat { CGFloat(fields.count) * 52 + 66 }
+  var preferredHeight: CGFloat { CGFloat(fields.count) * 52 + 66 + (error.isHidden ? 0 : 36) }
 
   init(definitions: [ToolArgumentDefinition], values: [String: String], description: String) {
     super.init(frame: .zero)
     wantsLayer = true
     layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-    layer?.borderColor = NSColor.systemTeal.cgColor
+    layer?.borderColor = ToolPresentationColors.command.cgColor
     layer?.borderWidth = 1
     layer?.cornerRadius = 6
+    error.font = .systemFont(ofSize: 11)
+    error.textColor = .systemRed
+    error.maximumNumberOfLines = 2
+    error.isHidden = true
+    error.setAccessibilityRole(.staticText)
+    addSubview(error)
     title.stringValue = description.isEmpty ? "Arguments" : description
     title.lineBreakMode = .byTruncatingTail
     title.toolTip = description
@@ -83,9 +90,12 @@ import JortToolContracts
 
   override func layout() {
     super.layout()
-    title.frame = NSRect(x: 10, y: 8, width: bounds.width - 20, height: 20)
+    let errorHeight: CGFloat = error.isHidden ? 0 : 36
+    error.frame = NSRect(x: 10, y: 7, width: bounds.width - 20, height: errorHeight)
+    title.frame = NSRect(x: 10, y: 8 + errorHeight, width: bounds.width - 20, height: 20)
     fieldScroll.frame = NSRect(
-      x: 6, y: 32, width: bounds.width - 12, height: max(24, bounds.height - 64))
+      x: 6, y: 32 + errorHeight, width: bounds.width - 12,
+      height: max(24, bounds.height - 64 - errorHeight))
     fieldArea.frame = NSRect(
       x: 0, y: 0, width: fieldScroll.contentSize.width,
       height: max(fieldScroll.contentSize.height, CGFloat(fields.count) * 52))
@@ -97,6 +107,15 @@ import JortToolContracts
     }
     run.frame = NSRect(x: bounds.width - 78, y: bounds.height - 28, width: 40, height: 24)
     back.frame = NSRect(x: bounds.width - 34, y: bounds.height - 28, width: 24, height: 24)
+  }
+
+  func setError(_ message: String?) {
+    error.stringValue = message ?? ""
+    error.isHidden = message == nil
+    if let message { error.setAccessibilityLabel("Tool error: \(message)") }
+    setAccessibilityChildren(
+      (error.isHidden ? [] : [error]) + [title] + fields.map(\.field) + [run, back])
+    needsLayout = true
   }
 
   func focusFirst() {

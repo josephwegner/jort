@@ -16,6 +16,14 @@ final class ModelCredentialsTests: XCTestCase {
       XCTFail("Expected unavailable identity")
     } catch { XCTAssertEqual(error as? ModelCredentialStoreFailure, .unavailableIdentity) }
     do {
+      _ = try await store.replaceIfCurrent(nil, with: "credential")
+      XCTFail("Expected unavailable identity")
+    } catch { XCTAssertEqual(error as? ModelCredentialStoreFailure, .unavailableIdentity) }
+    do {
+      _ = try await store.restoreIfCurrent("credential", with: nil)
+      XCTFail("Expected unavailable identity")
+    } catch { XCTAssertEqual(error as? ModelCredentialStoreFailure, .unavailableIdentity) }
+    do {
       try await store.remove()
       XCTFail("Expected unavailable identity")
     } catch { XCTAssertEqual(error as? ModelCredentialStoreFailure, .unavailableIdentity) }
@@ -541,6 +549,83 @@ final class ModelCredentialsTests: XCTestCase {
     XCTAssertEqual(security.operations, [])
     let retained = try await store.read()
     XCTAssertEqual(retained, "working-value")
+  }
+
+  func testConditionalRestorePreservesNewerProtectedCredential() async throws {
+    let policy = try ModelCredentialPolicy(
+      environment: .production, applicationIdentifierPrefix: "TEAM123.")
+    let security = CredentialSecurityFake(protected: Data("old-value".utf8))
+    let store = KeychainModelCredentialStore(policy: policy, security: security)
+    try await store.replace(with: "attempt-value")
+    try await store.replace(with: "newer-value")
+    let beforeWrites = security.operations.filter {
+      $0 == .updateProtected || $0 == .addProtected || $0 == .deleteProtected
+    }.count
+
+    let staleRestore = try await store.restoreIfCurrent("attempt-value", with: "old-value")
+    XCTAssertFalse(staleRestore)
+    XCTAssertEqual(security.protected, Data("newer-value".utf8))
+    let afterStaleRestoreWrites = security.operations.filter {
+      $0 == .updateProtected || $0 == .addProtected || $0 == .deleteProtected
+    }.count
+    XCTAssertEqual(afterStaleRestoreWrites, beforeWrites)
+
+    let matchedRestore = try await store.restoreIfCurrent("newer-value", with: "old-value")
+    XCTAssertTrue(matchedRestore)
+    XCTAssertEqual(security.protected, Data("old-value".utf8))
+
+    let staleRemoval = try await store.restoreIfCurrent("newer-value", with: nil)
+    XCTAssertFalse(staleRemoval)
+    XCTAssertEqual(security.protected, Data("old-value".utf8))
+  }
+
+  func testConditionalCommitPreservesNewerProtectedCredential() async throws {
+    let policy = try ModelCredentialPolicy(
+      environment: .production, applicationIdentifierPrefix: "TEAM123.")
+    let security = CredentialSecurityFake(protected: Data("old-value".utf8))
+    let store = KeychainModelCredentialStore(policy: policy, security: security)
+    try await store.replace(with: "newer-value")
+    let beforeWrites = security.operations.filter {
+      $0 == .updateProtected || $0 == .addProtected || $0 == .deleteProtected
+    }.count
+
+    let staleCommit = try await store.replaceIfCurrent("old-value", with: "attempt-value")
+    XCTAssertFalse(staleCommit)
+    XCTAssertEqual(security.protected, Data("newer-value".utf8))
+    let afterStaleCommitWrites = security.operations.filter {
+      $0 == .updateProtected || $0 == .addProtected || $0 == .deleteProtected
+    }.count
+    XCTAssertEqual(afterStaleCommitWrites, beforeWrites)
+
+    let matchedCommit = try await store.replaceIfCurrent("newer-value", with: "attempt-value")
+    XCTAssertTrue(matchedCommit)
+    XCTAssertEqual(security.protected, Data("attempt-value".utf8))
+  }
+
+  func testConditionalRollbackRestoresCredentialWithIncompleteLegacyCleanup() async throws {
+    let policy = try ModelCredentialPolicy(
+      environment: .production, applicationIdentifierPrefix: "TEAM123.")
+    let security = CredentialSecurityFake(legacy: Data("old-value".utf8))
+    security.failLegacyDelete = true
+    let store = KeychainModelCredentialStore(policy: policy, security: security)
+    let migrated = try await store.read()
+    let initialOutcome = await store.migrationOutcome()
+    XCTAssertEqual(migrated, "old-value")
+    XCTAssertEqual(initialOutcome, .cleanupIncomplete)
+    let committed = try await store.replaceIfCurrent("old-value", with: "attempt-value")
+    XCTAssertTrue(committed)
+    await XCTAssertThrowsErrorAsync(try await store.read()) {
+      XCTAssertEqual($0 as? ModelCredentialStoreFailure, .conflict)
+    }
+
+    let restored = try await store.restoreIfCurrent("attempt-value", with: "old-value")
+    XCTAssertTrue(restored)
+    XCTAssertEqual(security.protected, Data("old-value".utf8))
+    XCTAssertEqual(security.legacy, Data("old-value".utf8))
+    let finalCredential = try await store.read()
+    let finalOutcome = await store.migrationOutcome()
+    XCTAssertEqual(finalCredential, "old-value")
+    XCTAssertEqual(finalOutcome, .cleanupIncomplete)
   }
 
   func testPreDeleteConflictAndErrorPreserveBothCopies() async throws {

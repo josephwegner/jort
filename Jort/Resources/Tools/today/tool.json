@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Today",
   "command": "/today",
-  "description": "Insert local weekday and date, such as Sat, Sept 12",
+  "description": "Insert today’s local weekday and date.",
   "entryContract": 2,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",

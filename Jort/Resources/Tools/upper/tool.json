@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Uppercase",
   "command": "/upper",
-  "description": "Uppercase Unicode raw text, including code identifiers and URL paths",
+  "description": "Convert this text to uppercase.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

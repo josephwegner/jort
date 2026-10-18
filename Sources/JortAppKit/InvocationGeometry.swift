@@ -87,8 +87,10 @@ import JortDocument
     let indented = output.map { leadingIndent($0, snapshot: snapshot) } ?? false
     let emptyAtLineStart =
       output.map { $0.length == 0 && startsLine($0, snapshot: snapshot) } ?? false
+    let call = invocation.call?.resolve(in: snapshot)
     let sourceEndsLine = endsLine(
-      NSMaxRange(invocation.inputMode == "contextual" ? token : scope), snapshot: snapshot)
+      NSMaxRange(call ?? (invocation.inputMode == "contextual" ? token : scope)), snapshot: snapshot
+    )
     let outputEndsLine = output.map { endsLine(NSMaxRange($0), snapshot: snapshot) } ?? false
     let inlineActions =
       !(invocation.inputMode.hasPrefix("ephemeral") && invocation.phase == .inputting)
@@ -110,7 +112,9 @@ import JortDocument
       sourceFrames.append(emptyLine)
     }
     var sourceRects = connected(sourceFrames)
-    if output == nil, invocation.inputMode == "contextual", let tokenFrame = rects(token).last {
+    if call == nil, output == nil, invocation.inputMode == "contextual",
+      let tokenFrame = rects(token).last
+    {
       sourceRects.append(
         NSRect(
           x: tokenFrame.maxX - (sourceEndsLine ? 3 : 27), y: tokenFrame.minY,
@@ -128,9 +132,36 @@ import JortDocument
     sourceRects = clippedBeforeFollowingGlyph(
       sourceRects, end: NSMaxRange(scope), snapshot: snapshot, glyphs: input.glyphs)
     let warning = input.warning
-    let color: NSColor =
-      invocation.phase == .error ? .systemRed : warning == nil ? .systemTeal : .systemOrange
-    shapes.append((union(sourceRects), color))
+    let commandColor: NSColor =
+      invocation.phase == .error
+      ? .systemRed : warning == nil ? ToolPresentationColors.command : .systemOrange
+    if invocation.inputMode == "contextual" {
+      let command = call ?? token
+      // A legacy invocation may lack a call range. Exclude its token from the
+      // context in that case so every visible command still has the same style.
+      let contexts = contextSegments(
+        invocation.contextRanges(in: snapshot), excluding: command)
+      for context in contexts {
+        let color =
+          invocation.phase == .error
+          ? .systemRed
+          : warning == nil
+            ? ToolPresentationColors.context : .systemOrange
+        let frames = clippedBeforeFollowingGlyph(
+          connected(rects(context)), end: NSMaxRange(context), snapshot: snapshot,
+          glyphs: input.glyphs)
+        shapes.append((union(frames), color))
+      }
+      var callRects = connected(rects(command))
+      if output == nil, !callRects.isEmpty {
+        callRects[callRects.count - 1].size.width += sourceEndsLine ? 60 : 27
+      }
+      callRects = clippedBeforeFollowingGlyph(
+        callRects, end: NSMaxRange(command), snapshot: snapshot, glyphs: input.glyphs)
+      shapes.append((union(callRects), commandColor))
+    } else {
+      shapes.append((union(sourceRects), commandColor))
+    }
     let outputRects: [NSRect]
     if let output {
       var frames = connected(rects(output))
@@ -154,7 +185,7 @@ import JortDocument
           frames[frames.count - 1].size.width += outputEndsLine ? 54 : 21
         }
       }
-      if let a = sourceRects.last, let b = frames.first, b.minY > a.minY {
+      if call == nil, let a = sourceRects.last, let b = frames.first, b.minY > a.minY {
         let seam = NSRect(
           x: min(a.minX, b.minX), y: a.maxY - 2,
           width: max(a.maxX, b.maxX) - min(a.minX, b.minX), height: max(4, b.minY - a.maxY + 4))
@@ -168,7 +199,7 @@ import JortDocument
       outputRects = []
     }
     var contextControl =
-      invocation.inputMode == "contextual" && output == nil ? rects(token).last : nil
+      invocation.inputMode == "contextual" && output == nil ? rects(call ?? token).last : nil
     contextControl?.size.width += sourceEndsLine ? 60 : 27
     let leadingAnchor =
       leading ? rects(NSRange(location: output!.location, length: 0)).first : nil
@@ -221,6 +252,18 @@ import JortDocument
       result.append(frame)
     }
     return result
+  }
+  private static func contextSegments(_ ranges: [NSRange], excluding command: NSRange) -> [NSRange]
+  {
+    ranges.flatMap { range -> [NSRange] in
+      let intersection = NSIntersectionRange(range, command)
+      guard intersection.length > 0 else { return [range] }
+      return [
+        NSRange(location: range.location, length: intersection.location - range.location),
+        NSRange(
+          location: NSMaxRange(intersection), length: NSMaxRange(range) - NSMaxRange(intersection)),
+      ].filter { $0.length > 0 }
+    }
   }
   private static func clippedBeforeFollowingGlyph(
     _ frames: [NSRect], end: Int, snapshot: DocumentSnapshot, glyphs: [Int: NSRect]

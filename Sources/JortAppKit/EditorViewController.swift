@@ -687,7 +687,27 @@ import JortSettings
         location: min(selected.location, result.after.utf16Count),
         length: min(selected.length, max(0, result.after.utf16Count - selected.location))))
     var position = viewport
-    if let (id, relativeY) = topAnchor, let band = linePresentation.band(for: id) {
+    let anchorLineWasEdited: Bool
+    if let (id, _) = topAnchor, let line = result.before.line(id: id),
+      case .patch(let patch) = result.transaction.mutation
+    {
+      let lineRange = NSRange(location: line.location, length: line.length)
+      anchorLineWasEdited = patch.replacements.contains { replacement in
+        let edit = replacement.range
+        return edit.length == 0
+          ? edit.location >= line.location && edit.location <= NSMaxRange(lineRange)
+          : NSIntersectionRange(edit, lineRange).length > 0
+      }
+    } else {
+      anchorLineWasEdited = false
+    }
+    // A short note already fits in the viewport. Line insertion can move its
+    // first visible line without requiring any viewport movement.
+    let documentFitsViewport = textView.bounds.height <= scroll.contentView.bounds.height + 1
+    // A rewritten line also cannot provide a stable visual anchor.
+    if !documentFitsViewport, !anchorLineWasEdited, let (id, relativeY) = topAnchor,
+      let band = linePresentation.band(for: id)
+    {
       position.y = band.frame.minY + relativeY
     }
     scroll.contentView.scroll(to: position)

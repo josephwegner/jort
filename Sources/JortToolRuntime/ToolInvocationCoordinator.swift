@@ -108,6 +108,9 @@ import JortToolContracts
               .contains(failure.code)
             {
               self?.send(identity, .cancel)
+              // Keep the conservative unknown/no-replay state, but do not
+              // replace the host's actionable explanation with generic text.
+              self?.send(identity, .completionMessage(failure.message))
             } else {
               self?.send(
                 identity,

@@ -44,6 +44,14 @@ private actor CountingJavaScriptBroker: JavaScriptBrokerTransport {
   }
 }
 
+private struct UnexpectedProviderFailure: LocalizedError {
+  var errorDescription: String? { "private provider diagnostic" }
+}
+
+private struct UnexpectedFailureProvider: ModelProvider {
+  func execute(_ request: ModelRequest) async throws -> String { throw UnexpectedProviderFailure() }
+}
+
 final class ModelToolTests: StoreTestCase {
   func testCredentialConflictReachesConnectionAndDispatcherWithoutNetworkRequest() async throws {
     let credentials = MigrationCredentialStore(outcome: .conflict)
@@ -191,6 +199,24 @@ final class ModelToolTests: StoreTestCase {
     XCTAssertEqual(captured.first?.content, "秘密\ntext")
     XCTAssertEqual(captured.first?.instructions, package().instructions)
   }
+  func testModelPreflightPreservesSafeInputLimitsAndHidesInvalidConfiguration() async throws {
+    var limited = package()
+    limited.manifest.maximumInputBytes = 1
+    let dispatcher = ToolExecutorDispatcher(modelAvailable: { true })
+
+    let limit = await dispatcher.validate(limited, input: .init(content: "too long"))
+    XCTAssertEqual(limit.failure?.code, .outputLimit)
+    XCTAssertEqual(limit.error, ModelFailure.limit.message)
+
+    var unavailable = package()
+    unavailable.manifest.modelID = "removed/model"
+    let configuration = await dispatcher.validate(unavailable, input: .init(content: "input"))
+    XCTAssertEqual(configuration.failure?.code, .invalidPackage)
+    XCTAssertEqual(
+      configuration.error,
+      "This model tool is unavailable. Check its instructions and selected model in Tools Settings."
+    )
+  }
   func testModelDispatchNeverCrossesTheJavaScriptBrokerBoundary() async throws {
     let provider = FakeModelProvider(.success("answer"))
     let broker = CountingJavaScriptBroker()
@@ -265,6 +291,14 @@ final class ModelToolTests: StoreTestCase {
     XCTAssertNil(result.output)
     XCTAssertEqual(result.error, ModelFailure.cancelled.message)
   }
+  func testUnexpectedProviderFailureUsesSafePublicMessage() async {
+    let dispatcher = ToolExecutorDispatcher(
+      modelAvailable: { true }, provider: { UnexpectedFailureProvider() })
+    let result = await dispatcher.execute(package(), input: .init(content: "input"))
+    XCTAssertEqual(result.failure?.code, .malformedResponse)
+    XCTAssertEqual(result.error, ModelFailure.malformed.message)
+    XCTAssertFalse(result.error?.contains("private provider diagnostic") == true)
+  }
   func testPKCECorrelationExpirationAndEntropy() throws {
     let attempt = try PKCEAttempt(), other = try PKCEAttempt()
     XCTAssertEqual(attempt.verifier.count, 43)
@@ -337,7 +371,7 @@ final class ModelToolTests: StoreTestCase {
       .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent(
         "Jort/Resources/Tools")
     for (name, mode, operation) in [
-      ("ask", ToolInputMode.ephemeralMultiline, ToolOutputOperation.insertAtInvocation),
+      ("ask", ToolInputMode.contained, ToolOutputOperation.insertAtInvocation),
       ("rewrite", .contextual, .replaceContext),
     ] {
       let package = try ToolPackage.load(from: root.appendingPathComponent(name))

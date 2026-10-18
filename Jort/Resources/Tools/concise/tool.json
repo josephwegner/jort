@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Make concise",
   "command": "/concise",
-  "description": "Remove repetition and filler while preserving meaning and tone",
+  "description": "Make the selected text shorter while preserving its meaning and tone.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

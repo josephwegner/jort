@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Sort 9–0",
   "command": "/sort-90",
-  "description": "Sort by each line’s first finite signed number descending; ties stable, blanks last",
+  "description": "Sort lines by number from highest to lowest.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

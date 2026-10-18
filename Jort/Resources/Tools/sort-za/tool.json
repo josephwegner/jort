@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Sort Z–A",
   "command": "/sort-za",
-  "description": "Sort lines alphabetically descending; blanks last, duplicates and tied order retained",
+  "description": "Sort lines alphabetically from Z to A.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

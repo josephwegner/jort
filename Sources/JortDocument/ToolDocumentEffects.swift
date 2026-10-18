@@ -62,6 +62,7 @@ extension ToolInvocation {
       var value = submission ?? expected
       guard value.id == expected.id, value.packageID == expected.packageID,
         value.token == expected.token, value.scope == expected.scope,
+        value.call == expected.call,
         value.sourceHash == expected.sourceHash, value.generation == expected.generation,
         value.phase == .inputting
       else { throw DocumentError.invalidState }
@@ -82,7 +83,9 @@ extension ToolInvocation {
         throw DocumentError.invalidState
       }
       var value = expected
-      value.phase = .error
+      // A failed execution has no result to merge. Keep the call editable so
+      // its prompt or inline arguments can be corrected and submitted again.
+      value.phase = .inputting
       value.message = message
       try builder.update(value)
     case .publish(let output):
@@ -193,18 +196,47 @@ extension ToolInvocation {
     var scopeRange = NSRange(
       location: range.location,
       length: manifest.inputMode.isEphemeral ? command.utf16.count : replacement.utf16.count)
+    let callRange = scopeRange
     if manifest.inputMode == .contextual {
-      guard let first = plain.line(containingUTF16Offset: tokenRange.location),
-        let last = plain.line(
-          containingUTF16Offset: max(tokenRange.location, NSMaxRange(tokenRange) - 1))
+      guard let first = plain.line(containingUTF16Offset: tokenRange.location)
       else { throw DocumentError.missingAnchor }
-      scopeRange = NSRange(
-        location: first.location, length: last.location + last.length - first.location)
-      while scopeRange.length > 0,
-        let unit = try plain.utf16(in: NSRange(location: NSMaxRange(scopeRange) - 1, length: 1))
-          .first,
-        [10, 13].contains(unit)
-      { scopeRange.length -= 1 }
+      if manifest.entryContract == 2 {
+        var start = first.location
+        let prefix = try plain.text(
+          in: NSRange(
+            location: first.location, length: tokenRange.location - first.location))
+        if prefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+          var cursor = first.location
+          var foundParagraph = false
+          while cursor > 0 {
+            guard let previous = plain.line(containingUTF16Offset: cursor - 1),
+              previous.location < cursor
+            else { break }
+            let text = try plain.text(
+              in: NSRange(location: previous.location, length: previous.length))
+            let blank = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if blank && foundParagraph { break }
+            if !blank {
+              start = previous.location
+              foundParagraph = true
+            }
+            cursor = previous.location
+          }
+        }
+        scopeRange = NSRange(location: start, length: NSMaxRange(callRange) - start)
+      } else {
+        guard
+          let last = plain.line(
+            containingUTF16Offset: max(tokenRange.location, NSMaxRange(tokenRange) - 1))
+        else { throw DocumentError.missingAnchor }
+        scopeRange = NSRange(
+          location: first.location, length: last.location + last.length - first.location)
+        while scopeRange.length > 0,
+          let unit = try plain.utf16(in: NSRange(location: NSMaxRange(scopeRange) - 1, length: 1))
+            .first,
+          [10, 13].contains(unit)
+        { scopeRange.length -= 1 }
+      }
       for other in annotations {
         guard let source = other.scope.resolve(in: plain) else { continue }
         let scope = NSUnionRange(source, other.output?.resolve(in: plain) ?? source)
@@ -226,6 +258,9 @@ extension ToolInvocation {
       scope: try .init(scopeRange, snapshot: plain),
       sourceHash: ToolInvocation.hash(try plain.text(in: scopeRange)))
     invocation.executor = manifest.executorType.rawValue
+    if manifest.entryContract == 2 && !manifest.inputMode.isEphemeral {
+      invocation.call = try .init(callRange, snapshot: plain)
+    }
     invocation.id = identity.invocationID
     invocation.generation = identity.generation
     if space {
@@ -245,13 +280,16 @@ extension ToolInvocation {
       let scope = invocation.scope.resolve(in: state)
     else { throw DocumentError.invalidState }
     let before = state
-    let offset = invocation.inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token)
+    let offset =
+      invocation.call?.resolve(in: state).map(NSMaxRange)
+      ?? (invocation.inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token))
     let edit = NSRange(location: offset, length: 0)
     let plain = try replacing(before, range: edit, with: output)
     var annotations = ToolRangeEditing.remap(
       before.invocations.filter { $0.id != invocation.id }, from: before, to: plain, edit: edit,
       replacementLength: output.utf16.count)
-    var pending = invocation
+    var pending = try reanchored(
+      invocation, in: plain, edit: edit, replacementLength: output.utf16.count)
     pending.phase = .pending
     pending.token = try .init(token, snapshot: plain)
     pending.scope = try .init(
@@ -287,20 +325,24 @@ extension ToolInvocation {
       try cancel(id)
       return
     }
-    let restoration = invocation.restoration
+    var restoration = invocation.restoration
     let before = state
     if let output = invocation.output?.resolve(in: before) {
       let plain = try replacing(before, range: output, with: "")
       guard let token = invocation.token.resolve(in: before),
         let scope = invocation.scope.resolve(in: before)
       else { return }
+      invocation = try reanchored(invocation, in: plain, edit: output, replacementLength: 0)
+      restoration = invocation.restoration
       invocation.token = try .init(token, snapshot: plain)
       invocation.scope = try .init(
         NSRange(
           location: scope.location,
           length: scope.length - (invocation.inputMode == "contextual" ? output.length : 0)),
         snapshot: plain)
-      invocation = restored(invocation, token: invocation.token, scope: invocation.scope)
+      invocation = restored(
+        invocation, token: invocation.token, scope: invocation.scope,
+        call: invocation.call)
       var values = ToolRangeEditing.remap(
         before.invocations.filter { $0.id != id }, from: before, to: plain, edit: output,
         replacementLength: 0)
@@ -329,7 +371,9 @@ extension ToolInvocation {
       range = scope
       replacement = try before.text(in: output)
     } else {
-      range = invocation.inputMode == "contained" ? scope : token
+      range =
+        invocation.call?.resolve(in: state)
+        ?? (invocation.inputMode == "contained" ? scope : token)
       replacement = ""
     }
     let plain = try replacing(before, range: range, with: replacement)
@@ -358,8 +402,8 @@ extension ToolInvocation {
 
   func done(_ invocation: ToolInvocation) throws {
     guard let token = invocation.token.resolve(in: state) else { throw DocumentError.missingAnchor }
-    var range = token
-    if let separator = invocation.acceptanceSeparator?.resolve(in: state),
+    var range = invocation.call?.resolve(in: state) ?? token
+    if invocation.call == nil, let separator = invocation.acceptanceSeparator?.resolve(in: state),
       separator.location == NSMaxRange(token), separator.length == 1,
       (try state.text(in: separator)) == " "
     {
@@ -374,7 +418,7 @@ extension ToolInvocation {
 
   private func restored(
     _ invocation: ToolInvocation, token: ToolAnchoredRange? = nil,
-    scope: ToolAnchoredRange? = nil
+    scope: ToolAnchoredRange? = nil, call: ToolAnchoredRange? = nil
   ) -> ToolInvocation {
     guard let restoration = invocation.restoration else {
       var value = invocation
@@ -389,6 +433,36 @@ extension ToolInvocation {
     value.capturedArguments = invocation.capturedArguments ?? restoration.capturedArguments
     value.token = token ?? restoration.token
     value.scope = scope ?? restoration.scope
+    value.call = call ?? restoration.call
+    return value
+  }
+  /// Recreate auxiliary anchors after output edits, even when their offsets did
+  /// not move: inserting a newline can change the line identity at a seam.
+  private func reanchored(
+    _ invocation: ToolInvocation, in snapshot: DocumentSnapshot,
+    edit: NSRange, replacementLength: Int
+  ) throws -> ToolInvocation {
+    func mapped(_ anchor: ToolAnchoredRange) throws -> ToolAnchoredRange {
+      guard let range = anchor.resolve(in: state) else { throw DocumentError.missingAnchor }
+      func offset(_ value: Int) -> Int {
+        if value <= edit.location { return value }
+        if value >= NSMaxRange(edit) { return value + replacementLength - edit.length }
+        return edit.location
+      }
+      let start = offset(range.location), end = offset(NSMaxRange(range))
+      return try .init(NSRange(location: start, length: end - start), snapshot: snapshot)
+    }
+    var value = invocation
+    value.call = try invocation.call.map(mapped)
+    value.acceptanceSeparator = try invocation.acceptanceSeparator.map(mapped)
+    if var restoration = invocation.restoration {
+      restoration.token = try mapped(restoration.token)
+      restoration.scope = try mapped(restoration.scope)
+      restoration.call = try restoration.call.map(mapped)
+      restoration.acceptanceSeparator = try restoration.acceptanceSeparator.map(mapped)
+      restoration.selection = try restoration.selection.map(mapped)
+      value.restoration = restoration
+    }
     return value
   }
   private func replacing(_ snapshot: DocumentSnapshot, range: NSRange, with text: String) throws

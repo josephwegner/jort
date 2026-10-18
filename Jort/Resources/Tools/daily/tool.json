@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Daily",
   "command": "/daily",
-  "description": "Insert a local dated heading and attach a calendar landmark on Merge",
+  "description": "Insert a heading with today’s local date.",
   "entryContract": 2,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",

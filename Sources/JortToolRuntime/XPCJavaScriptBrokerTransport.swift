@@ -146,7 +146,31 @@ public actor XPCJavaScriptBrokerTransport: JavaScriptBrokerTransport {
     let message = text(error, count: errorLength)
     return .init(
       failure: .init(
-        code, message: message.isEmpty ? "JavaScript worker failed." : message))
+        code, message: publicFailureMessage(for: code, workerMessage: message)))
+  }
+
+  /// Broker status is trusted, but its diagnostic payload is implementation
+  /// detail. Structured tool results arrive on the successful status path.
+  nonisolated static func publicFailureMessage(
+    for code: ToolFailureCode, workerMessage: String
+  ) -> String {
+    switch code {
+    case .implementation: return "JavaScript tool failed or exceeded its resource limit."
+    case .cancelled: return "Cancelled."
+    case .timeout: return "JavaScript tool timed out. Try again with less input."
+    case .outputLimit: return "JavaScript tool output exceeds its limit."
+    case .protocolError, .malformedResponse:
+      return "JavaScript service returned an invalid result."
+    case .sandboxBootstrap, .peerIdentity, .launch:
+      return "JavaScript service could not start securely. Restart Jort."
+    case .cpuLimit, .engineLimit:
+      return "JavaScript tool exceeded its resource limit. Try again with less input."
+    case .crash: return "JavaScript tool stopped unexpectedly. Try again."
+    case .unavailable: return "JavaScript service is unavailable. Restart Jort and try again."
+    case .busy: return "JavaScript service is busy. Try again."
+    case .internalError: return "JavaScript service failed. Try again."
+    default: return "JavaScript tool failed."
+    }
   }
 
   nonisolated private static func text(_ bytes: UnsafePointer<UInt8>?, count: Int) -> String {

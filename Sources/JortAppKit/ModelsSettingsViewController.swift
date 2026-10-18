@@ -16,6 +16,10 @@ import JortSettings
   }
   private var job: Task<Void, Never>?
   private var connecting = false
+  /// A safe, user-facing result for the action currently being shown. Persistent
+  /// connection diagnostics come from `ModelConnectionStatus`; this only bridges
+  /// the interval before a status refresh can report them.
+  private var actionDetail: String?
   public init(connection: any ModelConnection) {
     self.connection = connection
     super.init(nibName: nil, bundle: nil)
@@ -76,9 +80,13 @@ import JortSettings
     ]
     statusLabel.stringValue =
       available || status.state == .connecting || status.credentialMigration?.blocksUse == true
+        || status.failure != nil
       ? titles[status.state]! : "Not Connected"
+    let blockingCredentialMessage =
+      status.credentialMigration?.blocksUse == true ? status.credentialMigration?.message : nil
     detailLabel.stringValue =
-      status.credentialMigration?.message ?? status.lastVerified.map {
+      blockingCredentialMessage ?? status.failure?.message ?? status.credentialMigration?.message
+      ?? actionDetail ?? status.lastVerified.map {
         "Last verified \($0.formatted(date: .abbreviated, time: .shortened))."
       } ?? "Connect to your OpenRouter account."
     connectButton.title = available ? "Replace Connection" : "Connect with OpenRouter"
@@ -100,21 +108,29 @@ import JortSettings
         try await action()
         job = nil
         connecting = false
+        actionDetail = nil
         await refresh()
       } catch {
         job = nil
         connecting = false
+        actionDetail = Self.actionMessage(for: error)
         await refresh()
-        detailLabel.stringValue =
-          (error as? ModelCredentialStoreFailure)?.message
-          ?? (error as? ModelFailure)?.message
-          ?? "Connection was cancelled or could not be completed."
       }
     }
+  }
+  private static func actionMessage(for error: Error) -> String {
+    if error is CancellationError { return "Connection was cancelled. Connect again when ready." }
+    if let failure = error as? ModelCredentialStoreFailure { return failure.message }
+    if let failure = error as? ModelFailure {
+      return failure == .cancelled
+        ? "Connection was cancelled. Connect again when ready." : failure.message
+    }
+    return "Connection could not be completed. Connect again in Models Settings."
   }
   @objc public func connect() {
     guard job == nil else { return }
     connecting = true
+    actionDetail = nil
     let connection = connection, browser = openBrowser
     perform { try await connection.connect(openBrowser: browser) }
     statusLabel.stringValue = "Connecting"

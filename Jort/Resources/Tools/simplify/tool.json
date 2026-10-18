@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Simplify",
   "command": "/simplify",
-  "description": "Rewrite in plainer language while retaining the supplied information",
+  "description": "Rewrite the selected text in plainer language.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

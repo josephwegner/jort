@@ -68,7 +68,9 @@ import JortDocument
         let leading = output.map { leadingActions($0, snapshot: snapshot) } ?? false
         let controlOffset =
           output.map { leading ? $0.location : NSMaxRange($0) }
-          ?? NSMaxRange(invocation.inputMode == "contextual" ? token : scope)
+          ?? NSMaxRange(
+            invocation.call?.resolve(in: snapshot)
+              ?? (invocation.inputMode == "contextual" ? token : scope))
         if let output, output.location < storage.length,
           leadingIndent(output, snapshot: snapshot)
             || output.length == 0 && startsLine(output, snapshot: snapshot)
@@ -88,16 +90,21 @@ import JortDocument
           storage.addAttribute(.kern, value: output?.length == 0 ? 78 : 54, range: padding)
           styled.append(padding)
           storage.addAttribute(decorationAttribute, value: true, range: padding)
-          if endsLine(controlOffset, snapshot: snapshot),
+          if (endsLine(controlOffset, snapshot: snapshot)
+            || invocation.inputMode == "contextual" && invocation.call != nil && output == nil),
             !startsLine(NSRange(location: controlOffset, length: 0), snapshot: snapshot)
           {
-            // TextKit omits trailing kern at a paragraph's end. Keep
-            // room for the accessory even at a narrow viewport edge.
+            // The paragraph's first character controls its wrapping. Reserve
+            // the action area there even when an inline call has text after it.
             let paragraph =
               (paragraphStyle?.mutableCopy() as? NSMutableParagraphStyle)
               ?? NSMutableParagraphStyle()
             paragraph.tailIndent -= output?.length == 0 ? 82 : 64
-            storage.addAttribute(.paragraphStyle, value: paragraph, range: padding)
+            let head = NSRange(
+              location: storage.mutableString.paragraphRange(for: padding).location, length: 1)
+            storage.addAttribute(.paragraphStyle, value: paragraph, range: head)
+            storage.addAttribute(decorationAttribute, value: true, range: head)
+            styled.append(head)
           }
         }
       }

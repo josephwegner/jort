@@ -2,10 +2,10 @@ import XCTest
 
 @MainActor final class JortUITests: XCTestCase {
   func testFileMenuPurgeCancellationCompletionAndRelaunch() throws {
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent("PurgeUI-\(UUID())")
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "PurgeUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
@@ -38,7 +38,7 @@ import XCTest
       FileManager.default.fileExists(atPath: root.appendingPathComponent("Purge.json").path))
     XCTAssertEqual(editor.value as? String, "Current text to preserve")
     app.terminate()
-    app.launch()
+    try app.launchIsolated()
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
     let restored = XCTNSPredicateExpectation(
       predicate: NSPredicate { _, _ in
@@ -48,10 +48,10 @@ import XCTest
   }
 
   func testShellOptionRevealAndPocket() throws {
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.appendingPathComponent("ShellUI-\(UUID())").path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "ShellUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
@@ -83,10 +83,10 @@ import XCTest
       to: FileManager.default.temporaryDirectory.appendingPathComponent("jort-shell-window.png"))
   }
   func testKeyboardFindUndoAndRelaunchInIsolatedStore() throws {
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent("JortUITest-\(UUID())")
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "JortUITest-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
     editor.click()
@@ -121,16 +121,15 @@ import XCTest
       }, object: nil)
     XCTAssertEqual(XCTWaiter.wait(for: [durable], timeout: 5), .completed)
     app.terminate()
-    app.launch()
+    try app.launchIsolated()
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
     XCTAssertEqual(editor.value as? String, "Local accessibility test\n\nA second thought.")
     app.terminate()
   }
   func testWalkPaletteAndLandmarkKeyboardFlow() throws {
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.appendingPathComponent("WalkUI-\(UUID())").path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent("WalkUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
@@ -152,10 +151,10 @@ import XCTest
   }
 
   func testSettingsWindowAndCustomToolDraft() throws {
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent("SettingsUI-\(UUID())")
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "SettingsUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
@@ -213,10 +212,10 @@ import XCTest
   }
 
   func testBundledToolCompletionPendingMergeAndRelaunch() throws {
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent("ToolsUI-\(UUID())")
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "ToolsUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
@@ -261,21 +260,22 @@ import XCTest
       }, object: nil)
     XCTAssertEqual(XCTWaiter.wait(for: [durable], timeout: 5), .completed)
     app.terminate()
-    app.launch()
+    try app.launchIsolated()
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
     XCTAssertEqual(editor.value as? String, expected)
   }
   func testModelsSettingsAndBundledModelDiscovery() throws {
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.appendingPathComponent("ModelUI-\(UUID())").path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "ModelUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
     editor.click()
     editor.typeText("/ask")
-    XCTAssertTrue(app.buttons["/ask  Ask a question"].waitForExistence(timeout: 30))
+    XCTAssertTrue(
+      app.buttons["/ask  Ask a question and insert the answer."].waitForExistence(timeout: 30))
     app.typeKey(.escape, modifierFlags: [])
     app.typeKey(",", modifierFlags: .command)
     let settings = app.windows["Jort Settings"]
@@ -295,11 +295,49 @@ import XCTest
     settings.buttons[XCUIIdentifierCloseWindow].click()
   }
 
+  func testReturnRunsNowAndInvalidInlineInputShowsVisibleError() throws {
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "InlineErrorsUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
+    defer { app.terminate() }
+    let editor = app.textViews["Jort document"]
+    XCTAssertTrue(editor.waitForExistence(timeout: 10))
+    editor.click()
+    editor.typeText("/now")
+    XCTAssertTrue(
+      app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "/now  "))
+        .firstMatch.waitForExistence(timeout: 30))
+    app.typeKey(.return, modifierFlags: [])
+    XCTAssertTrue(app.buttons["Merge"].waitForExistence(timeout: 10))
+    app.buttons["Merge"].click()
+    editor.click()
+    editor.typeKey("a", modifierFlags: .command)
+    editor.typeText("/lorem")
+    XCTAssertTrue(
+      app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "/lorem  "))
+        .firstMatch.waitForExistence(timeout: 10))
+    app.typeKey(.return, modifierFlags: [])
+    editor.typeText("words")
+    let help = app.staticTexts.matching(
+      NSPredicate(format: "label CONTAINS %@", "Enter how many paragraphs")
+    )
+    .firstMatch
+    XCTAssertTrue(help.waitForExistence(timeout: 5))
+    app.typeKey(.return, modifierFlags: .shift)
+    let error = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Tool error:"))
+      .firstMatch
+    XCTAssertTrue(error.waitForExistence(timeout: 5))
+    XCTAssertTrue(error.isHittable)
+    XCTAssertFalse(app.buttons["Merge"].exists)
+    XCTAssertTrue((editor.value as? String ?? "").contains("/lorem words"))
+  }
+
   func testContextualArgumentsAcceptEscapeReenterAndSubmitUsingKeyboard() throws {
-    let app = XCUIApplication()
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.appendingPathComponent("ArgumentsUI-\(UUID())").path
-    app.launch()
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
+      "ArgumentsUI-\(UUID())")
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 5))
@@ -309,21 +347,22 @@ import XCTest
       .firstMatch
     XCTAssertTrue(completion.waitForExistence(timeout: 30))
     app.typeKey(.return, modifierFlags: [])
-    let delimiter = app.textFields["Delimiter"]
-    XCTAssertTrue(delimiter.waitForExistence(timeout: 3))
-    app.typeText(",")
-    XCTAssertEqual(delimiter.value as? String, ",")
-    let source = editor.value as? String
-    XCTAssertEqual(source, "apples,oranges /split ")
-    app.typeKey(.escape, modifierFlags: [])
+    editor.typeText(",")
+    XCTAssertTrue((editor.value as? String ?? "").contains("/split ,"))
     app.typeKey(.tab, modifierFlags: [])
-    XCTAssertEqual(delimiter.value as? String, ",")
+    app.typeKey(.tab, modifierFlags: [])
+    app.typeKey(.tab, modifierFlags: [])
+    app.typeKey(.tab, modifierFlags: .shift)
+    app.typeKey(.tab, modifierFlags: [])
+    app.typeKey(.escape, modifierFlags: [])
+    XCTAssertTrue((editor.value as? String ?? "").contains("apples,oranges"))
     app.typeKey(.return, modifierFlags: .shift)
     XCTAssertTrue(app.buttons["Merge"].waitForExistence(timeout: 5))
     let pending = editor.value as? String ?? ""
-    // Contextual output sits immediately after the token, before its owned space.
-    XCTAssertTrue(pending.hasPrefix("apples,oranges /split"))
+    XCTAssertTrue(pending.contains("apples,oranges /split ,"))
     XCTAssertTrue(pending.contains("apples\noranges"))
+    app.buttons["Merge"].click()
+    XCTAssertFalse((editor.value as? String ?? "").contains("/split ,"))
   }
 
 }

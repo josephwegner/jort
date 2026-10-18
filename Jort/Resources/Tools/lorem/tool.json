@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Lorem ipsum",
   "command": "/lorem",
-  "description": "Insert 1–100 lorem ipsum paragraphs; default 1",
+  "description": "Generate paragraphs of lorem ipsum text.",
   "entryContract": 2,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",
@@ -16,8 +16,8 @@
     {
       "name": "paragraphs",
       "type": "integer",
-      "label": "Paragraphs",
-      "description": "1–100 paragraphs (default 1)",
+      "label": "Number of paragraphs",
+      "description": "Enter how many paragraphs.",
       "defaultValue": 1,
       "minimum": 1,
       "maximum": 100

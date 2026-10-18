@@ -34,6 +34,117 @@ import JortSettings
     XCTAssertLessThanOrEqual(run.frame.maxX, editor.textView.visibleRect.maxX)
   }
 
+  func testContextCallKeepsCommandControlsAndHandlesOutsideContext() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    var tool = package("upper", mode: .contextual)
+    tool.manifest.schemaVersion = 3
+    tool.manifest.entryContract = 2
+    tool.manifest.executor = .javascript
+    editor.toolPackages = [tool]
+    let source = String(repeating: "context ", count: 9) + "/upper after context"
+    editor.textView.insertText(source, replacementRange: NSRange(location: 0, length: 0))
+    let token = (source as NSString).range(of: "/upper")
+    try editor.toolController.accept(tool, token: token, space: true)
+    window.setContentSize(NSSize(width: 320, height: 400))
+    editor.view.layoutSubtreeIfNeeded()
+    await settlePresentationAsync(editor)
+
+    let invocation = try XCTUnwrap(editor.state.invocations.first)
+    let call = try XCTUnwrap(invocation.call?.resolve(in: editor.state))
+    let end = try XCTUnwrap(
+      editor.textView.subviews.compactMap { $0 as? ToolScopeHandle }
+        .first { $0.accessibilityLabel() == "Context end" })
+    let run = try XCTUnwrap(
+      editor.textView.subviews.first {
+        $0.accessibilityLabel() == "Run"
+      })
+    let callEnd = try XCTUnwrap(
+      editor.toolPresentation.geometry(
+        for: NSRange(location: NSMaxRange(call), length: 0)
+      ).first)
+    XCTAssertGreaterThanOrEqual(end.frame.minX, callEnd.maxX)
+    XCTAssertLessThanOrEqual(end.frame.maxX, editor.textView.visibleRect.maxX)
+    XCTAssertLessThanOrEqual(run.frame.maxX, editor.textView.visibleRect.maxX)
+    XCTAssertTrue(
+      editor.toolPresentation.containsDecoration(
+        at: NSPoint(x: run.frame.midX, y: run.frame.midY), pending: false))
+    let accessory = try XCTUnwrap(
+      editor.linePresentation.accessories[invocation.token.start.lineID])
+    XCTAssertGreaterThanOrEqual(accessory.view.frame.minY, callEnd.maxY + 2)
+
+    editor.textView.insertText(
+      String(repeating: "long input ", count: 8), replacementRange: editor.textView.selectedRange())
+    try editor.toolController.moveBoundary(invocation.id, start: true, to: 0)
+    try editor.toolController.moveBoundary(
+      invocation.id, start: false, to: editor.state.text.utf16.count)
+    for width in [320.0, 600.0] {
+      window.setContentSize(NSSize(width: width, height: 400))
+      editor.view.layoutSubtreeIfNeeded()
+      await settlePresentationAsync(editor)
+      editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+      editor.refreshToolPresentation()
+      await settlePresentationAsync(editor)
+      let current = try XCTUnwrap(editor.state.invocations.first)
+      let command = try XCTUnwrap(current.call?.resolve(in: editor.state))
+      if width == 320 {
+        XCTAssertGreaterThan(editor.toolPresentation.geometry(for: command).count, 1)
+      }
+      let scope = try XCTUnwrap(current.scope.resolve(in: editor.state))
+      let contexts = current.contextRanges(in: editor.state)
+      XCTAssertEqual(contexts.count, 2)
+      let ranges = [token, scope, command] + contexts
+      let rects = Dictionary(
+        uniqueKeysWithValues: ranges.map {
+          ($0, editor.toolPresentation.geometry(for: $0))
+        })
+      let prepared = try XCTUnwrap(
+        InvocationGeometry.prepare(
+          invocation: current, snapshot: editor.state, token: token, scope: scope,
+          output: nil, input: .init(rects: rects, glyphs: [:], warning: nil)))
+      XCTAssertEqual(prepared.shapes.filter { $0.1 == ToolPresentationColors.command }.count, 1)
+      XCTAssertEqual(prepared.shapes.filter { $0.1 == ToolPresentationColors.context }.count, 2)
+      let paintedCommand = try XCTUnwrap(
+        prepared.shapes.first {
+          $0.1 == ToolPresentationColors.command
+        }?.0)
+      XCTAssertLessThanOrEqual(paintedCommand.bounds.maxX, editor.textView.visibleRect.maxX)
+      // Larger glyph frames model a larger editor font without changing document ranges.
+      let enlarged = rects.mapValues { frames in
+        frames.map { frame in
+          NSRect(
+            x: frame.minX * 1.5, y: frame.minY * 1.5,
+            width: frame.width * 1.5, height: frame.height * 1.5)
+        }
+      }
+      let large = try XCTUnwrap(
+        InvocationGeometry.prepare(
+          invocation: current, snapshot: editor.state, token: token, scope: scope,
+          output: nil, input: .init(rects: enlarged, glyphs: [:], warning: nil)))
+      let commandPath = try XCTUnwrap(
+        large.shapes.first {
+          $0.1 == ToolPresentationColors.command
+        }?.0)
+      for x in [large.controlFrame.minX + 3, large.controlFrame.maxX - 3] {
+        XCTAssertTrue(commandPath.contains(NSPoint(x: x, y: large.controlFrame.midY)))
+      }
+      let visibleRun = try XCTUnwrap(
+        editor.textView.subviews.first {
+          $0.accessibilityLabel() == "Run"
+        })
+      let lastGlyph = try XCTUnwrap(
+        editor.linePresentation.glyphFrame(
+          at: NSMaxRange(command) - 1))
+      XCTAssertGreaterThanOrEqual(visibleRun.frame.minX, lastGlyph.maxX)
+      XCTAssertLessThanOrEqual(visibleRun.frame.maxX, editor.textView.visibleRect.maxX)
+      for x in [visibleRun.frame.minX + 2, visibleRun.frame.maxX - 2] {
+        XCTAssertTrue(
+          editor.toolPresentation.containsDecoration(
+            at: NSPoint(x: x, y: visibleRun.frame.midY), pending: false))
+      }
+    }
+  }
+
   func testMultilineOutputAtEOFHasGeometryOnEveryLine() async throws {
     let (editor, window) = try await editor()
     defer { window.orderOut(nil) }

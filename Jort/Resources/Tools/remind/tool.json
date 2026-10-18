@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Remind",
   "command": "/remind",
-  "description": "Schedule this captured block as a local notification in 1–525600 minutes",
+  "description": "Schedule a reminder for this text.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "insert-at-invocation",
@@ -16,8 +16,8 @@
     {
       "name": "minutes",
       "type": "integer",
-      "label": "Minutes",
-      "description": "Delay after submission in minutes",
+      "label": "Reminder delay",
+      "description": "Enter how many minutes from now to remind you.",
       "minimum": 1,
       "maximum": 525600,
       "required": true

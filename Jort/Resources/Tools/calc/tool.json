@@ -4,7 +4,7 @@
   "version": 1,
   "name": "Calc",
   "command": "/calc",
-  "description": "calc tool",
+  "description": "Calculate a mathematical expression. Enter the expression.",
   "entryContract": 1,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",

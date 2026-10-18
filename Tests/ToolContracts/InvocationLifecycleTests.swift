@@ -95,7 +95,7 @@ final class InvocationLifecycleTests: XCTestCase {
       for action in actions { XCTAssertTrue(value.reduce(action).isEmpty) }
       XCTAssertEqual(value, reserved)
       _ = acknowledge(&value)
-      XCTAssertEqual(value.phase, winner == 0 ? .pending : winner == 2 ? .submitted : .error)
+      XCTAssertEqual(value.phase, winner == 0 ? .pending : winner == 2 ? .submitted : .inputting)
       XCTAssertEqual(value.removed, winner == 2)
     }
   }
@@ -118,7 +118,7 @@ final class InvocationLifecycleTests: XCTestCase {
       _ = value.reduce(.restored(hasLiveJob: false))
       XCTAssertEqual(value.pendingEffect?.operation, .failure("Execution was interrupted."))
       _ = acknowledge(&value)
-      XCTAssertEqual(value.phase, .error)
+      XCTAssertEqual(value.phase, .inputting)
     }
     var pending = state(.pending)
     XCTAssertTrue(pending.reduce(.restored(hasLiveJob: false)).isEmpty)

@@ -2,6 +2,7 @@ import Foundation
 
 public struct ToolExecutionInput: Codable, Sendable {
   public let content: String
+  public let instruction: String?
   public let clock: String
   public let uuid: String
   public let arguments: [String: ToolArgumentValue]
@@ -12,9 +13,11 @@ public struct ToolExecutionInput: Codable, Sendable {
   public init(
     content: String, date: Date = Date(), uuid: UUID = UUID(),
     arguments: [String: ToolArgumentValue] = [:], localTime: ToolLocalTime? = nil,
-    entropy: [UInt8]? = nil, analysis: ToolTextAnalysis? = nil
+    entropy: [UInt8]? = nil, analysis: ToolTextAnalysis? = nil,
+    instruction: String? = nil
   ) {
     self.content = content
+    self.instruction = instruction
     self.clock = ISO8601DateFormatter().string(from: date)
     self.uuid = uuid.uuidString.lowercased()
     self.arguments = arguments
@@ -25,9 +28,10 @@ public struct ToolExecutionInput: Codable, Sendable {
   private init(
     content: String, clock: String, uuid: String,
     arguments: [String: ToolArgumentValue], localTime: ToolLocalTime?, entropy: [UInt8]?,
-    analysis: ToolTextAnalysis?
+    analysis: ToolTextAnalysis?, instruction: String?
   ) {
     self.content = content
+    self.instruction = instruction
     self.clock = clock
     self.uuid = uuid
     self.arguments = arguments
@@ -38,7 +42,12 @@ public struct ToolExecutionInput: Codable, Sendable {
   public func withArguments(_ arguments: [String: ToolArgumentValue]) -> Self {
     .init(
       content: content, clock: clock, uuid: uuid, arguments: arguments,
-      localTime: localTime, entropy: entropy, analysis: analysis)
+      localTime: localTime, entropy: entropy, analysis: analysis, instruction: instruction)
+  }
+  public func withInstruction(_ instruction: String?) -> Self {
+    .init(
+      content: content, clock: clock, uuid: uuid, arguments: arguments,
+      localTime: localTime, entropy: entropy, analysis: analysis, instruction: instruction)
   }
 }
 

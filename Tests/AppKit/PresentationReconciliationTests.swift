@@ -62,6 +62,51 @@ import JortDocument
       XCTAssertEqual(editor.linePresentation.targetedLayoutRequests, targeted)
     }
   }
+  func testUpwardScrollingAcrossInvocationKeepsViewportAndSelection() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    let tool = package("span", mode: .contextual, output: "result")
+    editor.toolPackages = [tool]
+    let source =
+      String(repeating: "before context\n", count: 180)
+      + String(repeating: "wrapped command prefix ", count: 24) + "/span\n"
+      + String(repeating: "after context\n", count: 180)
+    editor.textView.insertText(source, replacementRange: NSRange(location: 0, length: 0))
+    let token = (editor.state.text as NSString).range(of: "/span")
+    try editor.toolController.accept(tool, token: token, space: false)
+    let id = try XCTUnwrap(editor.state.invocations.first?.id)
+    try editor.toolController.moveBoundary(id, start: true, to: 0)
+    try editor.toolController.moveBoundary(id, start: false, to: editor.state.utf16Count)
+    await settlePresentationAsync(editor)
+    let lineID = try XCTUnwrap(editor.state.invocations.first?.token.start.lineID)
+    let help = try XCTUnwrap(editor.linePresentation.accessories[lineID]?.view)
+
+    func scrollAcrossBlock(expectHelp: Bool) async throws {
+      editor.textView.scrollRangeToVisible(token)
+      editor.linePresentation.prepareViewportLayout()
+      await settlePresentationAsync(editor)
+      let frame = try XCTUnwrap(editor.linePresentation.canonicalRects(for: token).first)
+      let selection = editor.textView.selectedRange()
+      let initialTargeted = editor.linePresentation.targetedLayoutRequests
+      for delta in [CGFloat(360), 180, -20, -160, 120, -60] {
+        editor.scroll.contentView.scroll(to: NSPoint(x: 0, y: frame.minY + delta))
+        editor.scroll.reflectScrolledClipView(editor.scroll.contentView)
+        let scrolledY = editor.scroll.contentView.bounds.minY
+        await settlePresentationAsync(editor)
+        XCTAssertEqual(editor.scroll.contentView.bounds.minY, scrolledY, accuracy: 1)
+        XCTAssertEqual(editor.textView.selectedRange(), selection)
+        XCTAssertEqual(editor.linePresentation.targetedLayoutRequests, initialTargeted)
+        if expectHelp {
+          XCTAssertTrue(editor.linePresentation.accessories[lineID]?.view === help)
+        }
+      }
+    }
+
+    try await scrollAcrossBlock(expectHelp: true)
+    editor.toolController.submit(id)
+    try await pending(editor, id: id)
+    try await scrollAcrossBlock(expectHelp: false)
+  }
   func testStableControlsAndStaleGenerationActions() async throws {
     let (editor, window) = try await editor()
     defer { window.orderOut(nil) }

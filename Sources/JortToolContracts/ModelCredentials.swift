@@ -47,10 +47,23 @@ public enum ModelCredentialStoreFailure: Error, Sendable, Equatable {
 public protocol ModelCredentialStore: Sendable {
   func read() async throws -> String?
   func replace(with credential: String) async throws
+  /// Commits a new value only if the previously observed value still matches.
+  func replaceIfCurrent(_ expected: String?, with credential: String) async throws -> Bool
+  /// Restores a prior value only while this store still contains the value
+  /// written by the caller. Implementations must compare and mutate without
+  /// allowing another operation on the store to interleave.
+  func restoreIfCurrent(_ expected: String, with previous: String?) async throws -> Bool
   func remove() async throws
   func migrationOutcome() async -> ModelCredentialMigrationOutcome
 }
 
 extension ModelCredentialStore {
   public func migrationOutcome() async -> ModelCredentialMigrationOutcome { .notRequired }
+  /// Unknown stores fail closed instead of attempting a non-atomic mutation.
+  public func replaceIfCurrent(_ expected: String?, with credential: String) async throws -> Bool {
+    false
+  }
+  public func restoreIfCurrent(_ expected: String, with previous: String?) async throws -> Bool {
+    false
+  }
 }

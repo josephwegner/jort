@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Export",
   "command": "/export",
-  "description": "Save this exact block as UTF-8 Markdown or text using a native save panel",
+  "description": "Save this block as a Markdown or text file.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "insert-at-invocation",

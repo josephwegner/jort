@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Explain",
   "command": "/explain",
-  "description": "Clarify dense or unfamiliar content, retain key terminology, and identify uncertainty",
+  "description": "Explain the selected text in clear language.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

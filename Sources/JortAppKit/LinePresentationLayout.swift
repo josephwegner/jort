@@ -45,9 +45,12 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     geometryDirty = false
     snapshot = PresentationGeometry.Snapshot(
       epoch: epoch, viewport: editor?.visibleRect ?? .zero, bands: visibleBands())
-    if let (id, offset, x) = pendingAnchor {
+    if let (id, offset, x, originalY) = pendingAnchor {
       pendingAnchor = nil
-      if let band = snapshot.bands.first(where: { $0.id == id }) {
+      let currentY = editor?.enclosingScrollView?.contentView.bounds.minY ?? originalY
+      if abs(currentY - originalY) <= 1,
+        let band = snapshot.bands.first(where: { $0.id == id }) ?? band(for: id)
+      {
         editor?.enclosingScrollView?.contentView.scroll(
           to: NSPoint(x: x, y: max(0, band.frame.minY + offset)))
       }
@@ -56,7 +59,7 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
   weak var editor: NSTextView?
   private(set) var lines = DocumentLineView([])
   private var geometryDirty = true
-  private var pendingAnchor: (UUID, CGFloat, CGFloat)?
+  private var pendingAnchor: (UUID, CGFloat, CGFloat, CGFloat)?
   private var mounted: Set<UUID> = []
   private(set) var accessories: [UUID: LineAccessory] = [:]
   init(editor: NSTextView) {
@@ -82,17 +85,30 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     guard let editor, let manager = editor.textLayoutManager,
       let content = manager.textContentManager
     else { return }
-    let anchor = viewportAnchor()
-    let originalX = editor.enclosingScrollView?.contentView.bounds.minX ?? 0
-    let previous = Set(accessories.keys)
-    for value in accessories.values { value.view.removeFromSuperview() }
-    mounted = []
-    accessories = [:]
-    let surviving = Set(values.compactMap { lines.line(id: $0.lineID)?.id })
-    for value in values where value.height > 0 && surviving.contains(value.lineID) {
-      accessories[value.lineID] = value
+    let next = Dictionary(
+      values.lazy
+        .filter { $0.height > 0 && self.lines.line(id: $0.lineID) != nil }
+        .map { ($0.lineID, $0) },
+      uniquingKeysWith: { _, latest in latest })
+    let changed = Set(accessories.keys).union(next.keys).filter { id in
+      let old = accessories[id]
+      let new = next[id]
+      return old?.height != new?.height || old?.view !== new?.view
     }
-    for id in previous.union(accessories.keys) {
+    guard !changed.isEmpty else { return }
+
+    let geometryChanged = changed.filter { accessories[$0]?.height != next[$0]?.height }
+    // Snapshot bands may belong to the viewport before a scroll event. Take the
+    // anchor from TextKit's current visible fragments only when their geometry
+    // is about to change.
+    let anchor = geometryChanged.isEmpty ? nil : viewportAnchor()
+    let originalX = editor.enclosingScrollView?.contentView.bounds.minX ?? 0
+    for id in changed where accessories[id]?.view !== next[id]?.view {
+      accessories[id]?.view.removeFromSuperview()
+      mounted.remove(id)
+    }
+    accessories = next
+    for id in geometryChanged {
       guard let line = lines.line(id: id) else { continue }
       if let start = content.location(content.documentRange.location, offsetBy: line.location),
         let end = content.location(start, offsetBy: line.length),
@@ -101,11 +117,19 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
         manager.invalidateLayout(for: range)
       }
     }
-    geometryDirty = true
-    if deferLayout {
-      if let (id, offset) = anchor { pendingAnchor = (id, offset, originalX) }
+    guard !geometryChanged.isEmpty else {
+      // A replacement view with the same measured height has no TextKit
+      // geometry to invalidate. Mount it in the existing visible band.
+      refreshViews()
       return
     }
+    geometryDirty = true
+    if deferLayout {
+      let originalY = editor.enclosingScrollView?.contentView.bounds.minY ?? 0
+      pendingAnchor = anchor.map { ($0.0, $0.1, originalX, originalY) }
+      return
+    }
+    pendingAnchor = nil
     layoutRequests += 1
     manager.textViewportLayoutController.layoutViewport()
     capture(epoch: snapshot.epoch)
@@ -204,7 +228,18 @@ private final class AccessoryLayoutFragment: NSTextLayoutFragment {
     }
   }
   func viewportAnchor() -> (UUID, CGFloat)? {
-    guard let editor, let scroll = editor.enclosingScrollView, let band = snapshot.bands.first
+    guard let editor, let scroll = editor.enclosingScrollView else { return nil }
+    let currentViewport = editor.visibleRect
+    if abs(snapshot.viewport.minY - currentViewport.minY) <= 1,
+      let band = snapshot.bands.first
+    {
+      return (band.id, scroll.contentView.bounds.minY - band.frame.minY)
+    }
+    let viewportY = scroll.contentView.bounds.minY - editor.textContainerOrigin.y
+    // A stale snapshot must never pull a newly scrolled viewport back to its
+    // previous line when TextKit has not exposed fresh fragments yet.
+    let bands = visibleBands()
+    guard let band = bands.last(where: { $0.frame.minY <= viewportY }) ?? bands.first
     else { return nil }
     return (band.id, scroll.contentView.bounds.minY - band.frame.minY)
   }

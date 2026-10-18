@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Join",
   "command": "/join",
-  "description": "Join logical lines with a required separator; an empty separator is allowed",
+  "description": "Join lines using a separator you choose.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",
@@ -17,7 +17,7 @@
       "name": "separator",
       "type": "string",
       "label": "Separator",
-      "description": "Required literal separator; use \"\" to concatenate",
+      "description": "Enter the text to place between lines. Use \"\" to concatenate.",
       "required": true
     }
   ]

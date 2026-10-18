@@ -8,7 +8,122 @@ import JortSettings
 @testable import JortAppKit
 
 @MainActor final class ToolInvocationPresentationTests: ToolInvocationTestCase {
-  func testCustomNativeActionIsDisclosedBeforeSubmissionWithoutRelyingOnDescription()
+  func testInlineHelpExplainsPurposeAndRelevantInputsWithoutKeyboardOrColorInstructions() {
+    var lorem = package("lorem").manifest
+    lorem.description = "Generate paragraphs of lorem ipsum text"
+    lorem.arguments = [
+      ToolArgumentDefinition(
+        name: "paragraphs", type: .integer, label: "Paragraphs",
+        description: "Enter how many paragraphs.",
+        defaultValue: .integer(1), minimum: 1, maximum: 100)
+    ]
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: lorem, hasInlineCall: true),
+      "Generate paragraphs of lorem ipsum text. Enter how many paragraphs (1–100; default 1).")
+
+    lorem.arguments = [
+      ToolArgumentDefinition(
+        name: "count", type: .integer, label: "Count",
+        description: "Enter 10 characters.", defaultValue: .integer(5), minimum: 1, maximum: 10)
+    ]
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: lorem, hasInlineCall: true),
+      "Generate paragraphs of lorem ipsum text. Enter 10 characters (1–10; default 5).")
+
+    var generator = package("uuid").manifest
+    generator.description = "Generate a UUID"
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: generator, hasInlineCall: true),
+      "Generate a UUID.")
+
+    var contextual = package("split", mode: .contextual).manifest
+    contextual.description = "Split the selected text into lines"
+    contextual.arguments = [
+      ToolArgumentDefinition(name: "delimiter", type: .string, label: "Delimiter", required: true)
+    ]
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: contextual, hasInlineCall: true),
+      "Split the selected text into lines. Enter delimiter.")
+
+    contextual.arguments = [
+      ToolArgumentDefinition(
+        name: "separator", type: .string, label: "Separator", defaultValue: .string(""))
+    ]
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: contextual, hasInlineCall: true),
+      "Split the selected text into lines. Enter separator (default \"\").")
+
+    var model = package("summarize", mode: .contextual).manifest
+    model.executor = .model
+    model.description = "Summarize the selected text"
+    model.arguments = [
+      ToolArgumentDefinition(
+        name: "length", type: .enum, label: "Length",
+        defaultValue: .string("medium"), choices: ["short", "medium", "long"])
+    ]
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: model, hasInlineCall: true),
+      "Summarize the selected text. Choose length (short, medium, long; default medium). Add a question or instruction if needed."
+    )
+
+    model.arguments?[0].description = "Choose the default region."
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: model, hasInlineCall: true),
+      "Summarize the selected text. Choose the default region (default medium). Add a question or instruction if needed."
+    )
+
+    model.arguments = [
+      ToolArgumentDefinition(
+        name: "length", type: .enum, label: "Summary format",
+        description:
+          "Choose default for concise prose, short for one paragraph, or 1–20 for that many bullet points.",
+        defaultValue: .string("default"), choices: ["default", "short"] + (1...20).map(String.init))
+    ]
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: model, hasInlineCall: true),
+      "Summarize the selected text. Choose default for concise prose, short for one paragraph, or 1–20 for that many bullet points. Add a question or instruction if needed."
+    )
+
+    var ask = package("ask").manifest
+    ask.executor = .model
+    ask.description = "Answer a question"
+    XCTAssertEqual(
+      ToolInvocationPresentation.inlineHelp(for: ask, hasInlineCall: true),
+      "Answer a question. Enter your question.")
+  }
+
+  func testInlineHelpAppearsAsReadableAccessibleSubtext() async throws {
+    let (editor, _) = try await editor()
+    var tool = package("lorem")
+    tool.manifest.schemaVersion = 3
+    tool.manifest.executor = .javascript
+    tool.manifest.entryContract = 2
+    tool.manifest.description = "Generate paragraphs of lorem ipsum text."
+    tool.manifest.arguments = [
+      ToolArgumentDefinition(
+        name: "paragraphs", type: .integer, label: "Number of paragraphs",
+        description: "Enter how many paragraphs.",
+        defaultValue: .integer(1), minimum: 1, maximum: 100)
+    ]
+    editor.toolPackages = [tool]
+    editor.textView.insertText("/lorem", replacementRange: NSRange(location: 0, length: 0))
+    try editor.toolController.accept(tool, token: NSRange(location: 0, length: 6), space: true)
+    await settlePresentationAsync(editor)
+
+    let help = try XCTUnwrap(
+      editor.linePresentation.accessories.values.flatMap {
+        ($0.view as? NSStackView)?.arrangedSubviews ?? []
+      }.compactMap { $0 as? NSTextField }.first {
+        $0.stringValue.contains("Generate paragraphs of lorem ipsum text.")
+      })
+    XCTAssertEqual(
+      help.stringValue,
+      "/lorem: Generate paragraphs of lorem ipsum text. Enter how many paragraphs (1–100; default 1)."
+    )
+    XCTAssertEqual(help.accessibilityLabel(), help.stringValue)
+  }
+
+  func testNativeActionDisclosureStaysInRunAccessibilityWithoutExtraWarningRow()
     async throws
   {
     let (editor, _) = try await editor()
@@ -25,11 +140,16 @@ import JortSettings
     let labels = editor.linePresentation.accessories.values.flatMap {
       ($0.view as? NSStackView)?.arrangedSubviews ?? []
     }.compactMap { $0 as? NSTextField }
-    let disclosure = try XCTUnwrap(labels.first { $0.stringValue.contains("This tool may") })
-    XCTAssertTrue(disclosure.stringValue.contains("replace clipboard contents"))
-    XCTAssertTrue(disclosure.stringValue.contains("destination you choose"))
-    XCTAssertTrue(disclosure.stringValue.contains("local notification"))
-    XCTAssertEqual(disclosure.accessibilityLabel(), disclosure.stringValue)
+    XCTAssertFalse(labels.contains { $0.stringValue.contains("This tool may") })
+    XCTAssertFalse(labels.contains { $0.textColor == .systemOrange })
+    let run = try XCTUnwrap(
+      editor.textView.subviews.first {
+        $0.accessibilityLabel()?.hasPrefix("Run:") == true
+      })
+    let disclosure = try XCTUnwrap(run.accessibilityLabel())
+    XCTAssertTrue(disclosure.contains("replace clipboard contents"))
+    XCTAssertTrue(disclosure.contains("destination you choose"))
+    XCTAssertTrue(disclosure.contains("local notification"))
     XCTAssertEqual(editor.state.text, "Note /tidy ")
     XCTAssertEqual(editor.state.invocations.first?.phase, .inputting)
     XCTAssertNil(ToolInvocationPresentation.actionDisclosure(for: package("plain").manifest))
@@ -66,23 +186,25 @@ import JortSettings
     invalid.source = "export default async function() { return {error: 'Expected a number'}; }"
     editor.toolPackages = [invalid]
     editor.toolController.submit(editor.state.invocations[0].id)
-    for _ in 0..<300 where editor.state.invocations[0].phase != .error {
+    for _ in 0..<300 where editor.state.invocations[0].message != "Expected a number" {
       try await Task.sleep(for: .milliseconds(10))
     }
+    XCTAssertEqual(editor.state.invocations[0].phase, .inputting)
+    XCTAssertEqual(editor.state.invocations[0].message, "Expected a number")
     editor.refreshToolPresentation()
     await settlePresentationAsync(editor)
     let messages = editor.linePresentation.accessories.values.flatMap {
       ($0.view as? NSStackView)?.arrangedSubviews ?? []
     }.compactMap { $0 as? NSTextField }
-    let dismiss = try XCTUnwrap(
+    let retry = try XCTUnwrap(
       editor.textView.subviews.compactMap { $0 as? NSButton }.first {
-        $0.accessibilityLabel()?.hasPrefix("Dismiss:") == true
+        $0.accessibilityLabel() == "Run"
       })
     let textRect = try XCTUnwrap(
       editor.toolPresentation.geometry(
         for: NSRange(location: 0, length: editor.state.text.utf16.count)
       ).last)
-    XCTAssertGreaterThanOrEqual(dismiss.frame.minX, textRect.maxX)
+    XCTAssertGreaterThanOrEqual(retry.frame.minX, textRect.maxX)
     XCTAssertTrue(messages.contains { $0.stringValue.contains("Expected a number") })
     let bitmap = try XCTUnwrap(editor.view.bitmapImageRepForCachingDisplay(in: editor.view.bounds))
     editor.view.cacheDisplay(in: editor.view.bounds, to: bitmap)

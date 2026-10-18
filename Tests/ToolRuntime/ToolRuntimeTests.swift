@@ -223,6 +223,26 @@ final class ToolRuntimeTests: XCTestCase {
     XCTAssertNil(result.output)
   }
 
+  func testBrokerStatusUsesSafeActionablePublicMessages() {
+    let privateDetail = "credential=private worker path=/tmp/secret"
+    XCTAssertEqual(
+      XPCJavaScriptBrokerTransport.publicFailureMessage(
+        for: .unavailable, workerMessage: privateDetail),
+      "JavaScript service is unavailable. Restart Jort and try again.")
+    XCTAssertEqual(
+      XPCJavaScriptBrokerTransport.publicFailureMessage(
+        for: .timeout, workerMessage: privateDetail),
+      "JavaScript tool timed out. Try again with less input.")
+    XCTAssertEqual(
+      XPCJavaScriptBrokerTransport.publicFailureMessage(
+        for: .cancelled, workerMessage: privateDetail),
+      "Cancelled.")
+    XCTAssertEqual(
+      XPCJavaScriptBrokerTransport.publicFailureMessage(
+        for: .implementation, workerMessage: privateDetail),
+      "JavaScript tool failed or exceeded its resource limit.")
+  }
+
   func testCancellationInvalidatesGenerationAtBrokerBoundary() async throws {
     let transport = RecordingBroker()
     await transport.setDelay(.seconds(2))

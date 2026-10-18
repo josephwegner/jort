@@ -74,11 +74,17 @@ public struct OpenRouterProvider: ModelProvider {
     http.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
     http.setValue("application/json", forHTTPHeaderField: "Content-Type")
     http.setValue("Jort", forHTTPHeaderField: "X-Title")
+    let userContent: String
+    if let instruction = request.instruction {
+      userContent = "Explicit request:\n\(instruction)\n\nContext:\n\(request.content)"
+    } else {
+      userContent = request.content
+    }
     http.httpBody = try JSONSerialization.data(withJSONObject: [
       "model": request.modelID, "stream": false, "max_tokens": request.maximumTokens,
       "messages": [
         ["role": "system", "content": request.instructions],
-        ["role": "user", "content": request.content],
+        ["role": "user", "content": userContent],
       ],
     ])
     let data = try await transport.send(

@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Escape HTML",
   "command": "/escape",
-  "description": "Escape ampersands, angle brackets, and both quote types as HTML text",
+  "description": "Escape this text for use in HTML.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

@@ -108,7 +108,7 @@ public struct InvocationLifecycleState: Equatable, Sendable {
         phase = .submitted
         return [.execute(identity)]
       case .processing: phase = .processing
-      case .failure: phase = .error
+      case .failure: phase = .inputting
       case .publish, .publishLandmarked: phase = .pending
       case .report: phase = .completed
       case .dispatchAction(let action):

@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Count lines",
   "command": "/count-lines",
-  "description": "Report logical and non-empty lines; wrapping and a final newline add no lines",
+  "description": "Count lines and non-empty lines.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "insert-at-invocation",

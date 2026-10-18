@@ -89,7 +89,7 @@ It does not declare compatibility with version-one pending invocations.
 
 Schema 2 adds `executor: "javascript" | "model"`. Legacy manifests without an executor remain JavaScript. Model packages use `instructions.txt` instead of `tool.js`, and declare a stable `modelID`. Instructions are plain text, nonempty, and limited to 32 KiB. The bundled version-one model catalog contains GPT-5.4 Mini (the default), GPT-5.4, and Claude Sonnet 4.6. Unknown model selections remain inspectable and editable, but do not execute or silently switch models.
 
-`/ask` uses ephemeral multiline input and inserts output at the invocation. `/rewrite` uses contextual input and replaces its captured context on Merge. Both use the ordinary tool registry, settings, source locks, canonical output, persistence, and history. Submitted generations capture their package and continue using that captured configuration after a Settings edit.
+`/ask` uses contained inline input and inserts output at the invocation. `/rewrite` uses contextual input and replaces its captured context on Merge. Both use the ordinary tool registry, settings, source locks, canonical output, persistence, and history. Submitted generations capture their package and continue using that captured configuration after a Settings edit. Older saved calls retain their original input behavior.
 
 Model execution sends only the selected model, instructions, and captured content in one nonstreaming OpenRouter chat completion. It has no document, history, filesystem, JavaScript, or tool-calling capability. Global output-token limits are 8,192, further constrained by the catalog and tool byte limit; existing tool byte and line limits still apply. Transport decoding is bounded to six times the output byte cap plus 64 KiB, with an absolute 8 MiB ceiling, 60-second request and 90-second resource timeouts, and no HTTP redirects.
 
@@ -158,19 +158,39 @@ string and enum values as JSON strings, without Swift enum wrappers. Defaults
 and ranges are validated before execution. Keep a script's editable fallback
 constant consistent with the corresponding manifest default.
 
-For contextual tools, arguments live in separate labeled fields; `input.content`
-is only the adjustable contiguous content block, excluding the command. It is not
-an inferred paragraph or the whole document. Contained generators parse only
-their owned input as arguments. Zero-argument generators reject non-whitespace
-input. Accepting a completion does not execute anything.
+For new contract-two calls, type arguments directly after the command, on the
+same logical line. The blue call owns the command and inputs; teal context is
+separate. Context defaults to the text before the command on its line, or the
+previous paragraph when the command starts a line. Drag the existing context
+handles to include text before or after the call. `input.content` contains only
+those context fragments, excluding the whole call and pending output. Context
+whitespace is preserved. Contained generators parse their owned input as
+arguments; zero-argument generators reject non-whitespace input. Selecting a
+completion with Return or a click immediately runs no-argument contained
+JavaScript generators, showing pending output for Merge. Legacy Date and UUID
+work the same way. Space only accepts a completion; tools with arguments,
+context, or model input still wait for Shift-Return. Once a call is accepted,
+ordinary Return resumes notes on a new line without extending its inputs.
+
+Contextual model tools also accept an optional free-text question after their
+declared arguments: `/explain What does the Kubernetes reference mean?`.
+Execution freezes this as `instruction`, separate from `content`; the provider
+receives explicitly labeled request and context, not modified system instructions.
+The question is limited to 16 KiB and is not available to JavaScript tools.
 
 Quoted arguments preserve spaces. `""` supplies an empty string; omission is
 different. Supported escapes are `\n`, `\r`, `\t`, `\"`, and `\\`; unknown
 escapes and unclosed quotes fail validation. For example `/split ".*"` uses a
 literal delimiter, `/join " · "` keeps spaces around the dot, and `/join ""`
-concatenates. Contextual examples mean values entered in the argument field.
-Tab/Shift-Tab traverse argument fields and controls; the Submit shortcut runs
-from fields. Escape returns to the editor while retaining entered values.
+concatenates. Input help beneath active calls starts with the tool description
+and adds short prompts from argument descriptions or labels, including useful
+ranges and defaults. With a collapsed caret in a contextual call,
+Tab focuses the start handle and Shift-Tab the end handle. Tab cycles between
+handles and back to inputs; arrow keys move the focused handle. Escape or Return
+returns to inputs without cancelling. Shift-Return runs from either inputs or a
+handle. Ordinary Shift-arrow and Option-Shift-arrow selection, copying, and
+pasting keep their native editor behavior. Contract-one and older saved nil-call
+invocations retain the legacy fields and scope behavior.
 
 The frozen input retains contract-one `content`, `clock`, `uuid`, and `cancelled`.
 Contract two adds `arguments` and only requested captured data:

@@ -1,19 +1,14 @@
 import XCTest
 
 /// Intentionally separate from normal Debug UI tests. The package lane builds
-/// dist/Jort.app first, then this test launches that exact Release bundle.
+/// dist/Jort.app first, then this test launches its isolated, credential-free copy.
 @MainActor final class PackagedJortUITests: XCTestCase {
   func testLocalReleaseJavaScriptDiscoveryExecutionMergeAndRelaunch() throws {
     continueAfterFailure = false
-    let repository = URL(fileURLWithPath: #filePath)
-      .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-    let bundle = repository.appendingPathComponent("dist/Jort.app")
-    XCTAssertTrue(FileManager.default.fileExists(atPath: bundle.path))
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+    let root = IsolatedJortApplication.temporaryDirectory.appendingPathComponent(
       "PackagedToolsUI-\(UUID())")
-    let app = XCUIApplication(url: bundle)
-    app.launchEnvironment["JORT_DATA_DIRECTORY"] = root.path
-    app.launch()
+    let app = try IsolatedJortApplication.make(directory: root)
+    try app.launchIsolated()
     defer { app.terminate() }
     let editor = app.textViews["Jort document"]
     XCTAssertTrue(editor.waitForExistence(timeout: 10))
@@ -46,7 +41,7 @@ import XCTest
     XCTAssertFalse(merged.contains("/lorem"))
     app.typeKey("s", modifierFlags: .command)
     app.terminate()
-    app.launch()
+    try app.launchIsolated()
     XCTAssertTrue(editor.waitForExistence(timeout: 10))
     let restored = XCTNSPredicateExpectation(
       predicate: NSPredicate { _, _ in editor.value as? String == merged }, object: nil)

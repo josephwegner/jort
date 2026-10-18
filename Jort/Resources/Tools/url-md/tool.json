@@ -5,7 +5,7 @@
   "version": 1,
   "name": "URLs to Markdown",
   "command": "/url-md",
-  "description": "Wrap bare HTTP(S) URLs as Markdown links; skip links, images, autolinks, and code",
+  "description": "Turn bare URLs in this text into Markdown links.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

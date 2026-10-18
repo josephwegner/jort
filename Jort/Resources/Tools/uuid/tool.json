@@ -4,7 +4,7 @@
   "version": 1,
   "name": "Uuid",
   "command": "/uuid",
-  "description": "uuid tool",
+  "description": "Generate a unique identifier.",
   "entryContract": 1,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",

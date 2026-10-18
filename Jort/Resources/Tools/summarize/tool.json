@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Summarize",
   "command": "/summarize",
-  "description": "Summarize facts, decisions, and actions; concise prose, short, or 1–20 bullets",
+  "description": "Summarize the selected text.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",
@@ -17,8 +17,8 @@
     {
       "name": "length",
       "type": "enum",
-      "label": "Summary length",
-      "description": "default: concise prose; short: one paragraph; 1–20: that many bullets",
+      "label": "Summary format",
+      "description": "Choose default for concise prose, short for one paragraph, or 1–20 for that many bullet points.",
       "defaultValue": "default",
       "choices": [
         "default",

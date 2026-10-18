@@ -42,7 +42,7 @@ CHECKS = {item.name: item for item in (
     make_check("native", ["./scripts/test-native.sh"], xcode=True),
     make_check("localization", ["python3", "scripts/check-localization.py"]),
     make_check("presentation", ["bash", "scripts/test-presentation.sh"], xcode=True),
-    make_check("packaging-tests", ["python3", "scripts/test-packaging.py"]),
+    make_check("packaging-tests", ["python3", "scripts/test-packaging.py"], ["python3", "-m", "unittest", "scripts.test_ui_isolation"]),
     make_check("ui", ["./scripts/test-ui.sh"], xcode=True),
     make_check("packaged-ui", ["bash", "scripts/test-packaged-ui.sh"], xcode=True),
     make_check("containment-binary-ui", ["python3", "scripts/verify-javascript-containment.py", ".build-ui-tests/Build/Products/Debug/Jort.app"]),
@@ -133,6 +133,13 @@ def focused_check(suite: str, configuration: str, filters: Sequence[str], perfor
     derived = f".build-focused-{suite}-{configuration.lower()}"
     suffix = "-tsan" if sanitizer == "thread" else ""
     derived += suffix
+    if suite == "ui":
+        if sanitizer:
+            raise ValueError("GUI test sanitizers are not supported by the isolated launcher")
+        command = ["bash", "scripts/run-isolated-ui-tests.sh", "--configuration", configuration,
+                   "--derived-data", str(ROOT / derived), "--kind", "debug", "--"]
+        command.extend(f"-only-testing:{value}" for value in filters)
+        return make_check(f"focused-ui-{configuration.lower()}", command, xcode=True)
     command = ["env", f"JORT_PERFORMANCE_ENFORCE={int(performance)}", "xcodebuild", "-project", "Jort.xcodeproj", "-scheme", scheme, "-configuration", configuration, "-derivedDataPath", derived, "-destination", "platform=macOS", "ENABLE_TESTABILITY=YES"]
     command.extend(f"-only-testing:{value}" for value in filters)
     if sanitizer == "thread": command.extend(("-enableThreadSanitizer", "YES"))

@@ -10,17 +10,28 @@ import JortSettings
   var executionInputFactory: (String) -> ToolExecutionInput = { ToolExecutionInput(content: $0) }
   private var knownIDs = Set<UUID>()
   private var arguments: [UUID: [String: String]] = [:]
+  private var inlineInputs: [UUID: String] = [:]
   init(editor: EditorViewController) { self.editor = editor }
   func documentChanged() {
     guard let editor else { return }
     let ids = Set(editor.state.invocations.map(\.id))
     for id in knownIDs where !ids.contains(id) {
       arguments.removeValue(forKey: id)
+      inlineInputs.removeValue(forKey: id)
       coordinator.remove(id)
       coordinator.transient.remove(id)
     }
     knownIDs = ids
+    var editedInlineErrors: [UUID] = []
     for invocation in editor.state.invocations {
+      if let inline = invocation.inlineInput(in: editor.state) {
+        let previous = inlineInputs.updateValue(inline, forKey: invocation.id)
+        if previous != nil, previous != inline, invocation.phase == .inputting,
+          invocation.message != nil
+        {
+          editedInlineErrors.append(invocation.id)
+        }
+      }
       if arguments[invocation.id] == nil, let captured = invocation.capturedArguments {
         arguments[invocation.id] = captured.mapValues { value in
           switch value {
@@ -39,8 +50,9 @@ import JortSettings
       }
       coordinator.transient.reconcile(
         invocation.id, inputting: invocation.phase == .inputting,
-        content: content(invocation))
+        content: warningIdentity(invocation))
     }
+    for id in editedInlineErrors { clearExecutionError(id) }
   }
 
   func reconcilePackages() {
@@ -53,7 +65,7 @@ import JortSettings
         cancel(current.id)
         continue
       }
-      let candidate = packages.first(where: { $0.manifest.id == current.packageID })?.manifest
+      let candidate = executionPackage(for: current)?.manifest
       try? perform(
         .reconcile(
           current.packageReference, candidate: candidate,
@@ -100,7 +112,9 @@ import JortSettings
         location: range.location + package.manifest.command.utf16.count + (space ? 1 : 0), length: 0
       ))
     if package.manifest.inputMode.isEphemeral { setPrompt("", for: identity.invocationID) }
-    if package.manifest.inputMode == .contextual, !(package.manifest.arguments?.isEmpty ?? true) {
+    if package.manifest.inputMode == .contextual, package.manifest.entryContract == 1,
+      !(package.manifest.arguments?.isEmpty ?? true)
+    {
       editor.toolPresentation.requestArgumentFocus(for: identity.invocationID)
       editor.textView.scrollRangeToVisible(editor.textView.selectedRange())
       editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
@@ -116,24 +130,36 @@ import JortSettings
   func submit(_ id: UUID) {
     guard let editor, let invocation = editor.state.invocations.first(where: { $0.id == id }),
       invocation.phase == .inputting,
-      let package = packages.first(where: { $0.manifest.id == invocation.packageID }),
+      let package = executionPackage(for: invocation),
       let content = content(invocation)
     else { return }
     clearWarning(id)
+    clearExecutionError(id)
     let submittedArguments = arguments[id] ?? [:]
+    let inline = invocation.call == nil ? nil : invocation.inlineInput(in: editor.state)
     let identity = InvocationGeneration(invocationID: id, generation: UUID())
     let input: ToolExecutionInput
     do {
       let definitions = package.manifest.arguments ?? []
       let parsed: [String: ToolArgumentValue]
-      if definitions.isEmpty {
+      var instruction: String?
+      if let inline, package.manifest.inputMode == .contextual {
+        // Typed inputs are owned by the call, never harvested from its context.
+        if package.manifest.executorType == .model {
+          let values = try ToolArguments.parseModelInputs(inline, definitions: definitions)
+          parsed = values.arguments
+          instruction = values.instruction
+        } else {
+          parsed = try ToolArguments.parse(inline, definitions: definitions)
+        }
+      } else if definitions.isEmpty {
         parsed = [:]
       } else if package.manifest.inputMode == .contextual {
         parsed = try parsedArguments(for: id, definitions: definitions)
       } else {
         parsed = try ToolArguments.parse(content, definitions: definitions)
       }
-      input = executionInputFactory(content).withArguments(parsed)
+      input = executionInputFactory(content).withArguments(parsed).withInstruction(instruction)
     } catch {
       setWarning(
         (error as? ToolFailure)?.message ?? "Check the tool arguments.", content: content, for: id)
@@ -191,6 +217,39 @@ import JortSettings
         else { return }
         self.setWarning(warning, content: content, for: id)
       })
+  }
+
+  private func executionPackage(for invocation: ToolInvocation) -> ToolPackage? {
+    guard var package = packages.first(where: { $0.manifest.id == invocation.packageID })
+    else { return nil }
+    // Ask and Rewrite v2 changed their entry contracts, not their instructions.
+    // Preserve v1 saved calls rather than cancelling them or auto-merging their
+    // pending results. New accepts always use the unmodified current package.
+    let oldMode: ToolInputMode
+    switch invocation.packageID {
+    case "dev.jort.ask": oldMode = .ephemeralMultiline
+    case "dev.jort.rewrite": oldMode = .contextual
+    default: return package
+    }
+    guard invocation.call == nil, invocation.entryContract == 1,
+      invocation.packageVersion == 1, invocation.executor == "model",
+      invocation.inputMode == oldMode.rawValue,
+      invocation.outputOperation == package.manifest.outputOperation.rawValue,
+      invocation.command == package.manifest.command,
+      package.manifest.version == 2, package.manifest.entryContract == 2,
+      package.manifest.executorType == .model,
+      package.manifest.arguments?.isEmpty ?? true,
+      package.manifest.capturedData?.isEmpty ?? true,
+      package.manifest.hostActions?.isEmpty ?? true
+    else { return package }
+    package.manifest.schemaVersion = 2
+    package.manifest.entryContract = 1
+    package.manifest.version = 1
+    package.manifest.inputMode = oldMode
+    package.manifest.arguments = nil
+    package.manifest.capturedData = nil
+    package.manifest.hostActions = nil
+    return package
   }
 
   private func apply(_ plan: ToolDocumentPlan) throws {
@@ -290,8 +349,11 @@ import JortSettings
   func argumentValues(for id: UUID) -> [String: String] { arguments[id] ?? [:] }
 
   func setArgument(_ value: String, name: String, for id: UUID) {
+    guard arguments[id]?[name] != value else { return }
     arguments[id, default: [:]][name] = value
     clearWarning(id)
+    clearExecutionError(id)
+    editor?.refreshToolPresentation()
   }
 
   private func parsedArguments(for id: UUID, definitions: [ToolArgumentDefinition]) throws
@@ -316,7 +378,10 @@ import JortSettings
     var a = start ? min(token.location, max(0, requested)) : scope.location
     var b =
       start
-      ? NSMaxRange(scope) : max(NSMaxRange(token), min(editor.state.text.utf16.count, requested))
+      ? NSMaxRange(scope)
+      : max(
+        invocation.call?.resolve(in: editor.state).map(NSMaxRange) ?? NSMaxRange(token),
+        min(editor.state.text.utf16.count, requested))
     for other in editor.state.invocations where other.id != id {
       guard let occupied = occupied(other, in: editor.state) else { continue }
       if NSMaxRange(occupied) <= token.location {
@@ -331,6 +396,11 @@ import JortSettings
     let range = NSRange(location: a, length: max(0, b - a))
     invocation.scope = try .init(range, lines: editor.state.lines)
     invocation.sourceHash = ToolInvocation.hash(source.substring(with: range))
+    invocation.message = nil
+    if invocation.actionStatus == .failed || invocation.actionStatus == .cancelled {
+      invocation.actionStatus = nil
+      invocation.actionKind = nil
+    }
     try update(invocation)
   }
 
@@ -356,13 +426,39 @@ import JortSettings
   }
 
   func prompt(for id: UUID) -> String? { coordinator.transient.prompt(for: id) }
-  func setPrompt(_ text: String?, for id: UUID) { coordinator.transient.setPrompt(text, for: id) }
+  func setPrompt(_ text: String?, for id: UUID) {
+    let previous = coordinator.transient.prompt(for: id)
+    guard previous != text else { return }
+    coordinator.transient.setPrompt(text, for: id)
+    clearWarning(id)
+    if previous != nil { clearExecutionError(id) }
+    editor?.refreshToolPresentation()
+  }
   func warning(for id: UUID) -> String? { coordinator.transient.warning(for: id) }
   private func setWarning(_ warning: String, content: String, for id: UUID) {
-    coordinator.transient.setWarning(warning, content: content, for: id)
+    let current = editor?.state.invocations.first(where: { $0.id == id })
+    coordinator.transient.setWarning(
+      warning, content: current.map(warningIdentity) ?? content, for: id)
     editor?.refreshToolPresentation()
+  }
+  private func warningIdentity(_ invocation: ToolInvocation) -> String? {
+    // The contextual content excludes typed inputs. Track the full call/context
+    // hash so correcting an argument clears a warning immediately, too.
+    invocation.call == nil ? content(invocation) : invocation.sourceHash
   }
   private func clearWarning(_ id: UUID) {
     coordinator.transient.setWarning(nil, content: nil, for: id)
+  }
+  private func clearExecutionError(_ id: UUID) {
+    guard let current = editor?.state.invocations.first(where: { $0.id == id }),
+      current.phase == .inputting, current.message != nil,
+      current.actionStatus == nil || current.actionStatus == .failed
+        || current.actionStatus == .cancelled
+    else { return }
+    var cleared = current
+    cleared.message = nil
+    cleared.actionStatus = nil
+    cleared.actionKind = nil
+    try? update(cleared)
   }
 }

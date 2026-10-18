@@ -44,7 +44,9 @@ public struct ToolExecutionRequest: Sendable {
   {
     try package.validate()
     guard input.content.utf8.count <= package.manifest.maximumInputBytes,
-      input.clock.utf8.count <= 128, input.uuid.utf8.count <= 64
+      input.clock.utf8.count <= 128, input.uuid.utf8.count <= 64,
+      input.instruction.map({ $0.utf8.count <= 16_384 && !$0.contains("\0") }) ?? true,
+      package.manifest.executorType != .javascript || input.instruction == nil
     else {
       throw ToolFailure(.invalidInput, message: "Enter content within the tool’s input limit.")
     }

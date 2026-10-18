@@ -293,6 +293,64 @@ private struct ConflictingSettingsCredentialStore: ModelCredentialStore {
   func remove() {}
 }
 
+private enum SettingsConnectionResult: Sendable {
+  case success
+  case modelFailure(ModelFailure)
+  case credentialFailure(ModelCredentialStoreFailure)
+}
+
+private actor SettingsModelConnection: ModelConnection {
+  private var status: ModelConnectionStatus
+  private var connected: Bool
+  private var nextConnectResult: SettingsConnectionResult
+
+  init(
+    status: ModelConnectionStatus = .init(), connected: Bool = false,
+    nextConnectResult: SettingsConnectionResult = .success
+  ) {
+    self.status = status
+    self.connected = connected
+    self.nextConnectResult = nextConnectResult
+  }
+
+  func setNextConnectResult(_ result: SettingsConnectionResult) { nextConnectResult = result }
+  func currentStatus() async -> ModelConnectionStatus { status }
+  func available() async -> Bool { connected }
+  func connect(openBrowser: @escaping @Sendable (URL) async -> Bool) async throws {
+    switch nextConnectResult {
+    case .success:
+      connected = true
+      status = .init(state: .connected, lastVerified: Date())
+    case let .modelFailure(failure):
+      status = .init(state: .needsAttention, failure: Self.failure(for: failure))
+      throw failure
+    case let .credentialFailure(failure):
+      status = .init(state: .needsAttention, failure: Self.failure(for: failure))
+      throw failure
+    }
+  }
+  func check() async throws {}
+  func disconnect() async throws {
+    connected = false
+    status = .init()
+  }
+
+  private static func failure(for failure: ModelFailure) -> ModelConnectionFailure {
+    switch failure {
+    case .authorization, .disconnected: .authorization
+    case .authentication: .authentication
+    case .offline: .offline
+    case .timeout: .timeout
+    case .cancelled: .cancelled
+    case .malformed, .limit: .malformed
+    case .credentialStore: .credentialStore
+    }
+  }
+  private static func failure(for failure: ModelCredentialStoreFailure) -> ModelConnectionFailure {
+    failure == .unavailableIdentity ? .unavailableIdentity : .credentialStore
+  }
+}
+
 extension SettingsWorkspaceTests {
   func testModelsPaneShowsActionableCredentialConflictWithoutNetwork() async throws {
     _ = NSApplication.shared
@@ -339,6 +397,55 @@ extension SettingsWorkspaceTests {
     XCTAssertEqual(pane.statusLabel.stringValue, "Not Connected")
     let count = await transport.count
     XCTAssertEqual(count, 3)
+  }
+
+  func testModelsPaneKeepsFailedConnectionMessageAcrossRefresh() async throws {
+    _ = NSApplication.shared
+    let connection = SettingsModelConnection(nextConnectResult: .modelFailure(.offline))
+    let pane = ModelsSettingsViewController(connection: connection)
+    _ = pane.view
+
+    pane.connect()
+    try await waitUntil { pane.detailLabel.stringValue == ModelFailure.offline.message }
+    XCTAssertEqual(pane.statusLabel.stringValue, "Connection Needs Attention")
+    await pane.refresh()
+    XCTAssertEqual(pane.detailLabel.stringValue, ModelFailure.offline.message)
+    let reopenedPane = ModelsSettingsViewController(connection: connection)
+    _ = reopenedPane.view
+    await reopenedPane.refresh()
+    XCTAssertEqual(reopenedPane.detailLabel.stringValue, ModelFailure.offline.message)
+  }
+
+  func testModelsPaneShowsCancellationThenClearsItAfterReconnect() async throws {
+    _ = NSApplication.shared
+    let connection = SettingsModelConnection(nextConnectResult: .modelFailure(.cancelled))
+    let pane = ModelsSettingsViewController(connection: connection)
+    _ = pane.view
+
+    pane.connect()
+    try await waitUntil {
+      pane.detailLabel.stringValue == ModelConnectionFailure.cancelled.message
+    }
+    await connection.setNextConnectResult(.success)
+    pane.connect()
+    try await waitUntil { pane.statusLabel.stringValue == "Connected" }
+    XCTAssertNotEqual(pane.detailLabel.stringValue, ModelConnectionFailure.cancelled.message)
+    XCTAssertEqual(pane.connectButton.title, "Replace Connection")
+  }
+
+  func testModelsPaneShowsSafeCredentialFailure() async throws {
+    _ = NSApplication.shared
+    let connection = SettingsModelConnection(
+      nextConnectResult: .credentialFailure(.unavailableIdentity))
+    let pane = ModelsSettingsViewController(connection: connection)
+    _ = pane.view
+
+    pane.connect()
+    try await waitUntil {
+      pane.detailLabel.stringValue == ModelConnectionFailure.unavailableIdentity.message
+    }
+    await pane.refresh()
+    XCTAssertEqual(pane.detailLabel.stringValue, ModelConnectionFailure.unavailableIdentity.message)
   }
   func testExecutorTransitionCancellationPreservesDraftAndLocalUndo() async throws {
     _ = NSApplication.shared

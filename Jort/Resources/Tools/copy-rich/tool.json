@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Copy rich text",
   "command": "/copy-rich",
-  "description": "Copy this Markdown block to the clipboard as rich and readable plain text",
+  "description": "Copy this Markdown block as rich text.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "insert-at-invocation",

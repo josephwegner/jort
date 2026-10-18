@@ -38,6 +38,14 @@ enum JortApp {
       override.map { URL(fileURLWithPath: $0) }
       ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
       .appendingPathComponent(storeName, isDirectory: true)
+    do {
+      try UITestLaunchIsolation.recordIfRequested(directory: directory)
+    } catch {
+      // Refuse a misconfigured test launch before opening any note store.
+      NSLog("Jort refused a GUI-test launch with invalid isolation.")
+      NSApplication.shared.terminate(nil)
+      return
+    }
     persistence = PersistenceController(directory: directory)
     editor = EditorViewController(persistence: persistence)
     let packageRegistry = ToolPackageRegistry(
@@ -230,7 +238,8 @@ enum JortApp {
     return true
   }
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    if duplicate { return .terminateNow }
+    // A rejected test launch exits before the editor or persistence exists.
+    if duplicate || editor == nil || persistence == nil { return .terminateNow }
     guard let settingsWindow else {
       finishTermination(sender)
       return .terminateLater

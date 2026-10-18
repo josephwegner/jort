@@ -739,7 +739,7 @@ private actor SuspendedToolExecutor: ToolExecuting {
     XCTAssertTrue(editor.state.text.contains("\(clock)|\(uuid.uuidString.lowercased())"))
   }
 
-  func testPendingAndErrorDismissRestorePreSubmitMetadataSelectionAndViewport() async throws {
+  func testPendingDismissRestoresMetadataAndErrorReturnsToEditableInput() async throws {
     for fails in [false, true] {
       let (editor, window) = try await editor()
       defer { window.orderOut(nil) }
@@ -759,12 +759,14 @@ private actor SuspendedToolExecutor: ToolExecuting {
       let selection = (editor.state.text as NSString).range(of: "tail")
       editor.textView.setSelectedRange(selection)
       let viewport = editor.scroll.contentView.bounds.origin
+      let canonical = editor.state.text
       let original = editor.state.invocations[0]
       editor.toolController.submit(id)
       if fails {
-        for _ in 0..<500 where editor.state.invocations[0].phase != .error {
-          try await Task.sleep(for: .milliseconds(10))
-        }
+        try await error(editor, id: id)
+        XCTAssertEqual(editor.state.invocations[0].message, "failed")
+        XCTAssertEqual(editor.state.text, canonical)
+        continue
       } else {
         try await pending(editor)
       }

@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Title case",
   "command": "/title",
-  "description": "English title case per line with editable minor words; preserve acronyms, may change code/URLs",
+  "description": "Convert each line to English title case.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

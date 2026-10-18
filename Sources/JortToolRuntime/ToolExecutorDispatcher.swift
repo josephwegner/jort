@@ -6,6 +6,10 @@ public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
   public static func prepareInput(_ input: ToolExecutionInput, for manifest: ToolManifest) throws
     -> ToolExecutionInput
   {
+    guard manifest.executorType != .javascript || input.instruction == nil else {
+      throw ToolFailure(
+        .invalidInput, message: "JavaScript tools do not accept an inline instruction.")
+    }
     guard manifest.entryContract == 2 else { return input }
     guard let date = ISO8601DateFormatter().date(from: input.clock) else {
       throw ToolFailure(.invalidInput, message: "Invalid captured submission time.")
@@ -26,7 +30,8 @@ public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
     }
     return .init(
       content: input.content, date: date, uuid: UUID(uuidString: input.uuid) ?? UUID(),
-      arguments: input.arguments, localTime: localTime, entropy: entropy, analysis: analysis)
+      arguments: input.arguments, localTime: localTime, entropy: entropy, analysis: analysis,
+      instruction: input.instruction)
   }
   public var modelAvailable: @Sendable () async -> Bool
   public var provider: @Sendable () -> any ModelProvider
@@ -47,11 +52,35 @@ public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
     -> ToolExecutionResult
   {
     if package.manifest.executorType == .javascript {
+      guard input.instruction == nil else {
+        return .init(
+          failure: .init(
+            .invalidInput, message: "JavaScript tools do not accept an inline instruction."))
+      }
       return await ToolRuntime.execute(
         package, input: input, validationOnly: true, client: javaScript)
     }
-    do { _ = try modelRequest(package, input: input) } catch {
-      return .init(error: "Check this tool’s instructions and selected model in Tools Settings.")
+    do {
+      _ = try modelRequest(package, input: input)
+    } catch let failure as ToolFailure {
+      return .init(failure: failure)
+    } catch let failure as ModelFailure {
+      // Input limits are actionable at submission time. Package/model failures
+      // are configuration problems and must not expose implementation details.
+      if failure == .limit { return .init(failure: failure.toolFailure) }
+      return .init(
+        failure: .init(
+          .invalidPackage,
+          message:
+            "This model tool is unavailable. Check its instructions and selected model in Tools Settings."
+        ))
+    } catch {
+      return .init(
+        failure: .init(
+          .invalidPackage,
+          message:
+            "This model tool is unavailable. Check its instructions and selected model in Tools Settings."
+        ))
     }
     guard await modelAvailable() else {
       return .init(failure: ModelFailure.disconnected.toolFailure)
@@ -62,6 +91,11 @@ public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
     -> ToolExecutionResult
   {
     if package.manifest.executorType == .javascript {
+      guard input.instruction == nil else {
+        return .init(
+          failure: .init(
+            .invalidInput, message: "JavaScript tools do not accept an inline instruction."))
+      }
       return await ToolRuntime.execute(package, input: input, client: javaScript)
     }
     do {
@@ -99,7 +133,8 @@ public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
     -> ModelRequest
   {
     guard package.manifest.entryContract == 2, !input.arguments.isEmpty else {
-      return try ModelRequest(package: package, content: input.content)
+      return try ModelRequest(
+        package: package, content: input.content, instruction: input.instruction)
     }
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
@@ -108,7 +143,8 @@ public struct ToolExecutorDispatcher: GenerationAwareToolExecuting {
     captured.implementation = .model(
       instructions: package.instructions
         + "\n\nExplicit submitted arguments (JSON):\n" + values)
-    return try ModelRequest(package: captured, content: input.content)
+    return try ModelRequest(
+      package: captured, content: input.content, instruction: input.instruction)
   }
 }
 

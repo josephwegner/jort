@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Trim",
   "command": "/trim",
-  "description": "Remove horizontal whitespace from both ends of each line, including indentation",
+  "description": "Remove whitespace from the start and end of each line.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

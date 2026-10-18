@@ -26,6 +26,19 @@ private struct UtilityReminderExecutor: ToolExecuting {
   }
 }
 
+@MainActor private final class DeniedUtilityReminderHost: ToolHostActionExecuting {
+  var dispatches = 0
+  func execute(action: ToolHostAction, identity: InvocationGeneration, input: ToolExecutionInput)
+    async -> ToolExecutionResult
+  {
+    dispatches += 1
+    return .init(
+      failure: .init(
+        .authorization,
+        message: "Allow Jort notifications in System Settings to schedule reminders."))
+  }
+}
+
 @MainActor private final class SuspendedUtilityHost: ToolHostActionExecuting {
   var dispatched: [InvocationGeneration] = []
   private var continuation: CheckedContinuation<ToolExecutionResult, Never>?
@@ -44,6 +57,45 @@ private struct UtilityReminderExecutor: ToolExecuting {
 
 /// UI integration deliberately bypasses the worker and real OS actions.
 @MainActor final class ToolUtilityFlowTests: ToolInvocationTestCase {
+  func testInlineReminderShowsMissingMinutesAndNotificationPermissionErrors() async throws {
+    let (editor, window) = try await editor()
+    let host = DeniedUtilityReminderHost()
+    editor.toolInvocationCoordinator = ToolInvocationCoordinator(
+      executor: UtilityReminderExecutor(), hostActions: host)
+    let tool = utility(arguments: [
+      .init(
+        name: "minutes", type: .integer, label: "Reminder delay",
+        minimum: 1, maximum: 525600, required: true)
+    ])
+    editor.toolPackages = [tool]
+    editor.textView.insertText("Buy tea /remind", replacementRange: NSRange(location: 0, length: 0))
+    try editor.toolController.accept(tool, token: NSRange(location: 8, length: 7), space: true)
+    let id = try XCTUnwrap(editor.state.invocations.first?.id)
+    window.makeFirstResponder(editor.textView)
+    await settlePresentationAsync(editor)
+
+    func errors() -> [NSTextField] {
+      editor.linePresentation.accessories.values.flatMap {
+        ($0.view as? NSStackView)?.arrangedSubviews ?? []
+      }.compactMap { $0 as? NSTextField }.filter { $0.textColor == .systemRed }
+    }
+    editor.toolController.submit(id)
+    await settlePresentationAsync(editor)
+    XCTAssertFalse(errors().isEmpty)
+    XCTAssertEqual(host.dispatches, 0)
+    editor.textView.insertText("1", replacementRange: editor.textView.selectedRange())
+    await settlePresentationAsync(editor)
+    XCTAssertTrue(errors().isEmpty)
+    editor.toolController.submit(id)
+    try await error(editor, id: id)
+    await settlePresentationAsync(editor)
+    let permission = try XCTUnwrap(
+      errors().first { $0.stringValue.contains("Allow Jort notifications") })
+    XCTAssertNotNil(permission.window)
+    XCTAssertFalse(permission.isHiddenOrHasHiddenAncestor)
+    XCTAssertEqual(host.dispatches, 1)
+  }
+
   private func utility(arguments: [ToolArgumentDefinition] = []) -> ToolPackage {
     var tool = package("remind", mode: .contextual)
     tool.manifest.schemaVersion = 3
@@ -73,6 +125,27 @@ private struct UtilityReminderExecutor: ToolExecuting {
     editor.textView.insertText(
       "/remindBuy tea" + tail, replacementRange: NSRange(location: 0, length: 0))
     try editor.toolController.accept(tool, token: NSRange(location: 0, length: 7), space: true)
+    // Keep these fixtures on the pre-inline contract: they exercise persisted
+    // argument-form recovery and the original whole-line contextual scope.
+    if let accepted = editor.state.invocations.first {
+      var legacy = accepted
+      legacy.call = nil
+      let line = try XCTUnwrap(editor.state.lines.first)
+      legacy.scope = try ToolAnchoredRange(
+        NSRange(location: line.location, length: line.length), lines: editor.state.lines)
+      legacy.sourceHash = ToolInvocation.hash(
+        (editor.state.text as NSString).substring(with: legacy.scope.resolve(in: editor.state)!))
+      let before = editor.state
+      let patch = DocumentPatch(
+        in: before, expectedInvocations: [accepted], invocations: [.upsert(legacy)])
+      try editor.apply(
+        .init(
+          baseRevision: before.revision, origin: .automation, undoPolicy: .none,
+          mutation: .patch(patch)))
+      editor.toolPresentation.requestArgumentFocus(for: accepted.id)
+      editor.textView.scrollRangeToVisible(try XCTUnwrap(accepted.token.resolve(in: editor.state)))
+      editor.textView.textLayoutManager?.textViewportLayoutController.layoutViewport()
+    }
     await settlePresentationAsync(editor)
     return try XCTUnwrap(editor.state.invocations.first?.id)
   }
@@ -273,6 +346,25 @@ private struct UtilityReminderExecutor: ToolExecuting {
     XCTAssertEqual(receipt.actionKind, "notification.schedule")
     XCTAssertFalse(coordinator.hasJob(id))
     XCTAssertEqual(editor.state.text, source)
+    let done = try XCTUnwrap(
+      editor.textView.subviews.first {
+        $0.accessibilityLabel() == "Done"
+      })
+    let cancelReminder = try XCTUnwrap(
+      editor.textView.subviews.first {
+        $0.accessibilityLabel() == "Cancel Reminder"
+      })
+    XCTAssertEqual(cancelReminder.frame.minX, done.frame.maxX, accuracy: 0.5)
+    XCTAssertLessThanOrEqual(cancelReminder.frame.maxX, editor.textView.visibleRect.maxX)
+    XCTAssertTrue(
+      editor.toolPresentation.containsDecoration(
+        at: NSPoint(x: cancelReminder.frame.midX, y: cancelReminder.frame.midY), pending: false))
+    let labels = editor.linePresentation.accessories.values.flatMap {
+      ($0.view as? NSStackView)?.arrangedSubviews ?? []
+    }.compactMap { $0 as? NSTextField }
+    let unknown = try XCTUnwrap(labels.first { $0.stringValue.contains("outcome is unknown") })
+    XCTAssertEqual(unknown.textColor, .systemRed)
+    XCTAssertTrue(unknown.accessibilityLabel()?.hasPrefix("Tool error:") == true)
     editor.textView.setSelectedRange(NSRange(location: 7, length: 0))
     window.makeFirstResponder(editor.textView)
     try press("\t", code: 48, modifiers: .shift, in: window)
@@ -286,6 +378,42 @@ private struct UtilityReminderExecutor: ToolExecuting {
     XCTAssertEqual(after.generation, receipt.generation)
     XCTAssertEqual(host.dispatched.count, 1)
     XCTAssertEqual(editor.state.text, source)
+  }
+
+  func testInlineReminderControlsStayInsideCommandDecoration() async throws {
+    let (editor, window) = try await editor()
+    defer { window.orderOut(nil) }
+    let host = SuspendedUtilityHost()
+    defer { host.finish() }
+    editor.toolInvocationCoordinator = ToolInvocationCoordinator(
+      executor: UtilityReminderExecutor(), hostActions: host)
+    editor.cancelToolReminder = { _ in "Cancelled the pending reminder." }
+    let tool = utility()
+    editor.toolPackages = [tool]
+    editor.textView.insertText("Buy tea /remind", replacementRange: NSRange(location: 0, length: 0))
+    try editor.toolController.accept(tool, token: NSRange(location: 8, length: 7), space: true)
+    let invocation = try XCTUnwrap(editor.state.invocations.first)
+    XCTAssertNotNil(invocation.call)
+    editor.toolController.submit(invocation.id)
+    for _ in 0..<500 where host.dispatched.isEmpty {
+      try await Task.sleep(for: .milliseconds(2))
+    }
+    XCTAssertFalse(host.dispatched.isEmpty)
+    editor.toolController.cancel(invocation.id)
+    await settlePresentationAsync(editor)
+
+    for label in ["Done", "Cancel Reminder"] {
+      let button = try XCTUnwrap(
+        editor.textView.subviews.first {
+          $0.accessibilityLabel() == label
+        })
+      XCTAssertLessThanOrEqual(button.frame.maxX, editor.textView.visibleRect.maxX)
+      for x in [button.frame.minX + 2, button.frame.midX, button.frame.maxX - 2] {
+        XCTAssertTrue(
+          editor.toolPresentation.containsDecoration(
+            at: NSPoint(x: x, y: button.frame.midY), pending: false), label)
+      }
+    }
   }
 
   func testRestoredStringArgumentsRoundTripThroughControllerParser() async throws {

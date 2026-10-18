@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Remove blank lines",
   "command": "/blank-lines",
-  "description": "Remove whitespace-only lines; preserve retained text and terminal-newline presence",
+  "description": "Remove blank lines from this text.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

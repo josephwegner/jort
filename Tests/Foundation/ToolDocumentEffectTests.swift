@@ -29,6 +29,27 @@ import JortToolContracts
         package: .init(manifest: manifest, source: "export default () => ({report:'ok'});"),
         token: NSRange(location: 0, length: command.utf16.count), space: true, in: before))
     try owner.apply(plan.transaction)
+    if mode == .contextual, let accepted = owner.snapshot.invocations.first {
+      // This fixture explicitly chooses the pre-existing text AFTER the call as
+      // context. New calls intentionally do not capture that tail by default.
+      let snapshot = owner.snapshot
+      var contextual = accepted
+      let first = try XCTUnwrap(snapshot.lines.first)
+      var end = first.location + first.length
+      while end > first.location,
+        let unit = try snapshot.utf16(in: NSRange(location: end - 1, length: 1)).first,
+        [10, 13].contains(unit)
+      { end -= 1 }
+      contextual.scope = try .init(NSRange(location: 0, length: end), snapshot: snapshot)
+      contextual.sourceHash = ToolInvocation.hash(
+        try snapshot.text(in: NSRange(location: 0, length: end)))
+      let patch = DocumentPatch(
+        in: snapshot, expectedInvocations: [accepted], invocations: [.upsert(contextual)])
+      try owner.apply(
+        .init(
+          baseRevision: snapshot.revision, origin: .automation, undoPolicy: .none,
+          mutation: .patch(patch)))
+    }
     return owner
   }
 
@@ -55,6 +76,21 @@ import JortToolContracts
       try XCTUnwrap(lifecycle.pendingEffect),
       in: owner.snapshot, expected: invocation)
     try owner.apply(plan.transaction)
+  }
+
+  func testExecutionFailureKeepsCallEditableAndRetryClearsMessage() throws {
+    let owner = try acceptedUtility(command: "/count", content: " text")
+    try submitUtility(owner)
+    let identity = owner.snapshot.invocations[0].lifecycle.identity
+    try perform(.failure(identity, message: "JavaScript service is unavailable."), on: owner)
+
+    XCTAssertEqual(owner.snapshot.invocations[0].phase, .inputting)
+    XCTAssertEqual(owner.snapshot.invocations[0].message, "JavaScript service is unavailable.")
+    XCTAssertNil(owner.snapshot.invocations[0].output)
+
+    try submitUtility(owner)
+    XCTAssertEqual(owner.snapshot.invocations[0].phase, .submitted)
+    XCTAssertNil(owner.snapshot.invocations[0].message)
   }
 
   func testReportDoneAndUndoPreserveExactUnicodeContentAndCompletedFeedback() throws {

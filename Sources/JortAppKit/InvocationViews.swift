@@ -150,18 +150,28 @@ import AppKit
 @MainActor final class ToolPromptView: NSView, NSTextViewDelegate {
   let input = NSTextView()
   private let scroll = NSScrollView()
+  private let error = NSTextField(wrappingLabelWithString: "")
+  private var run: ToolActionButton!
+  private var close: ToolActionButton!
   var changed: ((String) -> Void)?
   var submit: (() -> Void)?
   var dismiss: (() -> Void)?
   var multiline = true
+  var preferredHeight: CGFloat { (multiline ? 150 : 70) + (error.isHidden ? 0 : 36) }
   override var isFlipped: Bool { true }
   init() {
     super.init(frame: .zero)
     wantsLayer = true
     layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-    layer?.borderColor = NSColor.systemTeal.cgColor
+    layer?.borderColor = ToolPresentationColors.command.cgColor
     layer?.borderWidth = 1
     layer?.cornerRadius = 6
+    error.font = .systemFont(ofSize: 11)
+    error.textColor = .systemRed
+    error.maximumNumberOfLines = 2
+    error.isHidden = true
+    error.setAccessibilityRole(.staticText)
+    addSubview(error)
     input.isRichText = false
     input.font = .monospacedSystemFont(ofSize: 14, weight: .regular)
     input.delegate = self
@@ -173,10 +183,10 @@ import AppKit
     scroll.hasVerticalScroller = true
     scroll.drawsBackground = false
     addSubview(scroll)
-    let run = ToolActionButton(
+    run = ToolActionButton(
       symbol: "play.fill", label: LocalizedCopy.text("InvocationViews.run", fallback: "Run")
     ) { [weak self] in self?.submit?() }
-    let close = ToolActionButton(
+    close = ToolActionButton(
       symbol: "xmark",
       label: LocalizedCopy.text("InvocationViews.dismiss_prompt", fallback: "Dismiss prompt")
     ) { [weak self] in
@@ -193,12 +203,22 @@ import AppKit
   required init?(coder: NSCoder) { fatalError() }
   override func layout() {
     super.layout()
-    scroll.frame = bounds.insetBy(dx: 8, dy: 8)
-    scroll.frame.size.height -= 26
+    let errorHeight: CGFloat = error.isHidden ? 0 : 36
+    error.frame = NSRect(x: 8, y: 7, width: bounds.width - 16, height: errorHeight)
+    scroll.frame = NSRect(
+      x: 8, y: 8 + errorHeight, width: bounds.width - 16,
+      height: max(24, bounds.height - 42 - errorHeight))
     input.frame.size.width = scroll.contentSize.width
     input.minSize = NSSize(width: 0, height: scroll.contentSize.height)
-    subviews[1].frame = NSRect(x: bounds.width - 68, y: bounds.height - 28, width: 36, height: 24)
-    subviews[2].frame = NSRect(x: bounds.width - 30, y: bounds.height - 28, width: 24, height: 24)
+    run.frame = NSRect(x: bounds.width - 68, y: bounds.height - 28, width: 36, height: 24)
+    close.frame = NSRect(x: bounds.width - 30, y: bounds.height - 28, width: 24, height: 24)
+  }
+  func setError(_ message: String?) {
+    error.stringValue = message ?? ""
+    error.isHidden = message == nil
+    if let message { error.setAccessibilityLabel("Tool error: \(message)") }
+    setAccessibilityChildren((error.isHidden ? [] : [error]) + [scroll, run, close])
+    needsLayout = true
   }
   func textDidChange(_ notification: Notification) { changed?(input.string) }
   func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
@@ -234,8 +254,18 @@ import AppKit
     return true
   }
   override var acceptsFirstResponder: Bool { true }
+  override func becomeFirstResponder() -> Bool {
+    let accepted = super.becomeFirstResponder()
+    if accepted { needsDisplay = true }
+    return accepted
+  }
+  override func resignFirstResponder() -> Bool {
+    let resigned = super.resignFirstResponder()
+    if resigned { needsDisplay = true }
+    return resigned
+  }
   override func draw(_ dirtyRect: NSRect) {
-    NSColor.systemTeal.setFill()
+    ToolPresentationColors.context.setFill()
     let x = bounds.midX
     NSBezierPath(rect: NSRect(x: x - 1, y: 2, width: 2, height: bounds.height - 6)).fill()
     let flag = NSBezierPath()
@@ -244,6 +274,13 @@ import AppKit
     flag.line(to: NSPoint(x: x, y: bounds.height - 9))
     flag.close()
     flag.fill()
+    if window?.firstResponder === self {
+      NSColor.keyboardFocusIndicatorColor.setStroke()
+      let focusRing = NSBezierPath(
+        roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 4, yRadius: 4)
+      focusRing.lineWidth = 2
+      focusRing.stroke()
+    }
   }
   override func mouseDown(with event: NSEvent) {
     window?.makeFirstResponder(self)

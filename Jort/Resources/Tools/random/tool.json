@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Random",
   "command": "/random",
-  "description": "Insert 1–4096 unambiguous alphanumeric characters from captured entropy; default 12",
+  "description": "Generate a random alphanumeric string.",
   "entryContract": 2,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",
@@ -19,8 +19,8 @@
     {
       "name": "length",
       "type": "integer",
-      "label": "Length",
-      "description": "1–4096 independently sampled characters (default 12)",
+      "label": "Number of characters",
+      "description": "Enter how many characters to generate.",
       "defaultValue": 12,
       "minimum": 1,
       "maximum": 4096

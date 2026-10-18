@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Strip whitespace",
   "command": "/strip-ws",
-  "description": "Remove all Unicode whitespace, including line breaks and interior spacing",
+  "description": "Remove all whitespace from this text.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

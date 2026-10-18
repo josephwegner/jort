@@ -51,6 +51,7 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
   public var command: String
   public var token: ToolAnchoredRange
   public var scope: ToolAnchoredRange
+  public var call: ToolAnchoredRange? = nil
   public var generation: UUID
   public var sourceHash: String
   public var timestamp: Date
@@ -74,6 +75,7 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
     command = invocation.command
     token = invocation.token
     scope = invocation.scope
+    call = invocation.call
     generation = invocation.generation
     sourceHash = invocation.sourceHash
     timestamp = invocation.timestamp
@@ -97,6 +99,7 @@ public struct ToolInvocationRestoration: Codable, Equatable, Sendable {
     value.message = message
     value.capturedArguments = capturedArguments
     value.acceptanceSeparator = acceptanceSeparator
+    value.call = call
     return value
   }
 }
@@ -113,6 +116,9 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
   public var command: String
   public var token: ToolAnchoredRange
   public var scope: ToolAnchoredRange
+  /// Command and inline arguments, excluding any following logical newline.
+  /// Nil preserves the historical scope/token interpretation of persisted records.
+  public var call: ToolAnchoredRange? = nil
   public var output: ToolAnchoredRange?
   public var generation: UUID = UUID()
   public var phase: ToolInvocationPhase = .inputting
@@ -131,7 +137,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
   public init(
     packageID: String, packageVersion: Int, entryContract: Int, inputMode: String,
     outputOperation: String, command: String, token: ToolAnchoredRange,
-    scope: ToolAnchoredRange, sourceHash: String
+    scope: ToolAnchoredRange, sourceHash: String, call: ToolAnchoredRange? = nil
   ) {
     self.packageID = packageID
     self.packageVersion = packageVersion
@@ -141,6 +147,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     self.command = command
     self.token = token
     self.scope = scope
+    self.call = call
     self.sourceHash = sourceHash
   }
   public static func hash(_ text: String) -> String {
@@ -174,6 +181,7 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
     guard inputMode == "contextual" || scope.location == token.location,
       !inputMode.hasPrefix("ephemeral") || scope == token
     else { return false }
+    guard Self.validCall(call, token: token, scope: scope, in: snapshot) else { return false }
     if let restoration {
       guard restoration.packageID.utf8.count <= 256, restoration.packageVersion > 0,
         ["javascript", "model"].contains(restoration.executor ?? "javascript"),
@@ -186,11 +194,17 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
         restoration.selection?.resolve(in: snapshot) != nil || restoration.selection == nil,
         restoration.viewportOffset?.isFinite != false
       else { return false }
+      guard let restoredToken = restoration.token.resolve(in: snapshot),
+        let restoredScope = restoration.scope.resolve(in: snapshot),
+        Self.validCall(restoration.call, token: restoredToken, scope: restoredScope, in: snapshot)
+      else { return false }
     }
     guard var source = try? snapshot.text(in: scope) else { return false }
     if let output {
       guard let range = output.resolve(in: snapshot), NSMaxRange(range) <= snapshot.utf16Count,
-        range.location == (inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token)),
+        range.location
+          == (call?.resolve(in: snapshot).map(NSMaxRange)
+            ?? (inputMode == "contained" ? NSMaxRange(scope) : NSMaxRange(token))),
         (try? snapshot.text(in: range)).map(Self.hash) == outputHash
       else { return false }
       if let landmark = outputLandmark {
@@ -215,6 +229,20 @@ public struct ToolInvocation: Codable, Equatable, Identifiable, Sendable {
       let data = try? JSONEncoder().encode(arguments)
     else { return false }
     return data.count <= 65_536
+  }
+  private static func validCall(
+    _ call: ToolAnchoredRange?, token: NSRange, scope: NSRange, in snapshot: DocumentSnapshot
+  ) -> Bool {
+    guard let call else { return true }
+    guard let range = call.resolve(in: snapshot), range.location == token.location,
+      range.location >= scope.location,
+      NSMaxRange(range) >= NSMaxRange(token), NSMaxRange(range) <= NSMaxRange(scope),
+      NSMaxRange(scope) <= snapshot.utf16Count,
+      let input = try? snapshot.utf16(
+        in: NSRange(
+          location: NSMaxRange(token), length: NSMaxRange(range) - NSMaxRange(token)))
+    else { return false }
+    return !input.contains(where: { [10, 13, 0x85, 0x2028, 0x2029].contains($0) })
   }
   /// Return a UTF-16 offset without splitting a CRLF pair.
   static func outputLineOffset(_ line: Int, in text: String) -> Int? {
@@ -316,6 +344,40 @@ public enum ToolRangeEditing {
       else { return nil }
       value.token = token
       value.scope = scope
+      if let oldCall = original.call {
+        guard let source = oldCall.resolve(in: old),
+          let mapped = range(oldCall, grow: !value.isLocked),
+          var callRange = mapped.resolve(in: new), let tokenRange = token.resolve(in: new),
+          NSMaxRange(callRange) >= NSMaxRange(tokenRange)
+        else { return nil }
+        if !value.isLocked {
+          let start = NSMaxRange(tokenRange)
+          guard
+            let units = try? new.utf16(
+              in: NSRange(
+                location: start, length: NSMaxRange(callRange) - start))
+          else { return nil }
+          if let newline = units.firstIndex(where: { [10, 13, 0x85, 0x2028, 0x2029].contains($0) })
+          {
+            callRange.length =
+              start + units.distance(from: units.startIndex, to: newline)
+              - callRange.location
+          }
+        }
+        guard let call = try? ToolAnchoredRange(callRange, snapshot: new) else { return nil }
+        value.call = call
+        if !value.isLocked, let oldScope = original.scope.resolve(in: old),
+          NSMaxRange(oldScope) == NSMaxRange(source), let mappedScope = scope.resolve(in: new)
+        {
+          guard
+            let clamped = try? ToolAnchoredRange(
+              NSRange(
+                location: mappedScope.location,
+                length: NSMaxRange(callRange) - mappedScope.location), snapshot: new)
+          else { return nil }
+          value.scope = clamped
+        }
+      }
       if let separator = value.acceptanceSeparator {
         if let source = separator.resolve(in: old), NSIntersectionRange(source, edit).length == 0 {
           value.acceptanceSeparator = range(separator, grow: false)
@@ -330,6 +392,10 @@ public enum ToolRangeEditing {
         else { return nil }
         restoration.token = token
         restoration.scope = scope
+        if let call = restoration.call {
+          guard let mapped = range(call, grow: false) else { return nil }
+          restoration.call = mapped
+        }
         if let separator = restoration.acceptanceSeparator {
           restoration.acceptanceSeparator = range(separator, grow: false)
         }
@@ -338,11 +404,19 @@ public enum ToolRangeEditing {
         }
         value.restoration = restoration
       }
-      if !value.isLocked, let source = scope.resolve(in: new),
+      if !value.isLocked, let source = value.scope.resolve(in: new),
         NSMaxRange(source) <= new.utf16Count
       {
         guard let text = try? new.text(in: source) else { return nil }
-        value.sourceHash = ToolInvocation.hash(text)
+        let hash = ToolInvocation.hash(text)
+        if hash != value.sourceHash {
+          value.message = nil
+          if value.actionStatus == .failed || value.actionStatus == .cancelled {
+            value.actionStatus = nil
+            value.actionKind = nil
+          }
+        }
+        value.sourceHash = hash
       }
       return value.validated(in: new) ? value : nil
     }

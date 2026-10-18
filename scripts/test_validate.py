@@ -52,6 +52,15 @@ class ValidateTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parser.parse_args(["focused", "foundation", "--configuration", "Profile"])
 
+    def test_focused_gui_uses_isolated_launcher(self):
+        check = validate.focused_check("ui", "Release", ["JortUITests/JortUITests"], False)
+        command = check.commands[0]
+        self.assertEqual(command[:2], ("bash", "scripts/run-isolated-ui-tests.sh"))
+        self.assertIn("Release", command)
+        self.assertIn("-only-testing:JortUITests/JortUITests", command)
+        self.assertNotIn("xcodebuild", command)
+        self.assertTrue(check.xcode)
+
     def test_focused_tsan_uses_isolated_build_and_exact_filter(self):
         with mock.patch.object(validate, "execute", return_value=0) as execute:
             self.assertEqual(0, validate.main(["focused", "containment", "--sanitizer", "thread",

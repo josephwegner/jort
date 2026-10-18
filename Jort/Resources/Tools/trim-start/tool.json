@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Trim start",
   "command": "/trim-start",
-  "description": "Remove leading horizontal whitespace from each line; keep line breaks",
+  "description": "Remove whitespace from the start of each line.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

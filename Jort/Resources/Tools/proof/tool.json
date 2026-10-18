@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Proofread",
   "command": "/proof",
-  "description": "Correct spelling, grammar, and punctuation while preserving meaning, voice, and structure",
+  "description": "Correct spelling, grammar, and punctuation in the selected text.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

@@ -1,6 +1,11 @@
 // Grammar: sum -> product -> unary -> power -> primary.
 // Power is right associative and binds more tightly than a leading unary sign.
 export default async function(input) {
+  const publicErrors = new Set([
+    "Expression is too complex.", "Result is not finite.",
+    "Expression is too deeply nested.", "Expected closing parenthesis.",
+    "Expected a decimal number.", "Division by zero.", "Unexpected character."
+  ]);
   const text = input.content;
   let position = 0, depth = 0, tokens = 0;
   function space() { while (" \t\r\n".includes(text[position]) && position < text.length) position++; }
@@ -35,5 +40,8 @@ export default async function(input) {
   }
   function sum() { let value = product(); while (true) { if (take("+")) value = finite(value + product()); else if (take("-")) value = finite(value - product()); else return value; } }
   try { const value = sum(); space(); if (position !== text.length) throw Error("Unexpected character."); return {output: String(value)}; }
-  catch (error) { return {error: error.message}; }
+  catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return {error: publicErrors.has(message) ? message : "Unable to calculate this expression."};
+  }
 }

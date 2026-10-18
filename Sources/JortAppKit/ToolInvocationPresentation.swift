@@ -4,6 +4,10 @@ import JortDocument
 import JortSettings
 
 @MainActor enum ToolPresentationColors {
+  /// Commands and their editable input use the same light-blue surface in every mode.
+  static let command = NSColor(calibratedRed: 0.32, green: 0.69, blue: 0.98, alpha: 1)
+  /// Captured context is visually subordinate to the command that consumes it.
+  static let context = NSColor(calibratedRed: 0.16, green: 0.40, blue: 0.72, alpha: 1)
   static let pending = NSColor(calibratedRed: 0.68, green: 0.38, blue: 0.86, alpha: 1)
   static let canvas = NSColor(calibratedRed: 0.085, green: 0.094, blue: 0.106, alpha: 1)
 }
@@ -28,6 +32,8 @@ import JortSettings
   private let styleReconciler = InvocationStyleReconciler()
   private var focusedBoundary: (UUID, Bool)?
   private var errorAccessoryIDs = Set<UUID>()
+  private var errorAccessorySignatures: [UUID: [String]] = [:]
+  private var errorAccessoryWidth: CGFloat?
   /// Declarations, not a tool's editable description, identify possible native effects.
   static func actionDisclosure(for manifest: ToolManifest) -> String? {
     let destinations = (manifest.hostActions ?? []).compactMap { action -> String? in
@@ -50,6 +56,20 @@ import JortSettings
     else { return nil }
     return Self.actionDisclosure(for: manifest)
   }
+
+  /// Validation failures are transient; execution failures and unknown host
+  /// outcomes live on the invocation. Keep acknowledgements out of this path.
+  private func errorMessage(for invocation: ToolInvocation) -> String? {
+    if let warning = editor?.toolController.warning(for: invocation.id) { return warning }
+    if invocation.phase == .error {
+      return invocation.message
+        ?? LocalizedCopy.text("invocation.execution_error", fallback: "Execution error")
+    }
+    if invocation.phase == .inputting || invocation.actionStatus == .unknown {
+      return invocation.message
+    }
+    return nil
+  }
   func invalidateStyles() { styleReconciler.invalidate() }
   func clearChangedStyles(before: DocumentSnapshot, after: DocumentSnapshot) {
     guard let editor, let storage = editor.textView.textStorage else { return }
@@ -71,9 +91,10 @@ import JortSettings
       editor.toolController.setArgument(value, name: name, for: id)
     case .returnToEditor(let id):
       if let invocation = editor.state.invocations.first(where: { $0.id == id }),
-        let token = invocation.token.resolve(in: editor.state)
+        let token = (invocation.call ?? invocation.token).resolve(in: editor.state)
       {
         editor.textView.setSelectedRange(NSRange(location: NSMaxRange(token), length: 0))
+        editor.textView.scrollRangeToVisible(editor.textView.selectedRange())
       }
       editor.view.window?.makeFirstResponder(editor.textView)
     case .prompt(let id, let value): editor.toolController.setPrompt(value, for: id)
@@ -154,6 +175,57 @@ import JortSettings
     guard let editor else { return false }
     updateCompletion()
     let key = event.charactersIgnoringModifiers ?? ""
+    // Context adjustment owns only handle focus. Ordinary text selection,
+    // Option-Shift arrows, clipboard commands, and typing remain native.
+    if editor.view.window?.firstResponder is ToolScopeHandle, let (id, start) = focusedBoundary {
+      if event.keyCode == 53 || (event.keyCode == 36 && !event.modifierFlags.contains(.shift)) {
+        routeOverlay(.returnToEditor(id))
+        focusedBoundary = nil
+        return true
+      }
+      if event.keyCode == 48 {
+        // A contextual call has two adjustment endpoints. Tab and Shift-Tab
+        // both move to the other endpoint, so handle traversal remains inside
+        // this mode until an explicit Return or Escape exits it.
+        return focusContextBoundary(for: id, start: !start)
+      }
+      if [123, 124, 125, 126].contains(event.keyCode),
+        !event.modifierFlags.contains(.command),
+        let invocation = editor.state.invocations.first(where: { $0.id == id }),
+        let scope = invocation.scope.resolve(in: editor.state)
+      {
+        let offset = start ? scope.location : NSMaxRange(scope)
+        let text = editor.state.text as NSString
+        let next: Int
+        switch event.keyCode {
+        case 123:
+          next = offset > 0 ? text.rangeOfComposedCharacterSequence(at: offset - 1).location : 0
+        case 124:
+          next =
+            offset < text.length
+            ? NSMaxRange(text.rangeOfComposedCharacterSequence(at: offset)) : offset
+        case 126:
+          next =
+            offset > 0 ? text.lineRange(for: NSRange(location: offset - 1, length: 0)).location : 0
+        default:
+          next = NSMaxRange(
+            text.lineRange(for: NSRange(location: min(offset, text.length), length: 0)))
+        }
+        try? editor.toolController.moveBoundary(id, start: start, to: next)
+        return true
+      }
+    }
+    if event.keyCode == 48,
+      event.modifierFlags.intersection([.command, .option, .control]).isEmpty,
+      editor.textView.selectedRange().length == 0,
+      let invocation = editor.toolController.focused(), invocation.phase == .inputting,
+      invocation.inputMode == "contextual", let call = invocation.call?.resolve(in: editor.state),
+      NSLocationInRange(editor.textView.selectedRange().location, call)
+        || editor.textView.selectedRange().location == NSMaxRange(call)
+    {
+      return focusContextBoundary(
+        for: invocation.id, start: !event.modifierFlags.contains(.shift))
+    }
     if event.keyCode == 48, let invocation = editor.toolController.focused(),
       invocation.phase == .completed, let buttons = completionControls[invocation.id],
       let button = event.modifierFlags.contains(.shift) ? buttons.last : buttons.first
@@ -171,11 +243,24 @@ import JortSettings
     if key == "\r", event.modifierFlags.contains(.shift) {
       if editor.view.window?.firstResponder is ToolScopeHandle, let (id, _) = focusedBoundary {
         editor.toolController.submit(id)
-      } else if let invocation = editor.toolController.focused() {
-        if invocation.phase == .completed {
-          try? editor.toolController.done(invocation.id)
-        } else {
+      } else if let (range, packages, _) = completionController.completion,
+        let command = try? editor.state.text(in: range),
+        let package = packages.first(where: { $0.manifest.command == command }),
+        ["/now", "/daily"].contains(command)
+      {
+        completionController.completion = nil
+        completionController.suppressedCompletion = true
+        try? editor.toolController.accept(package, token: range, space: true)
+        if let invocation = editor.toolController.focused(), invocation.phase == .inputting {
           editor.toolController.submit(invocation.id)
+        }
+      } else if let invocation = pendingInvocationContainingOutputCaret(in: editor) {
+        try? editor.toolController.merge(invocation.id)
+      } else if let invocation = editor.toolController.focused() {
+        if invocation.phase == .inputting {
+          editor.toolController.submit(invocation.id)
+        } else if invocation.phase == .completed {
+          try? editor.toolController.done(invocation.id)
         }
       }
       return true
@@ -192,7 +277,7 @@ import JortSettings
       if key == " " || key == "\r" {
         completionController.completion = nil
         completionController.suppressedCompletion = true
-        try? editor.toolController.accept(packages[selected], token: range, space: true)
+        acceptCompletion(packages[selected], token: range, runIfReady: key == "\r")
         return true
       }
     }
@@ -202,8 +287,7 @@ import JortSettings
     let focusedContext =
       focusedBoundary.flatMap { id, _ in editor.state.invocations.first { $0.id == id } }
       ?? caretInvocation
-    if (event.modifierFlags.contains([.command, .option])
-      || event.modifierFlags.contains([.option, .shift])), let invocation = focusedContext,
+    if event.modifierFlags.contains([.command, .option]), let invocation = focusedContext,
       invocation.inputMode == "contextual",
       let scope = invocation.scope.resolve(in: editor.state),
       [123, 124, 125, 126].contains(event.keyCode)
@@ -235,6 +319,19 @@ import JortSettings
     return false
   }
 
+  private func pendingInvocationContainingOutputCaret(in editor: EditorViewController)
+    -> ToolInvocation?
+  {
+    let selection = editor.textView.selectedRange()
+    guard selection.length == 0 else { return nil }
+    return editor.state.invocations.first { invocation in
+      guard invocation.phase == .pending,
+        let output = invocation.output?.resolve(in: editor.state)
+      else { return false }
+      return NSLocationInRange(selection.location, output)
+    }
+  }
+
   private func updateCompletion() {
     guard let editor else { return }
     completionController.update(
@@ -243,21 +340,71 @@ import JortSettings
       acceptsCompletion: !editor.textView.hasMarkedText() && !editor.textView.isPasting
         && editor.toolController.focused() == nil)
   }
+  private func focusContextBoundary(for id: UUID, start: Bool, retry: Bool = true) -> Bool {
+    guard let editor,
+      let invocation = editor.state.invocations.first(where: { $0.id == id }),
+      let scope = invocation.scope.resolve(in: editor.state)
+    else { return false }
+    let offset = start ? scope.location : NSMaxRange(scope)
+    // Handles are viewport-owned. Reveal the requested endpoint before mounting
+    // and focusing it, without moving the editor's ordinary selection.
+    editor.textView.scrollRangeToVisible(NSRange(location: offset, length: 0))
+    editor.linePresentation.prepareViewportLayout()
+    editor.linePresentation.capture(epoch: editor.presentationCoordinator.epoch)
+    reconcileControls(recomputeCompletion: false)
+    if !overlays.focusBoundary(for: id, start: start), retry,
+      let responder = editor.view.window?.firstResponder
+    {
+      let selection = editor.textView.selectedRange()
+      let revision = editor.state.revision
+      Task { @MainActor [weak self, weak editor] in
+        guard let self, let editor, editor.view.window?.firstResponder === responder,
+          editor.textView.selectedRange() == selection, editor.state.revision == revision
+        else { return }
+        _ = self.focusContextBoundary(for: id, start: start, retry: false)
+      }
+    }
+    // A deferred viewport layout must not turn the adjustment gesture into
+    // a literal tab in the document.
+    return true
+  }
+
+  /// Contract-two generators explicitly declare their arguments. Legacy Date
+  /// and UUID are also known to need no input; other old tools (such as Calc)
+  /// may consume typed content despite having no argument declarations.
+  private static func runsOnCompletion(_ manifest: ToolManifest) -> Bool {
+    manifest.executorType == .javascript && manifest.inputMode == .contained
+      && (manifest.arguments ?? []).isEmpty && (manifest.hostActions ?? []).isEmpty
+      && (manifest.entryContract == 2
+        || ["dev.jort.date", "dev.jort.uuid"].contains(manifest.id))
+  }
+
+  private func acceptCompletion(_ package: ToolPackage, token: NSRange, runIfReady: Bool) {
+    guard let editor else { return }
+    do {
+      try editor.toolController.accept(package, token: token, space: true)
+    } catch { return }
+    guard runIfReady, Self.runsOnCompletion(package.manifest),
+      let invocation = editor.toolController.focused(), invocation.phase == .inputting,
+      invocation.packageID == package.manifest.id
+    else { return }
+    editor.toolController.submit(invocation.id)
+  }
+
   func reconcileStyles() -> Bool {
     guard let editor, let storage = editor.textView.textStorage else { return false }
     index.update(editor.state)
     let visible = editor.linePresentation.visibleCanonicalRange ?? NSRange(location: 0, length: 0)
-    if styleReconciler.reconcile(
+    let stylesChanged = styleReconciler.reconcile(
       snapshot: editor.state, storage: storage, visibleRange: visible,
       invocations: index.visible(in: visible),
       paragraphStyle: editor.textView.defaultParagraphStyle,
       documentFont: .monospacedSystemFont(ofSize: 15, weight: .regular),
       hasMarkedText: editor.textView.hasMarkedText())
-    {
-      updateErrorAccessories(editor.state)
-      return true
-    }
-    return false
+    // Validation warnings are transient: they do not change the document's
+    // revision or styles. Reconcile their rows independently of the style cache.
+    let accessoriesChanged = updateErrorAccessories(editor.state)
+    return stylesChanged || accessoriesChanged
   }
   func reconcileControls(recomputeCompletion: Bool = true, invalidateDisplay: Bool = true) {
     guard !refreshing, let editor, !editor.textView.hasMarkedText(),
@@ -311,6 +458,8 @@ import JortSettings
         token, scope, NSRange(location: scope.location, length: 0),
         NSRange(location: NSMaxRange(scope), length: 0),
       ]
+      if let call = invocation.call?.resolve(in: snapshot) { ranges.append(call) }
+      ranges += invocation.contextRanges(in: snapshot)
       if scope.length > 0,
         (try? snapshot.utf16(in: NSRange(location: NSMaxRange(scope) - 1, length: 1)).first) == 10
       {
@@ -318,7 +467,11 @@ import JortSettings
       }
       if let output { ranges += [output, NSRange(location: output.location, length: 0)] }
       let capturedRects = Dictionary(uniqueKeysWithValues: Set(ranges).map { ($0, rects($0)) })
-      let ends = Set([NSMaxRange(scope)] + (output.map { [NSMaxRange($0)] } ?? []))
+      let ends = Set(
+        [NSMaxRange(scope)]
+          + (invocation.call?.resolve(in: snapshot).map { [NSMaxRange($0)] } ?? [])
+          + invocation.contextRanges(in: snapshot).map(NSMaxRange)
+          + (output.map { [NSMaxRange($0)] } ?? []))
       let glyphs = Dictionary(
         uniqueKeysWithValues: ends.compactMap { offset in
           editor.linePresentation.glyphFrame(at: offset).map { (offset, $0) }
@@ -331,7 +484,18 @@ import JortSettings
             rects: capturedRects, glyphs: glyphs,
             warning: editor.toolController.warning(for: invocation.id)))
       else { continue }
-      let anchor = prepared.anchor, controlFrame = prepared.controlFrame
+      let anchor = prepared.anchor
+      var controlFrame = prepared.controlFrame
+      if invocation.inputMode == "contextual", invocation.call != nil,
+        anchor.minX < editor.textView.visibleRect.maxX,
+        controlFrame.maxX > editor.textView.visibleRect.maxX
+      {
+        // The trailing kern can reach the viewport edge after a wrapped call.
+        // Keep its controls in that reserved gap instead of clipping them.
+        controlFrame.origin.x = max(
+          editor.textView.visibleRect.minX,
+          editor.textView.visibleRect.maxX - controlFrame.width)
+      }
       let sourceEndsLine = prepared.sourceEndsLine, inlineActions = prepared.inlineActions
       shapes += prepared.shapes.map {
         .init(invocationID: invocation.id, path: $0.0, color: $0.1)
@@ -343,7 +507,7 @@ import JortSettings
             "play.fill",
             actionDisclosure(for: invocation).map { "Run: " + $0 }
               ?? LocalizedCopy.text("ToolInvocationPresentation.run", fallback: "Run"),
-            frame: controlFrame.offsetBy(dx: 10, dy: 0)
+            frame: controlFrame.offsetBy(dx: 3, dy: 0)
           ) {
             [weak editor] in editor?.toolController.submit(invocation.id)
           }
@@ -414,7 +578,7 @@ import JortSettings
         }
         if invocation.actionKind == "notification.schedule", editor.cancelToolReminder != nil {
           if let cancel = addButton(
-            "bell.slash", "Cancel Reminder", frame: controlFrame.offsetBy(dx: 30, dy: 0),
+            "bell.slash", "Cancel Reminder", frame: controlFrame.offsetBy(dx: 24, dy: 0),
             action: {
               [weak editor] in editor?.toolController.cancelReminder(invocation.id)
             })
@@ -443,16 +607,20 @@ import JortSettings
       let overlay = overlays.reconcile(
         invocation: invocation, snapshot: snapshot,
         token: token, scope: scope, sourceEndsLine: sourceEndsLine,
-        tokenRect: rects(token).last, boundaries: boundaries,
+        tokenRect: rects(token).last, command: invocation.call?.resolve(in: snapshot) ?? token,
+        boundaries: boundaries,
         promptValue: editor.toolController.prompt(for: invocation.id),
         argumentDefinitions: package?.manifest.arguments ?? [],
         argumentValues: editor.toolController.argumentValues(for: invocation.id),
-        description: package?.manifest.description ?? "", isCurrent: controlIsCurrent)
+        description: package?.manifest.description ?? "",
+        errorMessage: errorMessage(for: invocation),
+        isCurrent: controlIsCurrent)
       nextAccessibilityViews += overlay.views
       if !overlay.connectors.isEmpty {
         shapes.append(
           .init(
-            invocationID: invocation.id, path: Self.union(overlay.connectors), color: .systemTeal))
+            invocationID: invocation.id, path: Self.union(overlay.connectors),
+            color: ToolPresentationColors.command))
       }
     }
     nextAccessibilityViews += overlays.finish(snapshot: snapshot)
@@ -515,10 +683,10 @@ import JortSettings
         button.setAccessibilityValue(
           button.selected ? LocalizedCopy.text("completion.selected", fallback: "Selected") : "")
         button.needsDisplay = true
-        button.invoke = { [weak self, weak editor] in
+        button.invoke = { [weak self] in
           guard self?.completionController.completion?.0 == range else { return }
           self?.abandonCompletion()
-          try? editor?.toolController.accept(package, token: range, space: true)
+          self?.acceptCompletion(package, token: range, runIfReady: true)
         }
         button.frame = NSRect(x: 6, y: 6 + CGFloat(index) * 32, width: width - 12, height: 32)
       }
@@ -527,53 +695,88 @@ import JortSettings
     }
   }
 
-  private func updateErrorAccessories(_ snapshot: DocumentSnapshot) {
-    guard let editor else { return }
+  private func updateErrorAccessories(_ snapshot: DocumentSnapshot) -> Bool {
+    guard let editor else { return false }
     var values = editor.linePresentation.accessories.values.filter {
       !errorAccessoryIDs.contains($0.lineID)
     }
     let messages = Dictionary(
       grouping: snapshot.invocations.filter {
-        $0.message != nil || editor.toolController.warning(for: $0.id) != nil
-          || actionDisclosure(for: $0) != nil
+        !accessoryMessages(for: $0).isEmpty
       }, by: { $0.token.start.lineID })
     let previous = errorAccessoryIDs
+    let priorSignatures = errorAccessorySignatures
+    let priorWidth = errorAccessoryWidth
+    let width = max(
+      120, editor.scroll.contentSize.width - editor.textView.textContainerOrigin.x * 2 - 12)
+    let signatures = messages.mapValues { invocations in
+      invocations.map { invocation in
+        "\(invocation.phase):\(invocation.command):"
+          + accessoryMessages(for: invocation).map { "\($0.kind):\($0.text)" }
+          .joined(separator: "\n")
+      }
+    }
+    if signatures == priorSignatures, width == priorWidth,
+      messages.keys.allSatisfy({ editor.linePresentation.accessories[$0] != nil })
+    {
+      return false
+    }
     errorAccessoryIDs = Set(messages.keys)
-    guard !messages.isEmpty || !previous.isEmpty else { return }
+    errorAccessorySignatures = signatures
+    errorAccessoryWidth = width
+    guard !messages.isEmpty || !previous.isEmpty else { return false }
     for (lineID, invocations) in messages {
+      if let existing = editor.linePresentation.accessories[lineID],
+        previous.contains(lineID), signatures[lineID] == priorSignatures[lineID],
+        width == priorWidth
+      {
+        values.append(existing)
+        continue
+      }
       let rows = NSStackView()
       rows.orientation = .vertical
       rows.alignment = .leading
       rows.spacing = 4
-      var height: CGFloat = 8
+      rows.edgeInsets = NSEdgeInsets(top: 4, left: 0, bottom: 0, right: 0)
+      var height: CGFloat = 12
       for invocation in invocations {
-        let message = [
-          invocation.message ?? editor.toolController.warning(for: invocation.id),
-          actionDisclosure(for: invocation),
-        ].compactMap { $0 }.joined(separator: "\n")
-        let label = NSTextField(wrappingLabelWithString: "\(invocation.command): \(message)")
-        label.font = .systemFont(ofSize: 12)
-        let width = max(
-          120, editor.scroll.contentSize.width - editor.textView.textContainerOrigin.x * 2 - 12)
-        label.preferredMaxLayoutWidth = width
-        height += max(
-          22,
-          ceil(
-            (label.stringValue as NSString).boundingRect(
-              with: NSSize(width: width, height: 1024), options: [.usesLineFragmentOrigin],
-              attributes: [.font: label.font!]
-            ).height) + 6)
-        label.textColor =
-          invocation.phase == .completed || invocation.phase == .inputting
-          ? .secondaryLabelColor
-          : invocation.phase == .error ? .systemRed : .systemOrange
-        label.isSelectable = invocation.phase == .completed
-        label.setAccessibilityLabel(label.stringValue)
-        rows.addArrangedSubview(label)
+        for detail in accessoryMessages(for: invocation) {
+          let label = NSTextField(
+            wrappingLabelWithString: "\(invocation.command): \(detail.text)")
+          label.font = .systemFont(ofSize: 12)
+          label.preferredMaxLayoutWidth = width
+          height += max(
+            22,
+            ceil(
+              (label.stringValue as NSString).boundingRect(
+                with: NSSize(width: width, height: 1024), options: [.usesLineFragmentOrigin],
+                attributes: [.font: label.font!]
+              ).height) + 6)
+          switch detail.kind {
+          case "error": label.textColor = .systemRed
+          default: label.textColor = .secondaryLabelColor
+          }
+          label.isSelectable = detail.kind == "message" && invocation.phase == .completed
+          label.setAccessibilityLabel(
+            detail.kind == "error" ? "Tool error: \(detail.text)" : label.stringValue)
+          rows.addArrangedSubview(label)
+        }
       }
       values.append(LineAccessory(lineID: lineID, height: height, view: rows))
     }
     editor.linePresentation.setAccessories(Array(values), deferLayout: true)
+    return true
+  }
+
+  private func accessoryMessages(for invocation: ToolInvocation) -> [(kind: String, text: String)] {
+    var messages: [(kind: String, text: String)] = []
+    if let help = inlineHelp(for: invocation) { messages.append(("help", help)) }
+    if let error = errorMessage(for: invocation) {
+      messages.append(("error", error))
+    } else if let message = invocation.message {
+      messages.append(("message", message))
+    }
+    return messages
   }
   @discardableResult private func addButton(
     _ symbol: String, _ label: String, frame: NSRect, action: @escaping () -> Void
@@ -614,7 +817,84 @@ import JortSettings
   }
 
   func focusArguments(for id: UUID, name: String? = nil) {
+    if let editor, let invocation = editor.state.invocations.first(where: { $0.id == id }),
+      let call = invocation.call?.resolve(in: editor.state),
+      let token = invocation.token.resolve(in: editor.state)
+    {
+      let start = min(NSMaxRange(call), NSMaxRange(token) + 1)
+      editor.textView.setSelectedRange(NSRange(location: start, length: NSMaxRange(call) - start))
+      editor.view.window?.makeFirstResponder(editor.textView)
+      return
+    }
     _ = overlays.focusArguments(for: id, name: name)
+  }
+
+  private func inlineHelp(for invocation: ToolInvocation) -> String? {
+    guard invocation.phase == .inputting, let editor,
+      let manifest = editor.toolController.packages.first(where: {
+        $0.manifest.id == invocation.packageID
+      })?.manifest
+    else { return nil }
+    return Self.inlineHelp(for: manifest, hasInlineCall: invocation.call != nil)
+  }
+
+  static func inlineHelp(for manifest: ToolManifest, hasInlineCall: Bool) -> String {
+    func sentence(_ value: String) -> String {
+      let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !text.isEmpty else { return "" }
+      return ".!?".contains(text.last!) ? text : text + "."
+    }
+
+    var parts = [
+      sentence(
+        manifest.description.isEmpty ? manifest.name : manifest.description)
+    ]
+    if hasInlineCall {
+      for definition in manifest.arguments ?? [] {
+        let detail = definition.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        var prompt =
+          detail.isEmpty
+          ? "\(definition.type == .enum ? "Choose" : "Enter") \(definition.label.lowercased())"
+          : detail
+        var details: [String] = []
+        if let minimum = definition.minimum, let maximum = definition.maximum {
+          if !prompt.contains("\(minimum)–\(maximum)") {
+            details.append("\(minimum)–\(maximum)")
+          }
+        } else if let minimum = definition.minimum {
+          if !prompt.contains("at least \(minimum)") { details.append("at least \(minimum)") }
+        } else if let maximum = definition.maximum {
+          if !prompt.contains("at most \(maximum)") { details.append("at most \(maximum)") }
+        } else if detail.isEmpty, let choices = definition.choices, choices.count <= 6 {
+          details.append(choices.joined(separator: ", "))
+        }
+        if let defaultValue = definition.defaultValue {
+          let value: String
+          switch defaultValue {
+          case .integer(let number): value = String(number)
+          case .string(let text): value = text.isEmpty ? "\"\"" : text
+          }
+          let namesDefault =
+            prompt.contains("default \(value)")
+            || prompt.contains("\(value) (default)")
+            || (definition.type == .enum && value == "default" && prompt.contains("default"))
+          if !namesDefault { details.append("default \(value)") }
+        }
+        if !details.isEmpty {
+          if prompt.hasSuffix(".") { prompt.removeLast() }
+          prompt += " (\(details.joined(separator: "; ")))"
+        }
+        parts.append(sentence(prompt))
+      }
+      if manifest.executorType == .model && manifest.inputMode == .contextual {
+        parts.append("Add a question or instruction if needed.")
+      } else if manifest.executorType == .model && manifest.inputMode == .contained,
+        (manifest.arguments ?? []).isEmpty
+      {
+        parts.append("Enter your question.")
+      }
+    }
+    return parts.filter { !$0.isEmpty }.joined(separator: " ")
   }
 
   func requestArgumentFocus(for id: UUID) { overlays.requestArgumentFocus(for: id) }

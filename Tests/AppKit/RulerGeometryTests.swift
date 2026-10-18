@@ -108,6 +108,30 @@ import JortPersistence
     XCTAssertTrue(window.firstResponder === controller.textView)
     controller.textView.setSelectedRange(selection)
   }
+  func testDeferredAccessoryAnchorDoesNotUndoLaterScroll() throws {
+    let (controller, window) = try editor()
+    defer { window.orderOut(nil) }
+    insert(
+      String(repeating: "context line\n", count: 160), range: NSRange(location: 0, length: 0),
+      into: controller)
+    let layout = try XCTUnwrap(controller.linePresentation)
+    controller.navigate(to: controller.state.lines[90].id)
+    settlePresentation(controller)
+    let clip = controller.scroll.contentView
+    XCTAssertNotNil(layout.viewportAnchor())
+    layout.setAccessories(
+      [
+        LineAccessory(
+          lineID: controller.state.lines[92].id, height: 80,
+          view: NSTextField(labelWithString: "Pending context help"))
+      ], deferLayout: true)
+    clip.scroll(to: NSPoint(x: clip.bounds.minX, y: clip.bounds.minY - 120))
+    controller.scroll.reflectScrolledClipView(clip)
+    let scrolledY = clip.bounds.minY
+    layout.prepareViewportLayout()
+    layout.capture(epoch: controller.presentationCoordinator.epoch)
+    XCTAssertEqual(clip.bounds.minY, scrolledY, accuracy: 1)
+  }
   func testEmptyRowsCompositionAndPlainPaste() throws {
     let (controller, window) = try editor()
     defer { window.orderOut(nil) }

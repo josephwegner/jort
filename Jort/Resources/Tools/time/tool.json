@@ -5,7 +5,7 @@
   "version": 2,
   "name": "Time",
   "command": "/time",
-  "description": "Insert local time, such as 10:28am",
+  "description": "Insert the current local time.",
   "entryContract": 2,
   "inputMode": "contained",
   "outputOperation": "replace-invocation",

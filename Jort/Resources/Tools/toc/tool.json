@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Table of contents",
   "command": "/toc",
-  "description": "Insert Markdown links for this block’s headings; keep the source headings",
+  "description": "Create a Markdown table of contents from this block’s headings.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "insert-at-invocation",

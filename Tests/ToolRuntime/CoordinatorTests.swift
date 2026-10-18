@@ -116,6 +116,46 @@ private actor ControlledExecutor: ToolExecuting {
     XCTAssertEqual(operations.count, 3)
   }
 
+  func testHostFailureKeepsExplanationWithoutReplayingUncertainAction() async throws {
+    for uncertain in [false, true] {
+      let executor = ControlledExecutor(), host = ControlledHostActions()
+      let owner = ToolInvocationCoordinator(executor: executor, hostActions: host)
+      let identity = InvocationGeneration(invocationID: UUID(), generation: UUID())
+      let message =
+        uncertain
+        ? "Reminder acceptance could not be confirmed. It may have been scheduled."
+        : "Allow Jort notifications in System Settings to schedule reminders."
+      var operations: [InvocationDocumentOperation] = []
+      owner.submit(
+        identity: identity, package: actionPackage, input: .init(content: "source"),
+        apply: {
+          operations.append($0.operation)
+          return true
+        }, warning: { XCTFail($0) })
+      try await wait { await executor.validating }
+      await executor.validation(.init(output: ""))
+      try await wait { await executor.executing }
+      await executor.result(.init(action: .init(kind: "file.export", content: "source")))
+      try await wait { host.dispatched.count == 1 }
+      host.finish(
+        .init(failure: .init(uncertain ? .internalError : .authorization, message: message)))
+      try await wait { !owner.hasJob(identity.invocationID) }
+      if uncertain {
+        XCTAssertEqual(Array(operations.suffix(2)), [.actionUnknown, .completionMessage(message)])
+      } else {
+        XCTAssertEqual(operations.last, .actionFailed(message, cancelled: false))
+      }
+      owner.submit(
+        identity: identity, package: actionPackage, input: .init(content: "source"),
+        apply: { _ in
+          XCTFail("A dispatched generation was replayed")
+          return true
+        },
+        warning: { XCTFail($0) })
+      XCTAssertEqual(host.dispatched, [identity])
+    }
+  }
+
   func testCapturedHostServicesRemainIdenticalAcrossValidationAndExecution() async throws {
     let executor = ControlledExecutor(), owner = ToolInvocationCoordinator(executor: executor)
     var utility = actionPackage

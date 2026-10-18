@@ -52,6 +52,25 @@ import XCTest
     XCTAssertEqual(values, ["minutes": "20"])
   }
 
+  func testErrorIsAccessibleAndLeavesArgumentFieldsEditable() {
+    let form = ToolArgumentFormView(
+      definitions: [ToolArgumentDefinition(name: "minutes", type: .integer, label: "Minutes")],
+      values: ["minutes": "20"], description: "Schedule reminder")
+    let originalHeight = form.preferredHeight
+
+    form.setError("Minutes must be between 1 and 60.")
+
+    XCTAssertEqual(form.fields[0].field.stringValue, "20")
+    XCTAssertGreaterThan(form.preferredHeight, originalHeight)
+    let error = form.subviews.compactMap { $0 as? NSTextField }.first {
+      $0.accessibilityLabel() == "Tool error: Minutes must be between 1 and 60."
+    }
+    XCTAssertEqual(error?.textColor, .systemRed)
+
+    form.setError(nil)
+    XCTAssertEqual(form.preferredHeight, originalHeight)
+  }
+
   func testEveryFieldCanBeRevealedInAShortWindow() throws {
     let definitions = (0..<16).map { index in
       ToolArgumentDefinition(name: "argument\(index)", type: .string, label: "Argument \(index)")

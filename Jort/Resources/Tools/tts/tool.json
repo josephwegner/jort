@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Tabs to spaces",
   "command": "/tts",
-  "description": "Replace each tab with 1–16 spaces; default 4, without tab-stop alignment",
+  "description": "Convert tabs to spaces.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",
@@ -17,6 +17,7 @@
       "name": "width",
       "type": "integer",
       "label": "Spaces per tab",
+      "description": "Enter how many spaces to use for each tab.",
       "defaultValue": 4,
       "minimum": 1,
       "maximum": 16

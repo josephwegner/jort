@@ -185,6 +185,33 @@ public actor KeychainModelCredentialStore: ModelCredentialStore {
     }
   }
 
+  public func replaceIfCurrent(_ expected: String?, with credential: String) async throws -> Bool {
+    guard try read() == expected else { return false }
+    try replace(with: credential)
+    return true
+  }
+
+  public func restoreIfCurrent(_ expected: String, with previous: String?) async throws -> Bool {
+    // A retained legacy copy can contain `previous` while the protected slot
+    // temporarily contains `expected`. A normal read would report that as a
+    // conflict and prevent this rollback from restoring the matching pair.
+    guard credential(from: try readProtectedData()) == expected else { return false }
+    if policy.environment == .production {
+      // A newly changed legacy value may be another valid connection. Leave
+      // both slots untouched unless it still matches our prior observation.
+      if let legacy = try readLegacy() {
+        guard legacy == previous.map({ Data($0.utf8) }) else { return false }
+      }
+    }
+    if let previous {
+      try replace(with: previous)
+    } else {
+      try remove()
+    }
+    guard try read() == previous else { throw ModelFailure.credentialStore }
+    return true
+  }
+
   public func remove() throws {
     if policy.environment == .production {
       // Disconnect explicitly authorizes removal of both saved connections.
@@ -403,6 +430,17 @@ public actor MemoryModelCredentialStore: ModelCredentialStore {
     if failWrites { throw ModelFailure.credentialStore }
     self.credential = credential
   }
+  public func replaceIfCurrent(_ expected: String?, with credential: String) async throws -> Bool {
+    guard self.credential == expected else { return false }
+    try replace(with: credential)
+    return true
+  }
+  public func restoreIfCurrent(_ expected: String, with previous: String?) async throws -> Bool {
+    guard credential == expected else { return false }
+    if failWrites { throw ModelFailure.credentialStore }
+    credential = previous
+    return true
+  }
   public func remove() throws {
     if failWrites { throw ModelFailure.credentialStore }
     credential = nil
@@ -415,6 +453,12 @@ public struct UnavailableModelCredentialStore: ModelCredentialStore, Sendable {
   public init() {}
   public func read() throws -> String? { throw ModelCredentialStoreFailure.unavailableIdentity }
   public func replace(with credential: String) throws {
+    throw ModelCredentialStoreFailure.unavailableIdentity
+  }
+  public func replaceIfCurrent(_ expected: String?, with credential: String) async throws -> Bool {
+    throw ModelCredentialStoreFailure.unavailableIdentity
+  }
+  public func restoreIfCurrent(_ expected: String, with previous: String?) async throws -> Bool {
     throw ModelCredentialStoreFailure.unavailableIdentity
   }
   public func remove() throws { throw ModelCredentialStoreFailure.unavailableIdentity }

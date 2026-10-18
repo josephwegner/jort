@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Count characters",
   "command": "/count-characters",
-  "description": "Report Unicode grapheme counts, including and excluding whitespace",
+  "description": "Count characters, with and without whitespace.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "insert-at-invocation",

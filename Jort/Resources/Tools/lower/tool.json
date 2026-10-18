@@ -5,7 +5,7 @@
   "version": 1,
   "name": "Lowercase",
   "command": "/lower",
-  "description": "Lowercase Unicode raw text, including code identifiers and URL paths",
+  "description": "Convert this text to lowercase.",
   "entryContract": 2,
   "inputMode": "contextual",
   "outputOperation": "replace-context",

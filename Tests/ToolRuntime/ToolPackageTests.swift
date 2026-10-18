@@ -139,6 +139,8 @@ final class ToolPackageTests: StoreTestCase {
       let result = await ToolRuntime.testExecute(package, input: .init(content: input))
       XCTAssertNotNil(result.error, input)
     }
+    let division = await ToolRuntime.testExecute(package, input: .init(content: "1/0"))
+    XCTAssertEqual(division.error, "Division by zero.")
   }
   func testBundledCalculatorRejectsDeepUnaryExpression() async throws {
     let package = try ToolPackage.load(from: bundled.appendingPathComponent("calc"))

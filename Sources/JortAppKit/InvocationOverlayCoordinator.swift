@@ -37,13 +37,14 @@ enum InvocationOverlayAction {
   func reconcile(
     invocation: ToolInvocation, snapshot: DocumentSnapshot,
     token: NSRange, scope: NSRange, sourceEndsLine: Bool, tokenRect: NSRect?,
+    command: NSRange,
     boundaries: [(Bool, Int, NSRect)], promptValue: String?,
     argumentDefinitions: [ToolArgumentDefinition] = [], argumentValues: [String: String] = [:],
-    description: String = "", isCurrent: @escaping () -> Bool
+    description: String = "", errorMessage: String? = nil, isCurrent: @escaping () -> Bool
   ) -> (views: [NSView], connectors: [NSRect]) {
     guard let textView, let parent else { return ([], []) }
     var views: [NSView] = [], connectors: [NSRect] = []
-    if !argumentDefinitions.isEmpty, invocation.inputMode == "contextual",
+    if invocation.call == nil, !argumentDefinitions.isEmpty, invocation.inputMode == "contextual",
       invocation.phase == .inputting, let tokenRect
     {
       visibleArguments.insert(invocation.id)
@@ -53,6 +54,7 @@ enum InvocationOverlayAction {
         ?? ToolArgumentFormView(
           definitions: argumentDefinitions, values: argumentValues, description: description)
       argumentForms[invocation.id] = form
+      form.setError(errorMessage)
       let viewport = textView.visibleRect
       let width = min(360, max(160, viewport.width - 16))
       let height = min(form.preferredHeight, max(100, viewport.height))
@@ -97,9 +99,15 @@ enum InvocationOverlayAction {
           : LocalizedCopy.text(
             "ToolInvocationPresentation.context_end_drag_to_choose_source_text",
             fallback: "Context end — drag to choose source text")
-        let gap: CGFloat = !start && offset == NSMaxRange(token) && !sourceEndsLine ? 27 : 0
+        // An end handle at the command boundary adjusts captured context, not
+        // command text. Keep it outside the command's padded action area.
+        let endsCommand = !start && offset == NSMaxRange(command)
+        let desiredX =
+          endsCommand
+          ? position.maxX + (sourceEndsLine ? 53 : 20) : position.minX - 5
+        let x = max(textView.visibleRect.minX, min(desiredX, textView.visibleRect.maxX - 16))
         handle.frame = NSRect(
-          x: position.minX - 5 - gap, y: max(0, position.minY - 7), width: 16,
+          x: x, y: max(0, position.minY - 7), width: 16,
           height: max(30, position.height + 7))
         handle.setAccessibilityRole(.slider)
         handle.setAccessibilityElement(true)
@@ -138,11 +146,12 @@ enum InvocationOverlayAction {
       prompts[invocation.id] = prompt
       prompt.isHidden = false
       if isNew { prompt.input.string = promptValue ?? "" }
+      prompt.setError(errorMessage)
       prompt.multiline = invocation.inputMode == "ephemeralMultiline"
       let viewport = textView.visibleRect
       let width = min(320, max(120, viewport.width - 16))
       let x = max(viewport.minX + 8, min(tokenRect.maxX, viewport.maxX - width))
-      let height = min(prompt.multiline ? 150.0 : 70.0, viewport.height)
+      let height = min(prompt.preferredHeight, viewport.height)
       let below = tokenRect.maxY + 4
       let y =
         below + height <= viewport.maxY ? below : max(viewport.minY, tokenRect.minY - height - 4)
@@ -202,6 +211,19 @@ enum InvocationOverlayAction {
     for id in prompts.keys.filter({ !visiblePrompts.contains($0) }) {
       guard let prompt = prompts[id] else { continue }
       if parent?.window?.firstResponder === prompt.input {
+        // Keep the focused prompt usable when its anchor leaves the current
+        // viewport or TextKit has not supplied a fresh anchor after a resize.
+        if let textView, let parent {
+          let viewport = textView.visibleRect
+          var frame = parent.convert(prompt.frame, to: textView)
+          frame.size.width = min(frame.width, max(0, viewport.width - 16))
+          frame.size.height = min(frame.height, max(0, viewport.height - 16))
+          frame.origin.x = max(
+            viewport.minX + 8, min(frame.minX, viewport.maxX - frame.width - 8))
+          frame.origin.y = max(
+            viewport.minY + 8, min(frame.minY, viewport.maxY - frame.height - 8))
+          prompt.frame = parent.convert(frame, from: textView)
+        }
         retainedFocus.append(prompt)
       } else {
         prompts.removeValue(forKey: id)?.removeFromSuperview()
@@ -256,6 +278,15 @@ enum InvocationOverlayAction {
   }
 
   func requestArgumentFocus(for id: UUID) { requestedArgumentFocus.insert(id) }
+
+  @discardableResult func focusBoundary(for id: UUID, start: Bool) -> Bool {
+    guard let handle = handles[id.uuidString + (start ? ".start" : ".end")],
+      let window = parent?.window, window.makeFirstResponder(handle)
+    else { return false }
+    handle.scrollToVisible(handle.bounds)
+    handle.focused?()
+    return true
+  }
 
   func focusArguments(for id: UUID, name: String? = nil, backwards: Bool = false) -> Bool {
     guard let form = argumentForms[id] else { return false }

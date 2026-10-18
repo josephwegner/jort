@@ -121,6 +121,9 @@ import JortSettings
       if failure {
         try await error(editor, id: id)
         XCTAssertTrue(editor.state.invocations.first?.message?.contains("Models Settings") == true)
+        XCTAssertEqual(editor.toolController.prompt(for: id), "prompt")
+        editor.toolController.setPrompt("revised prompt", for: id)
+        XCTAssertNil(editor.state.invocations.first?.message)
       } else {
         try await Task.sleep(for: .milliseconds(30))
         editor.toolController.cancel(id)
