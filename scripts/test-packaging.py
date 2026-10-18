@@ -30,6 +30,8 @@ import sign_development
 
 spec = importlib.util.spec_from_file_location('package', Path(__file__).with_name('package.py'))
 package = importlib.util.module_from_spec(spec); spec.loader.exec_module(package)
+presentation_spec = importlib.util.spec_from_file_location('dmg_presentation', Path(__file__).with_name('test-dmg-presentation.py'))
+presentation = importlib.util.module_from_spec(presentation_spec); presentation_spec.loader.exec_module(presentation)
 ROOT = Path(__file__).resolve().parent.parent
 TEAM = 'ABCDE12345'
 IDENTITY = 'A' * 40
@@ -989,6 +991,8 @@ int main(void) {
 
     def test_each_pipeline_failure_preserves_publication_and_detaches_mount(self):
         dist = self.root / 'dist'; dist.mkdir()
+        artwork = self.root / 'Configuration/DMG'; artwork.mkdir(parents=True)
+        shutil.copyfile(ROOT / 'Configuration/DMG/background.png', artwork / 'background.png')
         prior = dist / 'prior'; prior.mkdir(); (prior / 'verified').write_text('good')
         manifest = copy.deepcopy(self.manifest)
         manifest['provisioningProfile'] = {'signingCertificateSHA1': IDENTITY}
@@ -1007,15 +1011,21 @@ int main(void) {
                     return json.dumps(self.settings).encode()
                 if command[:2] == ['hdiutil', 'create']:
                     Path(command[-1]).write_bytes(b'image')
+                if command[:2] == ['hdiutil', 'convert']:
+                    Path(command[-1]).write_bytes(b'compressed image')
                 if command[:3] == ['xcrun', 'notarytool', 'submit']:
                     return json.dumps({'id': '12345678-1234-1234-1234-123456789abc', 'status': 'Accepted'}).encode()
                 if command[:2] == ['hdiutil', 'attach']:
                     mount = Path(command[command.index('-mountpoint') + 1])
                     shutil.copytree(self.app, mount / 'Jort.app', symlinks=True)
                     (mount / 'Applications').symlink_to('/Applications')
+                    background = mount / '.background'; background.mkdir()
+                    shutil.copyfile(ROOT / 'Configuration/DMG/background.png', background / 'background.png')
+                    (mount / '.DS_Store').write_bytes(b'Finder layout')
                     return plistlib.dumps({'system-entities': [{'mount-point': str(mount)}]})
                 return b''
             with self.subTest(stage=failure), patch.object(release, 'ROOT', self.root), \
+                    patch.object(release, 'validate_image_presentation'), \
                     patch.object(release, 'preflight', return_value='Xcode fixture'), \
                     patch('validate.xcode_lock', return_value=nullcontext()), \
                     patch.object(release, 'embed_profile'), patch.object(release, 'generate', return_value=manifest), \
@@ -1109,6 +1119,107 @@ int main(void) {
                 serialized = manifests.canonical(evidence).decode()
                 self.assertNotIn('profile-DO-NOT-PERSIST', serialized)
                 self.assertNotIn('not retrieve', serialized)
+
+
+class ImagePresentationTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.stage = Path(self.temporary.name).resolve()
+        self.app = self.stage / 'Source.app'; self.app.mkdir()
+        self.output = self.stage / 'Jort.dmg'
+        self.calls = []
+
+    def runner(self, command, **kwargs):
+        self.calls.append(command)
+        if command[:2] == ['hdiutil', 'create'] or command[:2] == ['hdiutil', 'convert']:
+            Path(command[-1]).write_bytes(b'image')
+        if command[:2] == ['hdiutil', 'attach']:
+            mount = Path(command[command.index('-mountpoint') + 1])
+            shutil.copytree(self.stage / 'image-root', mount, dirs_exist_ok=True, symlinks=True)
+            return plistlib.dumps({'system-entities': [{'mount-point': str(mount)}]})
+        if command[0] == 'osascript':
+            (Path(command[-1]) / '.DS_Store').write_bytes(b'Finder layout')
+        return b''
+
+    def build(self, runner=None):
+        with patch.object(release, 'validate_bundle'):
+            release.build_image(self.app, {}, self.output, runner or self.runner, self.stage)
+
+    def test_artwork_and_layout_are_created_before_readonly_conversion(self):
+        self.build()
+        release.validate_image_presentation(self.stage / 'presentation-mount')
+        self.assertEqual(os.readlink(self.stage / 'image-root/Applications'), '/Applications')
+        self.assertTrue(self.output.is_file())
+        actions = [command[0:2] for command in self.calls]
+        self.assertEqual(actions[0], ['hdiutil', 'create'])
+        self.assertIn('UDRW', self.calls[0])
+        self.assertIn('-noautoopen', self.calls[1])
+        self.assertEqual(self.calls[2][-1], str(self.stage / 'presentation-mount'))
+        self.assertEqual(actions[-2:], [['hdiutil', 'detach'], ['hdiutil', 'convert']])
+        self.assertIn('UDZO', self.calls[-1])
+
+    def test_layout_failure_detaches_and_never_creates_final_image(self):
+        def fail(command, **kwargs):
+            if command[0] == 'osascript':
+                raise ValueError('Finder failed')
+            return self.runner(command, **kwargs)
+        with self.assertRaisesRegex(ValueError, 'Finder installer layout failed'):
+            self.build(fail)
+        self.assertEqual(self.calls[-1][:2], ['hdiutil', 'detach'])
+        self.assertFalse(self.output.exists())
+
+    def test_unexpected_attachment_detaches_without_automating_finder(self):
+        def wrong_mount(command, **kwargs):
+            result = self.runner(command, **kwargs)
+            if command[:2] == ['hdiutil', 'attach']:
+                return plistlib.dumps({'system-entities': []})
+            return result
+        with self.assertRaisesRegex(ValueError, 'unexpected presentation volume'):
+            self.build(wrong_mount)
+        self.assertEqual(self.calls[-1][:2], ['hdiutil', 'detach'])
+        self.assertFalse(any(command[0] == 'osascript' for command in self.calls))
+
+    def test_missing_changed_or_extra_presentation_files_are_rejected(self):
+        self.build()
+        mount = self.stage / 'presentation-mount'
+        image = mount / '.background/background.png'
+        original = image.read_bytes()
+        image.write_bytes(b'changed')
+        with self.assertRaisesRegex(ValueError, 'background changed'):
+            release.validate_image_presentation(mount)
+        image.write_bytes(original)
+        extra = image.parent / 'unexpected'; extra.write_bytes(b'extra')
+        with self.assertRaisesRegex(ValueError, 'unexpected disk image background content'):
+            release.validate_image_presentation(mount)
+        extra.unlink()
+        (mount / '.DS_Store').unlink()
+        with self.assertRaisesRegex(ValueError, 'missing disk image Finder layout'):
+            release.validate_image_presentation(mount)
+
+    def test_saved_background_check_reads_the_icon_view_blob(self):
+        layout = self.stage / '.DS_Store'
+        marker = struct.pack('>I', 1) + '.'.encode('utf-16be') + b'icvpblob'
+        volume_uuid = '11111111-1111-1111-1111-111111111111'
+        bookmark = b'book/.background/background.png/' + volume_uuid.encode()
+        bookmark_record = struct.pack('>I', 1) + '.'.encode('utf-16be') + b'pBBkblob' + struct.pack('>I', len(bookmark)) + bookmark
+        for options, accepted in [
+                ({'backgroundType': 2, 'backgroundImageAlias': b'alias/.background/background.png'}, True),
+                ({'backgroundType': 1}, False),
+                ({'backgroundType': 2, 'backgroundImageAlias': b'another.png'}, False)]:
+            blob = plistlib.dumps(options, fmt=plistlib.FMT_BINARY)
+            layout.write_bytes(marker + struct.pack('>I', len(blob)) + blob + bookmark_record)
+            if accepted:
+                presentation.verify_saved_background(layout, volume_uuid)
+                with self.assertRaisesRegex(ValueError, 'another volume'):
+                    presentation.verify_saved_background(layout, '22222222-2222-2222-2222-222222222222')
+            else:
+                with self.assertRaisesRegex(ValueError, 'background was not saved'):
+                    presentation.verify_saved_background(layout, volume_uuid)
+        for data in [b'no settings', marker, marker + struct.pack('>I', 100) + b'short']:
+            layout.write_bytes(data)
+            with self.assertRaises(ValueError):
+                presentation.verify_saved_background(layout, volume_uuid)
 
 
 if __name__ == '__main__':

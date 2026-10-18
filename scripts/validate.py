@@ -43,6 +43,7 @@ CHECKS = {item.name: item for item in (
     make_check("localization", ["python3", "scripts/check-localization.py"]),
     make_check("presentation", ["bash", "scripts/test-presentation.sh"], xcode=True),
     make_check("packaging-tests", ["python3", "scripts/test-packaging.py"], ["python3", "-m", "unittest", "scripts.test_ui_isolation"]),
+    make_check("dmg-presentation", ["python3", "scripts/test-dmg-presentation.py"]),
     make_check("ui", ["./scripts/test-ui.sh"], xcode=True),
     make_check("packaged-ui", ["bash", "scripts/test-packaged-ui.sh"], xcode=True),
     make_check("containment-binary-ui", ["python3", "scripts/verify-javascript-containment.py", ".build-ui-tests/Build/Products/Debug/Jort.app"]),
@@ -75,6 +76,8 @@ LANES = {
     # Rerun only after a fresh package build; ordinary qualification uses package.
     "packaged-ui": ["packaged-ui"],
     "release-fixtures": ["packaging-tests"],
+    # Opt-in desktop check: Finder automation is not available on headless CI.
+    "dmg-presentation": ["dmg-presentation"],
     "ci-test": ["format", "project", "foundation", "native", "packaging-tests", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release", "packaged-ui"],
     "all": ["format", "project", "foundation", "native", "packaging-tests", "first-party-analysis", "quickjs-audit", "ui", "containment-binary-ui", "tsan-foundation", "tsan-native", "release", "packaging-tests", "containment-binary-release", "packaged-ui"],
     "gate": ["format", "project", "foundation", "native", "packaging-tests", "first-party-analysis", "quickjs-audit", "ui", "containment-binary-ui"],

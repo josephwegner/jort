@@ -227,8 +227,45 @@ def build_image(app, manifest, output, runner, stage):
     image_root.mkdir()
     shutil.copytree(app, image_root / 'Jort.app', symlinks=True)
     os.symlink('/Applications', image_root / 'Applications')
-    runner(['hdiutil', 'create', '-volname', 'Install Jort', '-srcfolder', str(image_root), '-format', 'UDZO', '-imagekey', 'zlib-level=9', str(output)])
+    background = image_root / '.background'
+    background.mkdir()
+    shutil.copyfile(ROOT / 'Configuration/DMG/background.png', background / 'background.png')
+
+    # Finder stores window geometry, icon positions, and a volume-specific
+    # background alias in .DS_Store. Generate it on this image, not by copying
+    # metadata from an older installer (whose alias can point at another disk).
+    writable = stage / 'presentation.dmg'
+    mount = stage / 'presentation-mount'
+    mount.mkdir()
+    runner(['hdiutil', 'create', '-volname', 'Install Jort', '-srcfolder', str(image_root), '-format', 'UDRW', str(writable)])
+    attached = False
+    try:
+        attachment_data = runner(['hdiutil', 'attach', '-readwrite', '-nobrowse', '-noautoopen', '-mountpoint', str(mount), '-plist', str(writable)])
+        attached = True
+        attachment = plistlib.loads(attachment_data)
+        require(any(entity.get('mount-point') == str(mount) for entity in attachment.get('system-entities', [])), 'unexpected presentation volume')
+        try:
+            runner(['osascript', str(ROOT / 'scripts/layout-dmg.applescript'), str(mount)], timeout=60)
+        except ValueError as error:
+            raise ValueError('Finder installer layout failed; allow Finder automation in a logged-in desktop session and check ./scripts/validate dmg-presentation') from error
+        validate_image_presentation(mount)
+    finally:
+        if attached:
+            runner(['hdiutil', 'detach', str(mount)])
+    runner(['hdiutil', 'convert', str(writable), '-format', 'UDZO', '-imagekey', 'zlib-level=9', '-o', str(output)])
     require(output.is_file(), 'disk image missing')
+
+
+def validate_image_presentation(mount):
+    """Allow only the reviewed artwork, never arbitrary hidden image payloads."""
+    background = mount / '.background'
+    require(background.is_dir() and not background.is_symlink(), 'missing disk image background')
+    require({path.name for path in background.iterdir()} == {'background.png'}, 'unexpected disk image background content')
+    image = background / 'background.png'
+    require(image.is_file() and not image.is_symlink(), 'invalid disk image background')
+    require(digest(image) == digest(ROOT / 'Configuration/DMG/background.png'), 'disk image background changed')
+    layout = mount / '.DS_Store'
+    require(layout.is_file() and not layout.is_symlink() and layout.stat().st_size > 0, 'missing disk image Finder layout')
 
 
 def artifact_facts(path):
@@ -337,7 +374,8 @@ def release(args, runner=None):
             attachment = plistlib.loads(runner(['hdiutil', 'attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint', str(mount), '-plist', str(image)]))
             attached = True
             require(any(entity.get('mount-point') == str(mount) for entity in attachment.get('system-entities', [])), 'unexpected mounted volume')
-            require({path.name for path in mount.iterdir()} <= {'Jort.app', 'Applications', '.fseventsd', '.Trashes', '.DS_Store', '.VolumeIcon.icns'}, 'unexpected disk image content')
+            require({path.name for path in mount.iterdir()} <= {'Jort.app', 'Applications', '.background', '.fseventsd', '.Trashes', '.DS_Store', '.VolumeIcon.icns'}, 'unexpected disk image content')
+            validate_image_presentation(mount)
             require((mount / 'Applications').is_symlink() and os.readlink(mount / 'Applications') == '/Applications', 'invalid Applications link')
             compare_inventory(signed, validate_bundle(mount / 'Jort.app', manifest), manifest)
             verify_all(mount / 'Jort.app', manifest, args.team_id, args.identity, runner, stage)

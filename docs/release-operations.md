@@ -54,6 +54,19 @@ The broker and worker never receive either credential group.
 
 ## Operating a release
 
+The image stage restores the branded drag-to-Applications background and Finder
+icon layout using the tracked artwork in `Configuration/DMG/`. Run it in a logged-in
+macOS desktop session with permission to automate Finder (macOS may ask on the
+first run). It opens only the run-owned temporary installer window, never Jort,
+and closes it before detaching and compressing the image. The layout is generated
+before image signing and notarization; do not customize a verified DMG afterward.
+
+To check the layout without signing, notarization, or launching Jort, run
+`./scripts/validate dmg-presentation`. This desktop-only smoke test uses a
+non-executable placeholder, verifies the background and icon/window positions
+from the final compressed image, and removes its own temporary image afterward.
+It is opt-in because headless validation runners cannot automate Finder.
+
 Run the release command on the protected release environment with the approved
 identity, Team ID, and profile selectors. It must reject a dirty source tree,
 stale generated project, ambiguous identity, mismatched Team, incoherent
