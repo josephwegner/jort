@@ -7,9 +7,9 @@
   "forbiddenPaths": ["Contents/Frameworks/JortJavaScript.framework"],
   "requiredResources": ["Contents/Resources/AppIcon.icns", "Contents/Resources/ToolTemplates.json", "Contents/Resources/emoji.json"],
   "requiredDirectories": [],
-  "publicationEnabled": false,
+  "publicationEnabled": true,
   "communityImportEnabled": false,
-  "qualification": {"signedReleaseVerified": false, "sandboxExecutionVerified": false},
+  "qualification": {"signedReleaseVerified": true, "sandboxExecutionVerified": true},
   "peerRequirements": {
     "JortJavaScriptClient": [{"edge": "app-to-broker", "peerTarget": "JortJavaScriptBroker", "teamRelation": "self", "requirementTemplate": "anchor apple generic and identifier \"dev.jort.editor.javascript-broker\" and certificate leaf[subject.OU] = \"%@\""}],
     "JortJavaScriptBroker": [

@@ -2,6 +2,7 @@
 #import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
 #include <signal.h>
+#include "Fixtures/ProbeSigning.h"
 
 @interface JortAppleEventProbeTests : XCTestCase
 @end
@@ -59,6 +60,13 @@
         URLByDeletingLastPathComponent] URLByDeletingLastPathComponent];
     NSURL *scratch = [[root URLByAppendingPathComponent:@".build-validation"]
         URLByAppendingPathComponent:[@"apple-event-probe-" stringByAppendingString:NSUUID.UUID.UUIDString]];
+    NSString *signingIdentity = nil;
+    NSString *signingTeam = nil;
+    NSString *signingFailure = nil;
+    BOOL signingConfigured = JortProbeSigningConfiguration(NSProcessInfo.processInfo.environment,
+        &signingIdentity, &signingTeam, &signingFailure);
+    XCTAssertTrue(signingConfigured, @"%@", signingFailure);
+    if (!signingConfigured) return;
     NSError *error = nil;
     XCTAssertTrue([files createDirectoryAtURL:scratch withIntermediateDirectories:YES attributes:nil error:&error]);
     if (error) return;
@@ -96,12 +104,16 @@
         NSArray *signedFiles = @[harness, child];
         NSArray *policies = @[@"Configuration/JortJavaScriptBroker.entitlements", @"Configuration/JortJavaScriptWorker.entitlements"];
         for (NSUInteger index = 0; index < signedFiles.count; index++) {
-            [self run:[NSURL fileURLWithPath:@"/usr/bin/codesign"] arguments:@[@"--force", @"--sign", @"-",
-                @"--options", @"runtime", @"--timestamp=none", @"--entitlements",
-                [root URLByAppendingPathComponent:policies[index]].path, [signedFiles[index] path]]];
+            NSString *signFailure = nil;
+            BOOL signedCopy = JortProbeSign(signedFiles[index], signingIdentity, nil,
+                [root URLByAppendingPathComponent:policies[index]], signingTeam, &signFailure);
+            XCTAssertTrue(signedCopy, @"%@", signFailure);
+            if (!signedCopy) return;
         }
-        [self run:[NSURL fileURLWithPath:@"/usr/bin/codesign"] arguments:@[@"--force", @"--sign", @"-",
-            @"--timestamp=none", bundle.path]];
+        NSString *receiverSignFailure = nil;
+        BOOL receiverSigned = JortProbeSign(bundle, signingIdentity, nil, nil, signingTeam, &receiverSignFailure);
+        XCTAssertTrue(receiverSigned, @"%@", receiverSignFailure);
+        if (!receiverSigned) return;
         OSStatus registration = LSRegisterURL((__bridge CFURLRef)bundle, true);
         XCTAssertEqual(registration, noErr, @"failed to register disposable receiver");
         if (registration != noErr) return;
@@ -126,8 +138,11 @@
         XCTAssertTrue([info writeToURL:controlInfoURL atomically:YES]);
         NSURL *controlPolicy = [scratch URLByAppendingPathComponent:@"control.entitlements"];
         XCTAssertTrue([@{@"com.apple.security.automation.apple-events": @YES} writeToURL:controlPolicy atomically:YES]);
-        [self run:[NSURL fileURLWithPath:@"/usr/bin/codesign"] arguments:@[@"--force", @"--sign", @"-",
-            @"--options", @"runtime", @"--timestamp=none", @"--entitlements", controlPolicy.path, controlBundle.path]];
+        NSString *controlSignFailure = nil;
+        BOOL controlSigned = JortProbeSign(controlBundle, signingIdentity, nil, controlPolicy,
+            signingTeam, &controlSignFailure);
+        XCTAssertTrue(controlSigned, @"%@", controlSignFailure);
+        if (!controlSigned) return;
         XCTAssertEqual(LSRegisterURL((__bridge CFURLRef)controlBundle, true), noErr);
         control = [self launch:controlBundle arguments:@[@"control", receiverID, controlFile.path, commandFile.path]];
         if (!control) return;

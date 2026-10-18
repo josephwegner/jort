@@ -72,3 +72,43 @@ update was approved. A failed or incomplete item blocks release qualification.
   each diagnostic delta. This is not approval of an engine update or evidence of
   zero native defects. Full release qualification still awaits the remaining
   containment fixtures.
+
+### Release review — 2026-10-18 (Jort 0.3.0, arm64)
+
+- Reviewers: Codex release coordinator and a separate read-only host-shim
+  reviewer. This is a bounded reachability/containment review, not a whole-engine
+  security audit. The September dates above and in `Vendor/QuickJS/JORT.md`
+  describe the original vendoring/analyzer reviews; this entry records the
+  subsequent release review without changing the vendored baseline.
+- The [upstream release page](https://bellard.org/quickjs/) still identifies
+  2026-06-04 as the current archive. A fresh download matched the recorded
+  SHA-256. All 16 imported C/header/license files were compared with the archive;
+  only `quickjs.c` and `quickjs.h` differ, and regenerating those differences
+  reproduced `JORT.patch` exactly. No engine, local patch, analyzer baseline,
+  or provenance update is approved or required by this review.
+- Rechecked [#545](https://github.com/bellard/quickjs/issues/545): BigInt work
+  can evade the interpreter interrupt callback; it remains subject to the
+  independent kernel CPU limit and broker wall deadline, termination, and
+  reaping. RegExp uses the installed interrupt callback as well as those process
+  controls. Extreme-allocation/correctness findings remain known engine risks;
+  the 16 MiB engine heap is not a whole-process memory ceiling.
+- Rechecked [#508](https://github.com/bellard/quickjs/issues/508): the pinned
+  source contains the pointer re-fetch after coercion for the reported Atomics
+  issue. Jort additionally removes `Atomics` and `SharedArrayBuffer`. Ordinary
+  typed arrays remain enabled and are not claimed to be generally defect-free.
+- [#499](https://github.com/bellard/quickjs/issues/499) and
+  [#549 / CVE-2026-88378](https://github.com/bellard/quickjs/issues/549)
+  require hostile serialized bytecode/object input to `JS_ReadObject`.
+  No non-vendored Jort source calls `JS_ReadObject` or `JS_WriteObject`; tools
+  enter through source compilation with `JS_Eval`. Those reported entry points
+  are not exposed by the host contract. This is not a general native-code
+  safety claim.
+- Reviewed the retained diagnostic inventory and unchanged 59-diagnostic baseline;
+  the recorded delta is zero added and zero removed. Matching source/toolchain
+  provenance permits audit reuse in the normal gate. Existing diagnostics are
+  accepted known findings, not a claim of zero engine defects.
+- Release identity, signed sandbox probes, retained run identifiers, and any
+  remaining qualification conditions are recorded in
+  [the 0.3.0 release review](release-qualification-0.3.0.md). Publication is
+  permitted only after those conditions are satisfied. Community package import
+  remains disabled independently of publication.

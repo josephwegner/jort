@@ -100,6 +100,32 @@ def fixture(root):
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_publication_requires_both_explicit_qualification_approvals(self):
+        policy = {'publicationEnabled': True, 'communityImportEnabled': False,
+                  'qualification': {'signedReleaseVerified': True, 'sandboxExecutionVerified': True}}
+        release.require_release_approval(policy, candidate=False)
+        for field in ('signedReleaseVerified', 'sandboxExecutionVerified'):
+            for value in (False, 'true', 1, None):
+                changed = copy.deepcopy(policy)
+                changed['qualification'][field] = value
+                with self.subTest(field=field, value=value), self.assertRaisesRegex(ValueError, 'publication disabled'):
+                    release.require_release_approval(changed, candidate=False)
+            changed = copy.deepcopy(policy)
+            del changed['qualification'][field]
+            with self.assertRaisesRegex(ValueError, 'publication disabled'):
+                release.require_release_approval(changed, candidate=False)
+        for qualification in ({}, None, []):
+            changed = dict(policy, qualification=qualification)
+            with self.assertRaisesRegex(ValueError, 'publication disabled'):
+                release.require_release_approval(changed, candidate=False)
+        for enabled in (False, 'true', 1):
+            with self.assertRaisesRegex(ValueError, 'publication disabled'):
+                release.require_release_approval(dict(policy, publicationEnabled=enabled), candidate=False)
+        release.require_release_approval(dict(policy, publicationEnabled=False, qualification={}), candidate=True)
+        for candidate in (True, False):
+            with self.assertRaisesRegex(ValueError, 'community import'):
+                release.require_release_approval(dict(policy, communityImportEnabled=True), candidate)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name).resolve()

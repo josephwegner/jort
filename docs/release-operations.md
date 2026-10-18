@@ -147,6 +147,20 @@ signed-release and sandbox qualification evidence is independently reviewed,
 the committed release policy may be updated in a separate reviewed change; only
 then may the same command run without `--candidate` to atomically publish.
 
+The Apple Silicon 0.3.0 qualification and approval record is
+[release-qualification-0.3.0.md](release-qualification-0.3.0.md). After committing
+the approved policy and review changes, build the public artifact with:
+
+```sh
+./scripts/release.sh --revision "$(git rev-parse HEAD)" --architectures arm64
+```
+
+Upload the DMG from the resulting `dist/Jort-0.3.0-3-macos/` directory to the
+GitHub release. Retain its adjacent verification JSON as release evidence.
+The script's publication step creates this local output directory; it does not
+upload to GitHub. The release still rebuilds and verifies the selected clean
+revision in full; enabling publication never skips signing or notarization.
+
 Credential-free local builds carry development-only debugging and library-load
 exceptions so separately ad-hoc-signed frameworks can launch. They carry no
 credential access group. The protected Apple Development lane replaces those

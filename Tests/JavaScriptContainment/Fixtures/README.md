@@ -1,5 +1,29 @@
 # Nonshipping native containment probes
 
+## Developer ID release qualification
+
+The default fixtures use ad-hoc signing. To qualify the production certificate,
+use the exact public certificate SHA-1 and Team ID, forwarded explicitly into
+XCTest by Xcode's `TEST_RUNNER_` convention:
+
+```sh
+TEST_RUNNER_JORT_CONTAINMENT_SIGNING_IDENTITY=YOUR_40_CHARACTER_CERTIFICATE_SHA1 \
+TEST_RUNNER_JORT_CONTAINMENT_TEAM_ID=YOURTEAMID \
+./scripts/validate focused containment \
+  --only JortJavaScriptContainmentTests/JortSignedNativeProbeTests \
+  --only JortJavaScriptContainmentTests/JortAppleEventProbeTests
+```
+
+These selectors are not credentials. Never pass private keys or passwords.
+Both values are required together. Each signed copy must pass strict Apple-
+anchored Developer ID and Team checks before it runs; its public signing
+selectors are recorded in the test log. A passing local/ad-hoc run without
+those receipts is not distribution-identity qualification. The Apple Events
+positive control may request Automation consent; the USB test requires a
+connected, enabled Yubico device and a skip is not a device-denial pass.
+
+## Fixture boundaries
+
 `SandboxHarness.c` is a signed App Sandbox parent with the broker's exact
 one-key sandbox policy. It includes the production broker implementation to
 exercise its pipe setup, `posix_spawn`, owned PID supervision, and `waitpid`

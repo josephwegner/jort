@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <Security/SecKeychain.h>
 #include "Fixtures/USBOpenProbe.h"
+#include "Fixtures/ProbeSigning.h"
 
 static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSString *account,
     SecKeychainRef *created) {
@@ -42,6 +43,37 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
 @end
 
 @implementation JortSignedNativeProbeTests
+
+- (void)testProbeSigningConfigurationRequiresBothWellFormedValues {
+    NSString *identity = nil;
+    NSString *team = nil;
+    NSString *failure = nil;
+    XCTAssertTrue(JortProbeSigningConfiguration(@{}, &identity, &team, &failure));
+    XCTAssertNil(identity);
+    XCTAssertNil(team);
+
+    NSArray<NSDictionary<NSString *, NSString *> *> *invalidConfigurations = @[
+        @{@"JORT_CONTAINMENT_SIGNING_IDENTITY": @"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
+        @{@"JORT_CONTAINMENT_TEAM_ID": @"ABCDE12345"},
+        @{@"JORT_CONTAINMENT_SIGNING_IDENTITY": @"not-a-certificate",
+          @"JORT_CONTAINMENT_TEAM_ID": @"ABCDE12345"}
+    ];
+    for (NSDictionary<NSString *, NSString *> *configuration in invalidConfigurations) {
+        identity = nil;
+        team = nil;
+        failure = nil;
+        XCTAssertFalse(JortProbeSigningConfiguration(configuration, &identity, &team, &failure));
+        XCTAssertNotNil(failure);
+    }
+
+    NSDictionary<NSString *, NSString *> *validConfiguration = @{
+        @"JORT_CONTAINMENT_SIGNING_IDENTITY": @"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        @"JORT_CONTAINMENT_TEAM_ID": @"ABCDE12345"
+    };
+    XCTAssertTrue(JortProbeSigningConfiguration(validConfiguration, &identity, &team, &failure));
+    XCTAssertEqualObjects(identity, validConfiguration[@"JORT_CONTAINMENT_SIGNING_IDENTITY"]);
+    XCTAssertEqualObjects(team, validConfiguration[@"JORT_CONTAINMENT_TEAM_ID"]);
+}
 
 - (NSString *)vmmapForProcess:(pid_t)pid error:(NSError **)error {
     NSTask *task = [NSTask new];
@@ -105,6 +137,13 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
     NSURL *fixtures = [[source URLByDeletingLastPathComponent] URLByAppendingPathComponent:@"Fixtures"];
     NSURL *scratch = [[root URLByAppendingPathComponent:@".build-validation"]
         URLByAppendingPathComponent:[@"native-probe-" stringByAppendingString:NSUUID.UUID.UUIDString]];
+    NSString *signingIdentity = nil;
+    NSString *signingTeam = nil;
+    NSString *signingFailure = nil;
+    BOOL signingConfigured = JortProbeSigningConfiguration(NSProcessInfo.processInfo.environment,
+        &signingIdentity, &signingTeam, &signingFailure);
+    XCTAssertTrue(signingConfigured, @"%@", signingFailure);
+    if (!signingConfigured) return;
     NSError *error = nil;
     SecKeychainRef probeKeychain = NULL;
     XCTAssertTrue([files createDirectoryAtURL:scratch withIntermediateDirectories:YES attributes:nil error:&error], @"%@", error);
@@ -170,15 +209,11 @@ static OSStatus JortCreateProbeKeychain(NSString *path, NSString *service, NSStr
             if (error) return;
             // Test builds may inject get-task-allow. Sign disposable copies with
             // the exact production sandbox policy and no XCTest exceptions.
-            NSTask *sign = [NSTask new];
-            sign.executableURL = [NSURL fileURLWithPath:@"/usr/bin/codesign"];
-            sign.arguments = @[@"--force", @"--sign", @"-", @"--identifier", identifiers[index],
-                @"--entitlements", entitlements[index].path, @"--options", @"runtime", @"--timestamp=none", target.path];
-            XCTAssertTrue([sign launchAndReturnError:&error], @"%@", error);
-            if (error) return;
-            [sign waitUntilExit];
-            XCTAssertEqual(sign.terminationStatus, 0);
-            if (sign.terminationStatus) return;
+            NSString *signFailure = nil;
+            BOOL signedCopy = JortProbeSign(target, signingIdentity, identifiers[index],
+                entitlements[index], signingTeam, &signFailure);
+            XCTAssertTrue(signedCopy, @"%@", signFailure);
+            if (!signedCopy) return;
         }
         NSTask *task = [NSTask new];
         task.executableURL = harnessTarget;

@@ -182,6 +182,17 @@ def settings_command(args):
             '-configuration', 'Release', *release_overrides(args), '-showBuildSettings', '-json']
 
 
+def require_release_approval(policy, candidate):
+    require(policy.get('communityImportEnabled') is False, 'community import remains prohibited')
+    if candidate:
+        return
+    qualification = policy.get('qualification')
+    require(policy.get('publicationEnabled') is True and isinstance(qualification, dict)
+            and qualification.get('signedReleaseVerified') is True
+            and qualification.get('sandboxExecutionVerified') is True,
+            'publication disabled until signed-release and sandbox qualification evidence is reviewed')
+
+
 def preflight(args, runner, root=ROOT):
     require(re.fullmatch(r'[0-9a-f]{40}', args.revision) is not None, 'exact source revision required')
     require(re.fullmatch(r'[0-9A-Fa-f]{40}', args.identity) is not None, 'exact Developer ID certificate SHA-1 required')
@@ -196,9 +207,7 @@ def preflight(args, runner, root=ROOT):
     require(not runner(['git', 'status', '--porcelain', '--untracked-files=normal']).strip(), 'generated project differs from revision')
     policy = json.loads((root / 'Configuration/release-policy.json').read_text())
     validate_entitlement_sources(root, policy)
-    require(not policy['communityImportEnabled'], 'community import remains prohibited')
-    if not args.candidate:
-        require(policy['publicationEnabled'] and all(policy['qualification'].values()), 'publication disabled until signed-release and sandbox qualification evidence is reviewed')
+    require_release_approval(policy, args.candidate)
     versions = runner(['xcodebuild', '-version']).decode().strip()
     match = re.search(r'^Xcode (\d+)\.', versions)
     require(match and 16 <= int(match.group(1)) <= 26, 'unsupported Xcode toolchain')
