@@ -5,6 +5,33 @@ import XCTest
 @testable import JortSettings
 
 final class ModelCredentialsTests: XCTestCase {
+  func testProtectedSigningSourcesSatisfyRuntimeCredentialIdentity() throws {
+    let root = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    for (name, environment) in [
+      ("JortProduction", ModelCredentialEnvironment.production),
+      ("JortDevelopment", ModelCredentialEnvironment.development),
+    ] {
+      let data = try Data(
+        contentsOf: root.appendingPathComponent("Configuration/\(name).entitlements"))
+      let source = try XCTUnwrap(
+        PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any])
+      // Resolve the same prefix Xcode supplies, then exercise the actual runtime
+      // factory. A release-only allowlist test missed this requirement before.
+      let resolvedData = try PropertyListSerialization.data(
+        fromPropertyList: source, format: .xml, options: 0)
+      let resolvedXML = try XCTUnwrap(String(data: resolvedData, encoding: .utf8))
+        .replacingOccurrences(of: "$(AppIdentifierPrefix)", with: "TEAM123456.")
+      let entitlements = try XCTUnwrap(
+        PropertyListSerialization.propertyList(from: Data(resolvedXML.utf8), format: nil)
+          as? [String: Any])
+      let policy = try ModelCredentialPolicy.forCurrentProcess(
+        environment: environment, expectedProductionTeamIdentifier: "TEAM123456",
+        identity: CredentialIdentityFake(entitlements))
+      XCTAssertEqual(policy.environment, environment)
+    }
+  }
+
   func testUnavailableStoreFailsClosedForEveryOperation() async {
     let store = UnavailableModelCredentialStore()
     do {

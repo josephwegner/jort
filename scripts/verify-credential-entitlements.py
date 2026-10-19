@@ -33,8 +33,9 @@ groups = {
 if environment not in groups:
     raise SystemExit('main app has no recognized credential environment')
 expected = groups[environment]
-if entitlements(app) != {'keychain-access-groups': [expected]}:
-    raise SystemExit('main app does not have its exact credential group')
+if entitlements(app) != {'com.apple.application-identifier': args.team_id + '.dev.jort.editor',
+                         'keychain-access-groups': [expected]}:
+    raise SystemExit('main app does not have its exact application identifier and credential group')
 denied = [
     app / 'Contents/XPCServices/JortJavaScriptBroker.xpc',
     app / 'Contents/XPCServices/JortJavaScriptBroker.xpc/Contents/Helpers/JortJavaScriptWorker',

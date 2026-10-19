@@ -36,7 +36,9 @@ def expected_entitlements(role, team=None, environment='production'):
     # A capability change requires reviewing the enforcement code as well.
     if role == 'app':
         suffix = '.credentials' if environment == 'production' else '.development.credentials'
-        return {'keychain-access-groups': [(team or '{TEAM_ID}') + '.dev.jort.editor' + suffix]}
+        application_identifier = (team or '{TEAM_ID}') + '.dev.jort.editor'
+        return {'com.apple.application-identifier': application_identifier,
+                'keychain-access-groups': [application_identifier + suffix]}
     if role == 'broker':
         return {'com.apple.security.app-sandbox': True}
     if role == 'worker':
@@ -59,6 +61,7 @@ def validate_entitlement_sources(root, policy):
         actual = plistlib.loads((root / path).read_bytes())
         expected = expected_entitlements(role, '$(AppIdentifierPrefix)')
         if role == 'app':
+            expected['com.apple.application-identifier'] = '$(AppIdentifierPrefix)dev.jort.editor'
             expected['keychain-access-groups'] = ['$(AppIdentifierPrefix)dev.jort.editor.credentials']
         require(canonical(actual) == canonical(expected), 'release entitlement source drift')
 
@@ -421,7 +424,8 @@ def generate(root, settings, app, production=False, team_id=None, metadata=None,
             files[full] = dict(expectation, kind='resource')
         entitlements = json.loads(json.dumps(role['entitlements']).replace('{TEAM_ID}', team_id or '{TEAM_ID}'))
         if profile_facts is not None and not production and kind == 'app':
-            entitlements = {'keychain-access-groups': [profile_facts['keychainAccessGroup']]}
+            entitlements = {'com.apple.application-identifier': profile_facts['applicationIdentifier'],
+                            'keychain-access-groups': [profile_facts['keychainAccessGroup']]}
         if production:
             require(values.get('ENABLE_HARDENED_RUNTIME') == 'YES', 'Hardened Runtime disabled')
         runpaths = set(shlex.split(values.get('LD_RUNPATH_SEARCH_PATHS', '')))
@@ -507,6 +511,7 @@ def validate_manifest(manifest):
             else:
                 source_expected = expected_entitlements(item['role'], item['teamID'], environment)
                 if item['role'] == 'app':
+                    source_expected['com.apple.application-identifier'] = '$(AppIdentifierPrefix)dev.jort.editor'
                     suffix = '.credentials' if environment == 'production' else '.development.credentials'
                     source_expected['keychain-access-groups'] = ['$(AppIdentifierPrefix)dev.jort.editor' + suffix]
             require(canonical(source_values) == canonical(source_expected), 'manifest entitlement source capabilities drift')

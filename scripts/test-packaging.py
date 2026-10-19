@@ -321,7 +321,8 @@ class ReleaseTests(unittest.TestCase):
         for item in manifest['objects']:
             item['teamID'] = TEAM
             if item['role'] == 'app':
-                item['entitlements'] = {'keychain-access-groups': [facts['keychainAccessGroup']]}
+                item['entitlements'] = {'com.apple.application-identifier': facts['applicationIdentifier'],
+                                        'keychain-access-groups': [facts['keychainAccessGroup']]}
                 item['entitlementInput'] = 'Configuration/JortDevelopment.entitlements'
                 item['entitlementSHA256'] = manifests.digest(ROOT / item['entitlementInput'])
         manifests.validate_manifest(manifest)
@@ -730,6 +731,24 @@ int main(void) {
             manifests.validate_manifest(altered)
         with self.assertRaisesRegex(ValueError, 'unsupported manifest schema keyword'):
             manifests.validate_schema({}, {'unreviewedKeyword': True})
+
+    def test_release_requires_runtime_application_identifier_before_signing(self):
+        app = next(item for item in self.manifest['objects'] if item['role'] == 'app')
+        self.assertEqual(app['entitlements'], {
+            'com.apple.application-identifier': TEAM + '.dev.jort.editor',
+            'keychain-access-groups': [TEAM + '.dev.jort.editor.credentials'],
+        })
+        for identifier in (None, 'OTHER12345.dev.jort.editor', TEAM + '.dev.other'):
+            altered = copy.deepcopy(self.manifest)
+            entitlements = next(item for item in altered['objects'] if item['role'] == 'app')['entitlements']
+            if identifier is None:
+                del entitlements['com.apple.application-identifier']
+            else:
+                entitlements['com.apple.application-identifier'] = identifier
+            calls = []
+            with self.subTest(identifier=identifier), self.assertRaises(ValueError):
+                signing.sign_all(self.app, altered, TEAM, IDENTITY, calls.append, self.root)
+            self.assertEqual(calls, [])
 
     def test_entitlement_widening_is_rejected_before_any_signature(self):
         for role, key in [('app', 'com.apple.security.app-sandbox'), ('app', 'com.apple.security.cs.allow-jit'),

@@ -3,6 +3,8 @@
 <plist version="1.0">
 <dict>
 	<!-- release.sh selects this only after it has verified the Developer ID Team. -->
+	<key>com.apple.application-identifier</key>
+	<string>$(AppIdentifierPrefix)dev.jort.editor</string>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)dev.jort.editor.credentials</string>

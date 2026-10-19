@@ -3,6 +3,8 @@
 <plist version="1.0">
 <dict>
 	<!-- Local and Apple Development builds never query the production namespace. -->
+	<key>com.apple.application-identifier</key>
+	<string>$(AppIdentifierPrefix)dev.jort.editor</string>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)dev.jort.editor.development.credentials</string>

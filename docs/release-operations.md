@@ -102,7 +102,8 @@ override matching `.release.env` entries.
 The checked-in manifest schema is enforced at runtime without remote references
 or additional packages. Each code object's reviewed entitlement source path and
 SHA-256 are bound into the manifest. Signing and verification also enforce an
-independent exact capability allowlist: one app credential group, sandbox-only
+independent exact capability allowlist: the exact Team-scoped app identifier,
+one app credential group, sandbox-only
 broker, sandbox-plus-inherit worker, and entitlement-free frameworks. Editing
 JSON or entitlement files alone cannot broaden that authority.
 
@@ -154,6 +155,22 @@ the approved policy and review changes, build the public artifact with:
 ```sh
 ./scripts/release.sh --revision "$(git rev-parse HEAD)" --architectures arm64
 ```
+
+When rebuilding the same version/build after a signing fix, first commit the
+fix and ensure `git status --short` is empty. Publication deliberately refuses
+to overwrite an existing output directory. If `dist/Jort-0.3.0-3-macos/` already
+exists, preserve it under a new, unused name before running the command above:
+
+```sh
+mv dist/Jort-0.3.0-3-macos dist/Jort-0.3.0-3-macos-before-identity-fix
+```
+
+Use the newly generated DMG, not one of the earlier hidden candidate directories.
+Quit Jort, install the new app from that DMG, and reopen it before retrying
+Settings → Models → Connect. Browser callback completion alone is not a successful
+connection: confirm Settings shows Connected, then restart Jort and confirm it
+remains connected. This real-account smoke test is manual; automated credential
+tests use fake identities or disposable canary data, never an OpenRouter key.
 
 Upload the DMG from the resulting `dist/Jort-0.3.0-3-macos/` directory to the
 GitHub release. Retain its adjacent verification JSON as release evidence.

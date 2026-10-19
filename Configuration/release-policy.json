@@ -18,7 +18,7 @@
     ]
   },
   "roles": {
-    "Jort": {"role": "app", "identifier": "dev.jort.editor", "entitlements": {"keychain-access-groups": ["{TEAM_ID}.dev.jort.editor.credentials"]}},
+    "Jort": {"role": "app", "identifier": "dev.jort.editor", "entitlements": {"com.apple.application-identifier": "{TEAM_ID}.dev.jort.editor", "keychain-access-groups": ["{TEAM_ID}.dev.jort.editor.credentials"]}},
     "JortAppKit": {"role": "framework", "entitlements": {}},
     "JortDocument": {"role": "framework", "entitlements": {}},
     "JortPersistence": {"role": "framework", "entitlements": {}},

@@ -72,9 +72,11 @@ def release_identity_errors(project_text, local_entitlements, development_entitl
         if value not in app:
             errors.append(f'app lacks {value}')
     expected_development = {
+        'com.apple.application-identifier': '$(AppIdentifierPrefix)dev.jort.editor',
         'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.development.credentials'],
     }
     expected_production = {
+        'com.apple.application-identifier': '$(AppIdentifierPrefix)dev.jort.editor',
         'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.credentials'],
     }
     if local_entitlements != {
@@ -83,9 +85,9 @@ def release_identity_errors(project_text, local_entitlements, development_entitl
     }:
         errors.append('credential-free local app entitlements must contain only local debug exceptions')
     if development_entitlements != expected_development:
-        errors.append('development app entitlements must contain only the development Keychain group')
+        errors.append('development app entitlements must contain only its app identifier and development Keychain group')
     if production_entitlements != expected_production:
-        errors.append('production app entitlements must contain only the production Keychain group')
+        errors.append('production app entitlements must contain only its app identifier and production Keychain group')
     if 'com.apple.security.app-sandbox' in development_entitlements or 'com.apple.security.app-sandbox' in production_entitlements:
         errors.append('app must not be sandboxed for direct distribution')
     for value in (
@@ -253,8 +255,10 @@ def main():
                 'com.apple.security.get-task-allow': True,
                 'com.apple.security.cs.disable-library-validation': True,
             },
-            {'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.development.credentials']},
-            {'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.credentials']})
+            {'com.apple.application-identifier': '$(AppIdentifierPrefix)dev.jort.editor',
+             'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.development.credentials']},
+            {'com.apple.application-identifier': '$(AppIdentifierPrefix)dev.jort.editor',
+             'keychain-access-groups': ['$(AppIdentifierPrefix)dev.jort.editor.credentials']})
         assert not entitlement_errors(
             {'com.apple.security.app-sandbox': True},
             {'com.apple.security.app-sandbox': True, 'com.apple.security.inherit': True})

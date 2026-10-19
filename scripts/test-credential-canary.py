@@ -87,7 +87,8 @@ def require_built_roles():
     roles = {name: signed_role(path) for name, path in paths.items()}
     expected = {
         'app': {'identifier': 'dev.jort.editor',
-                'entitlements': {'keychain-access-groups': [group]}},
+                'entitlements': {'com.apple.application-identifier': team + '.dev.jort.editor',
+                                 'keychain-access-groups': [group]}},
         'broker': {'identifier': 'dev.jort.editor.javascript-broker',
                    'entitlements': {'com.apple.security.app-sandbox': True}},
         'worker': {'identifier': 'dev.jort.editor.javascript-worker',
