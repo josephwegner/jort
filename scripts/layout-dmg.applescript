@@ -2,26 +2,32 @@
 -- Never address a disk by its display name: another Install Jort may be mounted.
 on run arguments
     set mountPath to item 1 of arguments
+    -- Python supplies Path.as_uri(), including escaping spaces and Unicode.
+    set mountURL to item 2 of arguments
     set backgroundFile to POSIX file ((item 1 of arguments) & "/.background/background.png") as alias
     tell application "Finder"
         -- Coercing a root-folder alias can return disk "Install Jort", losing
         -- its identity when another installer with that name is mounted.
-        -- Keep an ID-based reference and verify the actual filesystem path.
+        -- Compare Finder's URL directly; converting to an alias can resolve a
+        -- different, already-mounted volume with the same display name.
+        -- hdiutil can also finish before Finder has discovered the new disk.
         set imageDiskID to missing value
-        repeat with diskIndex from 1 to count of disks
-            set candidateID to id of disk diskIndex
-            set candidatePath to POSIX path of (disk id candidateID as alias)
-            if candidatePath is (mountPath & "/") then
-                set imageDiskID to candidateID
-                exit repeat
-            end if
+        repeat 40 times
+            repeat with diskIndex from 1 to count of disks
+                if (URL of disk diskIndex) is mountURL then
+                    set imageDiskID to id of disk diskIndex
+                    exit repeat
+                end if
+            end repeat
+            if imageDiskID is not missing value then exit repeat
+            delay 0.25
         end repeat
         if imageDiskID is missing value then error "Finder cannot locate the run-owned installer volume"
         set imageFolder to a reference to disk id imageDiskID
         open imageFolder
         set imageWindow to container window of imageFolder
-        if (count of arguments) > 1 then
-            if item 2 of arguments is "verify" then
+        if (count of arguments) > 2 then
+            if item 3 of arguments is "verify" then
                 set viewOptions to icon view options of imageWindow
                 set geometry to bounds of imageWindow
                 set appPosition to position of item "Jort.app" of imageFolder

@@ -77,7 +77,7 @@ def main():
             verify_saved_background(mount / '.DS_Store', volume.get('VolumeUUID'))
             # Read the layout from the final compressed image, not Finder's
             # in-memory view of the writable intermediate.
-            result = runner(['osascript', str(release.ROOT / 'scripts/layout-dmg.applescript'), str(mount), 'verify'], timeout=60)
+            result = runner(['osascript', str(release.ROOT / 'scripts/layout-dmg.applescript'), str(mount), mount.as_uri() + '/', 'verify'], timeout=60)
             release.require(result.strip() == b'true', 'Finder layout did not survive compression')
         finally:
             if attached:

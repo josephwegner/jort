@@ -1184,7 +1184,7 @@ class ImagePresentationTests(unittest.TestCase):
             shutil.copytree(self.stage / 'image-root', mount, dirs_exist_ok=True, symlinks=True)
             return plistlib.dumps({'system-entities': [{'mount-point': str(mount)}]})
         if command[0] == 'osascript':
-            (Path(command[-1]) / '.DS_Store').write_bytes(b'Finder layout')
+            (Path(command[2]) / '.DS_Store').write_bytes(b'Finder layout')
         return b''
 
     def build(self, runner=None):
@@ -1200,9 +1200,20 @@ class ImagePresentationTests(unittest.TestCase):
         self.assertEqual(actions[0], ['hdiutil', 'create'])
         self.assertIn('UDRW', self.calls[0])
         self.assertIn('-noautoopen', self.calls[1])
-        self.assertEqual(self.calls[2][-1], str(self.stage / 'presentation-mount'))
+        mount = self.stage / 'presentation-mount'
+        self.assertEqual(self.calls[2][2:], [str(mount), mount.as_uri() + '/'])
         self.assertEqual(actions[-2:], [['hdiutil', 'detach'], ['hdiutil', 'convert']])
         self.assertIn('UDZO', self.calls[-1])
+
+    def test_finder_receives_exact_encoded_mount_url_not_a_volume_name(self):
+        self.stage = self.stage / 'Installer space café'
+        self.stage.mkdir()
+        self.output = self.stage / 'Jort.dmg'
+        self.build()
+        command = next(command for command in self.calls if command[0] == 'osascript')
+        self.assertEqual(command[2], str(self.stage / 'presentation-mount'))
+        self.assertEqual(command[3], (self.stage / 'presentation-mount').as_uri() + '/')
+        self.assertIn('Installer%20space%20caf%C3%A9/', command[3])
 
     def test_layout_failure_detaches_and_never_creates_final_image(self):
         def fail(command, **kwargs):

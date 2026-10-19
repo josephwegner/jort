@@ -254,9 +254,9 @@ def build_image(app, manifest, output, runner, stage):
         attachment = plistlib.loads(attachment_data)
         require(any(entity.get('mount-point') == str(mount) for entity in attachment.get('system-entities', [])), 'unexpected presentation volume')
         try:
-            runner(['osascript', str(ROOT / 'scripts/layout-dmg.applescript'), str(mount)], timeout=60)
+            runner(['osascript', str(ROOT / 'scripts/layout-dmg.applescript'), str(mount), mount.as_uri() + '/'], timeout=60)
         except ValueError as error:
-            raise ValueError('Finder installer layout failed; allow Finder automation in a logged-in desktop session and check ./scripts/validate dmg-presentation') from error
+            raise ValueError('Finder installer layout failed; run ./scripts/validate dmg-presentation in a logged-in desktop session for the specific Finder error') from error
         validate_image_presentation(mount)
     finally:
         if attached:
