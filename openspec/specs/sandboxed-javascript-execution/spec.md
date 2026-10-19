@@ -34,8 +34,13 @@ The broker SHALL have App Sandbox and Hardened Runtime with no network, arbitrar
 
 #### Scenario: Worker request is constructed
 - **WHEN** one immutable JavaScript package is prepared for execution
-- **THEN** the request contains only its normalized manifest/contract, source, exact input, captured clock/UUID, generation/correlation identity, and declared bounds
-- **AND** contains no document snapshot, settings store, credential, provider, filesystem path, URL, bookmark, native object, or callback capability
+- **THEN** the request contains only its normalized manifest/contract, source, exact input, captured clock/UUID, generation/correlation identity, and declared bounds; contract 2 additionally carries bounded validated arguments, local calendar/locale values, entropy, and pure text-analysis data
+- **AND** contains no document snapshot, settings store, credential, provider, filesystem authority, destination path, endpoint capability, bookmark, native object, or callback capability; literal URLs in note text remain ordinary data
+
+#### Scenario: Script requests a host action
+- **WHEN** a contract 2 worker returns one typed action request
+- **THEN** the broker transports bounded inert data only, without executing that action
+- **AND** app-side validation and injected host services enforce tool-host-actions independently of manifest declarations
 
 #### Scenario: Entitlements are inspected
 - **WHEN** the built broker and worker signatures are decoded
@@ -43,10 +48,10 @@ The broker SHALL have App Sandbox and Hardened Runtime with no network, arbitrar
 - **AND** their stable code identifiers and expected signer relationship differ from one another and match the checked target manifest
 
 ### Requirement: JavaScript IPC is exact-version, allowlisted, correlated, and bounded
-Jort SHALL use protocol version 1 with only fixed primitive fields, SHALL reject unknown/missing/wrong-typed fields and unsupported versions, SHALL correlate replies by authenticated peer, 128-bit nonce, invocation ID, and lifecycle generation, and SHALL enforce every independent and summed length before application copying or decoding.
+Jort SHALL use an explicitly versioned protocol 2 for contract 2 data while preserving contract 1 behavior through an adapter, with only fixed primitive fields and bounded arrays, SHALL reject unknown/missing/wrong-typed fields and unsupported versions, SHALL correlate replies by authenticated peer, 128-bit nonce, invocation ID, and lifecycle generation, and SHALL enforce every independent and summed length before application copying or decoding.
 
 #### Scenario: Maximum valid request is sent
-- **WHEN** a request contains at most a 16 KiB contract, 256 KiB source, min(package byte limit, 1 MiB) input, 4 KiB metadata, and 1.5 MiB total payload
+- **WHEN** a request contains at most a 16 KiB contract, 256 KiB source, min(package byte limit, 1 MiB) input, at most 1 MiB captured metadata (including at most 16 KiB entropy), and 2.5 MiB total payload
 - **THEN** both client and broker accept its lengths before copying/decoding and the child accepts its fixed header before allocating payload buffers
 - **AND** each layer still validates the decoded semantic bounds
 
@@ -56,7 +61,7 @@ Jort SHALL use protocol version 1 with only fixed primitive fields, SHALL reject
 - **AND** any public error is at most 512 UTF-8 bytes and any private diagnostic is at most 4 KiB without sensitive payload data
 
 #### Scenario: Length or frame is invalid
-- **WHEN** any independent length, summed envelope, fixed tag, hash, UTF-8 value, field allowlist, output/error exclusivity, frame count, trailing data, or declared size is invalid
+- **WHEN** any independent length, summed envelope, fixed tag, hash, UTF-8 value, field allowlist, text/report/action/error exclusivity, frame count, trailing data, or declared size is invalid
 - **THEN** the receiving layer rejects it before allocating or decoding the declared payload and terminates/abandons the generation
 - **AND** returns only a bounded typed protocol or limit failure
 
@@ -64,6 +69,11 @@ Jort SHALL use protocol version 1 with only fixed primitive fields, SHALL reject
 - **WHEN** a reply has a valid shape but its peer identity, protocol, nonce, invocation, or generation does not match the outstanding request
 - **THEN** Jort rejects it without emitting success or document effects
 - **AND** invalidates the affected channel when authenticity or protocol integrity is uncertain
+
+#### Scenario: Protocol versions disagree
+- **WHEN** client, broker, or worker versions do not agree on the exact frame schema
+- **THEN** the request fails before execution with a bounded compatibility error
+- **AND** no participant silently downgrades an action result to text or ignores unknown fields
 
 ### Requirement: Enforceable OS and engine limits precede untrusted source delivery
 The worker SHALL lower and verify a deadline-derived `RLIMIT_CPU` no greater than 31 hard seconds, zero core/file-size/additional-process limits, and a checked minimal file-descriptor limit before announcing Ready or receiving source, and SHALL additionally preserve the 16 MiB QuickJS heap, 512 KiB engine stack, maximum 30-second deadline, cancellation, API, byte, and line limits. Jort SHALL NOT claim or implement a deterministic whole-process memory ceiling or memory watchdog; macOS manages memory pressure outside QuickJS accounting.

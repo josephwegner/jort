@@ -58,6 +58,6 @@
 ## 8. Qualification and release readiness
 
 - [x] 8.1 Run focused package fixtures for every catalog command and cross-cutting failure cases, verifying expected source preservation and output operation through the real registry/executor path.
-- [ ] 8.2 Exercise native argument/report controls entirely by keyboard (including error correction and offscreen/re-mounted controls), clipboard paste, export cancel/overwrite, daily landmark navigation/Undo and reminder delivery with the signed app; record concrete evidence, argument-field usability feedback and environmental limits.
+- [x] 8.2 Exercise native argument/report controls entirely by keyboard (including error correction and offscreen/re-mounted controls), clipboard paste, export cancel/overwrite, daily landmark navigation/Undo and reminder delivery with the signed app; record concrete evidence, argument-field usability feedback and environmental limits.
 - [x] 8.3 Obtain independent review of contract migration, native action boundaries, lifecycle recovery and catalog behavior; resolve findings and keep specs/design coherent with implementation.
 - [x] 8.4 Run `./scripts/validate gate` after final code changes and `openspec validate expand-bundled-tool-utilities --strict`; record results, remaining qualification gaps and rollback guidance before marking the change complete.

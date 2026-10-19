@@ -137,9 +137,12 @@ Keyboard integration covers initial focus, traversal, invalid-field correction,
 Escape/re-entry, and offscreen remount without lost arguments. This is not proof
 of physical notification delivery or a VoiceOver usability session.
 
-### Physical qualification still required
+### Physical qualification (user-confirmed)
 
-Use the signed app with a disposable document before release:
+The user confirmed completing all outstanding signed-app manual checks with
+"I've tested all of those. Good to go." This is user-reported qualification,
+not an agent-observed session or additional automated evidence. The confirmed
+checklist was:
 
 - Paste `/copy-rich` output into rich-text and plain-text targets.
 - Export to a disposable existing file, cancel overwrite once, then confirm;
@@ -149,10 +152,16 @@ Use the signed app with a disposable document before release:
   denied permission and pending cancellation. Delivery follows Focus/settings.
 - Try argument fields with keyboard-only editing and VoiceOver, including an
   invalid delay and scrolling away/back. Gather feedback on this experimental UI.
+- Exercise argument/report controls, Tab/Shift-Tab, Escape/re-entry, error
+  correction, and offscreen/remounted controls without a pointer.
+- Verify `/daily` landmark navigation and atomic text/landmark Undo/Redo.
 
-No live notification permission/delivery or physical accessibility feedback is
-claimed by automated fixtures. Native qualification remains open until that
-evidence is recorded.
+The user's overall usability feedback was "Good to go"; no blocking issues or
+environmental limits were reported. Build identity, OS version, paste-target
+names, screenshots, and per-step observations were not supplied. Task 8.2 is
+closed on the user's confirmation, without inferring those details. Automated
+fixtures still do not establish physical notification delivery or accessibility
+usability; notification delivery remains subject to Focus and system settings.
 
 ### Safe rollback
 
