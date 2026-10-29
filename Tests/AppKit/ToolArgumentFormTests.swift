@@ -26,17 +26,27 @@ import XCTest
     let first = form.fields[0].field
     let second = form.fields[1].field
     XCTAssertEqual(first.stringValue, "\" · \"")
-    XCTAssertTrue(first.nextKeyView === second)
+    XCTAssertEqual(second.stringValue, "")
     XCTAssertEqual(first.accessibilityLabel(), "Separator")
-    var returned = false
-    form.returnToEditor = { returned = true }
-    let fieldEditor = try XCTUnwrap(window.firstResponder as? NSTextView)
+    let firstEditor = try XCTUnwrap(first.currentEditor() as? NSTextView)
+    XCTAssertTrue(
+      form.control(first, textView: firstEditor, doCommandBy: #selector(NSResponder.insertTab(_:))))
+    XCTAssertTrue(second.currentEditor() === window.firstResponder)
+    let secondEditor = try XCTUnwrap(second.currentEditor() as? NSTextView)
     XCTAssertTrue(
       form.control(
-        first, textView: fieldEditor,
+        second, textView: secondEditor, doCommandBy: #selector(NSResponder.insertBacktab(_:))))
+    XCTAssertTrue(first.currentEditor() === window.firstResponder)
+    var returned = false
+    form.returnToEditor = { returned = true }
+    let currentFirstEditor = try XCTUnwrap(first.currentEditor() as? NSTextView)
+    XCTAssertTrue(
+      form.control(
+        first, textView: currentFirstEditor,
         doCommandBy: #selector(NSResponder.cancelOperation(_:))))
     XCTAssertTrue(returned)
     XCTAssertEqual(first.stringValue, "\" · \"")
+    XCTAssertEqual(second.stringValue, "")
   }
 
   func testArgumentEditsAreReportedWithoutDocumentMutation() {
