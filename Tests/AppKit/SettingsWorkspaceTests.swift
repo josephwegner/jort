@@ -51,13 +51,27 @@ import JortPersistence
     XCTAssertEqual(
       sidebar.table.view(atColumn: 0, row: 0, makeIfNecessary: true)?.accessibilityLabel(), "Tools")
     let inner = try XCTUnwrap(tools.view.subviews.first as? NSSplitView)
-    tools.view.layoutSubtreeIfNeeded()
-    let listWidth = inner.arrangedSubviews[0].frame.width
-    let editorWidth = inner.arrangedSubviews[1].frame.width
-    controller.window?.setContentSize(NSSize(width: 1200, height: 600))
+    let window = try XCTUnwrap(controller.window)
+    window.setContentSize(NSSize(width: 1300, height: 600))
     outer.view.layoutSubtreeIfNeeded()
-    XCTAssertLessThanOrEqual(inner.arrangedSubviews[0].frame.width, listWidth + 10)
-    XCTAssertGreaterThan(inner.arrangedSubviews[1].frame.width, editorWidth + 200)
+    let initialContentWidth = window.contentRect(forFrameRect: window.frame).width
+    let initialListWidth = inner.arrangedSubviews[0].frame.width
+    let initialEditorWidth = inner.arrangedSubviews[1].frame.width
+    window.setContentSize(NSSize(width: 1200, height: 600))
+    outer.view.layoutSubtreeIfNeeded()
+    let resizedContentWidth = window.contentRect(forFrameRect: window.frame).width
+    let contentWidthReduction = initialContentWidth - resizedContentWidth
+    let listWidthReduction = initialListWidth - inner.arrangedSubviews[0].frame.width
+    let editorWidthReduction = initialEditorWidth - inner.arrangedSubviews[1].frame.width
+    XCTAssertEqual(
+      contentWidthReduction, 100, accuracy: 1,
+      "The requested content-width shrink should be applied.")
+    XCTAssertEqual(
+      listWidthReduction, 0, accuracy: 10,
+      "The sidebar list should not absorb the content-width shrink.")
+    XCTAssertEqual(
+      editorWidthReduction, contentWidthReduction, accuracy: 10,
+      "The editor should absorb approximately the full content-width shrink.")
     try await waitUntil { tools.snapshot.availability == .ready }
     controller.window?.orderOut(nil)
     try await store.close()

@@ -18,6 +18,7 @@
 		037051AAF7591B861EEA4871 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF8341534A77B39BFA2904E /* PerformanceTests.swift */; };
 		04DFE6B5D74DD7D82466B457 /* HistoryWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3C116676873EB05E2C3FDA /* HistoryWorkspaceTests.swift */; };
 		070D3989A0D3CBC220564869 /* ToolExecution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C856D6CE50FFC9A1F3F8FB /* ToolExecution.swift */; };
+		0A84B4D747D6BF1BC0CB696D /* ExternalScriptPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D332729EA20FD1EF8F404053 /* ExternalScriptPreferences.swift */; };
 		0AB006326144370586B9CDC5 /* EditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACEB5981A7D1291606F22F4 /* EditorTests.swift */; };
 		0AED284D86765A6BCF56004B /* RecoveryControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081DE0F1FB086C45F71F5744 /* RecoveryControlsTests.swift */; };
 		0B7299E83DAD1D69739F855F /* SandboxHarness.c in Sources */ = {isa = PBXBuildFile; fileRef = 7967E916C4F60BEEA892365B /* SandboxHarness.c */; };
@@ -168,6 +169,7 @@
 		818D838BAF464D27CD3703D8 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9136C288B97547D76167A45 /* DocumentState.swift */; };
 		819E6BD9E4AFFEB2591D5934 /* JortPersistence.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; };
 		81AD1C4092CEA2C6CC14DA10 /* ToolPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AE5B524A0A913C5257E842 /* ToolPersistenceTests.swift */; };
+		821389714370F7A3BDD0A01B /* ExternalScriptRunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A5673251FA8FEB551A0BA4 /* ExternalScriptRunnerTests.swift */; };
 		82FAAE0066A1867C7D6831CD /* StoreTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCB4C3DD085EA1BE82F13B3 /* StoreTestCase.swift */; };
 		8316CC5DCDA7F882F313D229 /* ToolPackageRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382B6626673D4E9ECF7208D3 /* ToolPackageRegistry.swift */; };
 		8347474761FD76586ADA88DC /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E614086D89E52EFCC7DCED6 /* StorageTests.swift */; };
@@ -220,11 +222,13 @@
 		A1F8D7ABEAC627BDB9EB4F29 /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		A267BC6563E7029ECB191BCB /* JortToolRuntime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; };
 		A3370E47507974B4A95D801E /* UtilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC005A7DC6922D21102F6848 /* UtilityContractTests.swift */; };
+		A428BB408E7DA23041B8EEDA /* ExternalScriptLaunchPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977CABCE3945613AD883EF0C /* ExternalScriptLaunchPolicyTests.swift */; };
 		A5A0395325F13CB5AE249E9C /* libunicode.c in Sources */ = {isa = PBXBuildFile; fileRef = C680C97D91E66688DAD477B2 /* libunicode.c */; };
 		A86E69A0E7D85AA789CDBC93 /* JortPersistence.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 02A0A8926B0C7313854C181A /* JortPersistence.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A8C8CDD07E8183DA122AB7EA /* NativeToolHostActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA66C2CCEEC7DE455518C137 /* NativeToolHostActions.swift */; };
 		AB298C7887950D6C7D4C5A2A /* PerformanceDistribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4964D6C51C4D095A9DEDEF10 /* PerformanceDistribution.swift */; };
 		ABB6E56F50FC5458516F5CC2 /* JortSettings.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BE5C16AB1B9E23C73115E84 /* JortSettings.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AC5E4C09ED5FFEBC04D4DF8A /* ExternalScriptAdmissionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007550F8914A326140D6844 /* ExternalScriptAdmissionController.swift */; };
 		AC7063A1F953D56D1002F25C /* JortDocument.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4448EA2A682199B4390618 /* JortDocument.framework */; };
 		ACD8467586A937E04390A13E /* JortJavaScriptProtocol.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A9FE0D086D1C6D46B389BBE /* JortJavaScriptProtocol.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		ACDD4BF4E884A860D6DFA097 /* SuspendedPackageValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5986DE870C8DE8C5758CD18D /* SuspendedPackageValidator.swift */; };
@@ -251,6 +255,7 @@
 		C11DE1F0CD37F3A010129E69 /* StoreTeardownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F815CC485603BE306454BA /* StoreTeardownTests.swift */; };
 		C1EC2CF63ACED57AB060F91F /* PackageSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732029BF590EEC65BB931250 /* PackageSettingsStore.swift */; };
 		C1ECE1FC7156A5BFD014F7F9 /* ToolPackageOrigin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E89D2823CD5C05C21437F6EA /* ToolPackageOrigin.swift */; };
+		C271E5E5C34EEBB03B7F6A7F /* ExternalScriptAdmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0B18FF0778CA7E7D4AD3BE /* ExternalScriptAdmissionTests.swift */; };
 		C3750039A956D1AE8D0EBE84 /* JortToolRuntime.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5806D1F7E3F6119A136460FB /* JortToolRuntime.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C450D0050E55BC7ACE2D6B04 /* ToolInvocationPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D209ECDBC9F716C933AC4166 /* ToolInvocationPresentationTests.swift */; };
 		C4A2936B2A56B21B452DFBB7 /* JortAppleEventProbeTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2FCCB8AF31754CD0D5124D03 /* JortAppleEventProbeTests.m */; };
@@ -258,12 +263,14 @@
 		C5EA7E14540753619F55F7E4 /* JortSignedNativeProbeTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 999E9A44EA9816681DFF46FE /* JortSignedNativeProbeTests.m */; };
 		C736371A0FEC3D14D9613553 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 436A66BF175F3AC334111381 /* CoreFoundation.framework */; };
 		C878B42A38B417DAF27BF2AB /* JortJavaScriptProtocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B8C6B127252F5CF8C8079EA /* JortJavaScriptProtocol.c */; };
+		C8E4AD7526548855F02EF46D /* ExternalScriptLaunchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB17C4B38D558A2D3C596474 /* ExternalScriptLaunchPolicy.swift */; };
 		CB5FE13005BECD82BDEC2FB2 /* ModelPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EAD02C8B2CADD434BED5753 /* ModelPicker.swift */; };
 		CB9392CE9AC09100BF688759 /* tool-invocations-pre-extraction.json in Resources */ = {isa = PBXBuildFile; fileRef = 5EAEA9AD8AA44366C9B3D2C2 /* tool-invocations-pre-extraction.json */; };
 		CC4D6F2749AABC25A8E88E43 /* InlineToolInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73CEE8FB6B12BF9BB729C4E8 /* InlineToolInputTests.swift */; };
 		CDD19338990DA4F6F840FA4B /* DocumentSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F89440C294A4AAA78F9A0B /* DocumentSearch.swift */; };
 		CF7AD349BB2FD3C608A1E02A /* canvas-10000.txt in Resources */ = {isa = PBXBuildFile; fileRef = D7391540700D5CC6E567E4A5 /* canvas-10000.txt */; };
 		CF7B101AF807C76607E0652D /* libregexp.c in Sources */ = {isa = PBXBuildFile; fileRef = E08C38A6AD7E93755E054182 /* libregexp.c */; };
+		D07085C2E7694EEAB8A1E695 /* ExternalScriptRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B017861ECEAB1847943441 /* ExternalScriptRunner.swift */; };
 		D1BC17702D943089BECBDA36 /* BrokerEnvelope.c in Sources */ = {isa = PBXBuildFile; fileRef = 2BB7FA7E469D23EEC0F0337A /* BrokerEnvelope.c */; };
 		D1E98BAD145921C706B6E900 /* CrawlLargeDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B44C2BA619EAE076A62806 /* CrawlLargeDocument.swift */; };
 		D20F42C78D68A8616DDF6FD7 /* JortToolContracts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6619CF748FC6ADD2809539A3 /* JortToolContracts.framework */; };
@@ -876,6 +883,7 @@
 		6F11EB6B8DC0E5289F7EB3BB /* ToolArgumentFormTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolArgumentFormTests.swift; sourceTree = "<group>"; };
 		6FDA4E0988A64BCA45C6ADB6 /* InvocationLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationLifecycleTests.swift; sourceTree = "<group>"; };
 		703DCFC6F6B842B6C60B9D8A /* BundledUtilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledUtilityTests.swift; sourceTree = "<group>"; };
+		71B017861ECEAB1847943441 /* ExternalScriptRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalScriptRunner.swift; sourceTree = "<group>"; };
 		72802DD142F26F8C6F82D9A7 /* EditorTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTestCase.swift; sourceTree = "<group>"; };
 		72C38DD691618F20FA27AD87 /* LandmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandmarkTests.swift; sourceTree = "<group>"; };
 		732029BF590EEC65BB931250 /* PackageSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackageSettingsStore.swift; sourceTree = "<group>"; };
@@ -922,6 +930,7 @@
 		92AE5B524A0A913C5257E842 /* ToolPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPersistenceTests.swift; sourceTree = "<group>"; };
 		932C7EFEF2A53817E00DF43E /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		956D7EEB582CB228242A99A3 /* libunicode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libunicode.h; sourceTree = "<group>"; };
+		977CABCE3945613AD883EF0C /* ExternalScriptLaunchPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalScriptLaunchPolicyTests.swift; sourceTree = "<group>"; };
 		999E9A44EA9816681DFF46FE /* JortSignedNativeProbeTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JortSignedNativeProbeTests.m; sourceTree = "<group>"; };
 		99CD2EE601C1B3855108D82F /* ToolPackageStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageStorage.swift; sourceTree = "<group>"; };
 		9A9FE0D086D1C6D46B389BBE /* JortJavaScriptProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JortJavaScriptProtocol.h; sourceTree = "<group>"; };
@@ -973,6 +982,7 @@
 		C9136C288B97547D76167A45 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
 		C92B0A8E0CD47781F5D63DB5 /* ToolInputNormalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInputNormalization.swift; sourceTree = "<group>"; };
 		C9D1D80CC0A9BC989917816B /* ToolPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackage.swift; sourceTree = "<group>"; };
+		CB17C4B38D558A2D3C596474 /* ExternalScriptLaunchPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalScriptLaunchPolicy.swift; sourceTree = "<group>"; };
 		CB95A9C0C9700E91D96BA4E0 /* DocumentUndoManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentUndoManager.swift; sourceTree = "<group>"; };
 		CBB5415DF73F241C4E9ACF6F /* ToolInvocationPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationPresentation.swift; sourceTree = "<group>"; };
 		CDF537CB4F17C92B348F8027 /* JortJavaScriptBroker.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = JortJavaScriptBroker.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -981,6 +991,7 @@
 		D209ECDBC9F716C933AC4166 /* ToolInvocationPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationPresentationTests.swift; sourceTree = "<group>"; };
 		D20D9C51A250BEC2C3511917 /* JortJavaScriptClient.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JortJavaScriptClient.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2819C2AD2B9853EA43F79B3 /* ModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelProvider.swift; sourceTree = "<group>"; };
+		D332729EA20FD1EF8F404053 /* ExternalScriptPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalScriptPreferences.swift; sourceTree = "<group>"; };
 		D344138FB05A5EA019B7C8B7 /* SettingsWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWorkspaceTests.swift; sourceTree = "<group>"; };
 		D5A12D3369FE17046B45C5B0 /* ToolInvocationInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationInput.swift; sourceTree = "<group>"; };
 		D6F815CC485603BE306454BA /* StoreTeardownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTeardownTests.swift; sourceTree = "<group>"; };
@@ -989,12 +1000,14 @@
 		D832102816479BC3634258FF /* PresentationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationPolicyTests.swift; sourceTree = "<group>"; };
 		D83AEEDFD45147CFE6AE4AD2 /* ToolInvocationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolInvocationController.swift; sourceTree = "<group>"; };
 		D87A80477F84AD407D8C4E18 /* DocumentSearchController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSearchController.swift; sourceTree = "<group>"; };
+		DB0B18FF0778CA7E7D4AD3BE /* ExternalScriptAdmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalScriptAdmissionTests.swift; sourceTree = "<group>"; };
 		DB1FB39E5B77D5CDA4FBC834 /* IsolatedJortApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedJortApplication.swift; sourceTree = "<group>"; };
 		DCC54E5EE4E025FE4290CFAB /* PrivateDataControlsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateDataControlsTests.swift; sourceTree = "<group>"; };
 		DCD7B1742A804E238FDF1641 /* InjectedValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectedValidatorTests.swift; sourceTree = "<group>"; };
 		DE3468DC421F7F54BE19537C /* EditorShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorShell.swift; sourceTree = "<group>"; };
 		E01E0CEA740F99DBF212F1E8 /* LinePresentationLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinePresentationLayout.swift; sourceTree = "<group>"; };
 		E08C38A6AD7E93755E054182 /* libregexp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = libregexp.c; sourceTree = "<group>"; };
+		E0A5673251FA8FEB551A0BA4 /* ExternalScriptRunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalScriptRunnerTests.swift; sourceTree = "<group>"; };
 		E1876DFC1341A5E590645C09 /* NativeToolReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolReminders.swift; sourceTree = "<group>"; };
 		E1BDAC7CA1A2AF0B0AEA9816 /* PersistentText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentText.swift; sourceTree = "<group>"; };
 		E89D2823CD5C05C21437F6EA /* ToolPackageOrigin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPackageOrigin.swift; sourceTree = "<group>"; };
@@ -1006,6 +1019,7 @@
 		EF07D49D04C1C5072287C267 /* InvocationTransientState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvocationTransientState.swift; sourceTree = "<group>"; };
 		EF2EDC109EF783B8261B274E /* JortJavaScriptSandboxHarness */ = {isa = PBXFileReference; includeInIndex = 0; path = JortJavaScriptSandboxHarness; sourceTree = BUILT_PRODUCTS_DIR; };
 		EFCA84DB97F4B0025EACB09D /* JortCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JortCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F007550F8914A326140D6844 /* ExternalScriptAdmissionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalScriptAdmissionController.swift; sourceTree = "<group>"; };
 		F11DB9851BBCD9FBA9BF383A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		F127F7DCE1F2B0D613B49126 /* JortJavaScriptWorker */ = {isa = PBXFileReference; includeInIndex = 0; path = JortJavaScriptWorker; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2D6E9F2978A8E4005A1CCA9 /* DocumentSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSnapshot.swift; sourceTree = "<group>"; };
@@ -1272,6 +1286,9 @@
 			children = (
 				703DCFC6F6B842B6C60B9D8A /* BundledUtilityTests.swift */,
 				8997BE6442E1F78BFCBA363D /* CoordinatorTests.swift */,
+				DB0B18FF0778CA7E7D4AD3BE /* ExternalScriptAdmissionTests.swift */,
+				977CABCE3945613AD883EF0C /* ExternalScriptLaunchPolicyTests.swift */,
+				E0A5673251FA8FEB551A0BA4 /* ExternalScriptRunnerTests.swift */,
 				FB92F3C3ED27E863972C2971 /* InlineModelRequestTests.swift */,
 				FEA59492C31450C9F988EA91 /* ModelToolTests.swift */,
 				3DFD2A35470F9F5B99CABECC /* OpenRouterConnectionFlowTests.swift */,
@@ -1295,6 +1312,9 @@
 		3FD294B8730BAA78938AA17C /* JortToolRuntime */ = {
 			isa = PBXGroup;
 			children = (
+				F007550F8914A326140D6844 /* ExternalScriptAdmissionController.swift */,
+				CB17C4B38D558A2D3C596474 /* ExternalScriptLaunchPolicy.swift */,
+				71B017861ECEAB1847943441 /* ExternalScriptRunner.swift */,
 				6105F42B72B3516B63AD9B9E /* OpenRouterConnection.swift */,
 				C33127349987FC988BB882FD /* OpenRouterTransport.swift */,
 				237A9DA54FC18BE76B8D119F /* ToolExecutorDispatcher.swift */,
@@ -1501,6 +1521,7 @@
 		9F7406EDAEF7DE1090322A21 /* JortSettings */ = {
 			isa = PBXGroup;
 			children = (
+				D332729EA20FD1EF8F404053 /* ExternalScriptPreferences.swift */,
 				037F170C9E7560F06B7DEE46 /* ModelCredentials.swift */,
 				732029BF590EEC65BB931250 /* PackageSettingsStore.swift */,
 				BD024A9EEA12F030339D9451 /* SettingsModels.swift */,
@@ -2501,6 +2522,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A84B4D747D6BF1BC0CB696D /* ExternalScriptPreferences.swift in Sources */,
 				94E49DD4CF0CE654613B2CB4 /* ModelCredentials.swift in Sources */,
 				C1EC2CF63ACED57AB060F91F /* PackageSettingsStore.swift in Sources */,
 				F34B6D9D67A884FF7D957809 /* SQLiteSettingsStore.swift in Sources */,
@@ -2665,6 +2687,9 @@
 				DA14CF4A9CAA28288E5D4BF8 /* BundledUtilityTests.swift in Sources */,
 				B10D7DBC3666E9972E1F75A9 /* CoordinatorTests.swift in Sources */,
 				34D1807CFEBEC7FAAFF36CB1 /* CrawlLargeDocument.swift in Sources */,
+				C271E5E5C34EEBB03B7F6A7F /* ExternalScriptAdmissionTests.swift in Sources */,
+				A428BB408E7DA23041B8EEDA /* ExternalScriptLaunchPolicyTests.swift in Sources */,
+				821389714370F7A3BDD0A01B /* ExternalScriptRunnerTests.swift in Sources */,
 				F2BFB87F0B0EA804CD4B4D00 /* FakeModelProvider.swift in Sources */,
 				878F77C3E4769AC1E40E6840 /* InlineModelRequestTests.swift in Sources */,
 				9D6F7A0C0EF1D8B350CE65CD /* ModelToolTests.swift in Sources */,
@@ -2735,6 +2760,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC5E4C09ED5FFEBC04D4DF8A /* ExternalScriptAdmissionController.swift in Sources */,
+				C8E4AD7526548855F02EF46D /* ExternalScriptLaunchPolicy.swift in Sources */,
+				D07085C2E7694EEAB8A1E695 /* ExternalScriptRunner.swift in Sources */,
 				2E47DEDE2F0980061D4F8FAD /* OpenRouterConnection.swift in Sources */,
 				8DF7F64CEDE9869F7C59F7AE /* OpenRouterTransport.swift in Sources */,
 				4691B3AA6E12FA7E4E6A3DE6 /* ToolExecutorDispatcher.swift in Sources */,

@@ -512,7 +512,9 @@ int main(void) {
 }
 ''')
         executable = self.root / 'canary-probe-test'
-        compiled = subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(harness),
+        # Keep the compiler and SDK paired within the selected developer directory.
+        compiled = subprocess.run(['xcrun', '--sdk', 'macosx', 'clang', '-std=c11',
+                                   '-Wall', '-Wextra', '-Werror', str(harness),
                                    '-o', str(executable)], capture_output=True, text=True)
         self.assertEqual(compiled.returncode, 0, compiled.stderr)
         result = subprocess.run([str(executable)], capture_output=True)
