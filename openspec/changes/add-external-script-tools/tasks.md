@@ -1,50 +1,38 @@
-## 1. Blocking signed containment and runtime prototype
+## 1. Resolve remaining contracts
 
-- [ ] 1.1 Inventory current production signing, sandbox, storage/recovery locations, IPC authentication, and in-flight manifest/protocol changes; record the threat model and deny-probe targets.
-- [ ] 1.2 Prototype separate signed network-disabled/network-enabled sandbox supervisors and a disposable inherited-sandbox bootstrap that replaces itself with a selected interpreter using public macOS APIs.
-- [ ] 1.3 Exercise system shell and installed Python/Homebrew/venv fixtures for JSON stdin, stdout, imports, TLS, resource scopes, and runtime compatibility; record supported and rejected layouts without broad directory exceptions.
-- [ ] 1.4 Prove script snapshot and race-resistant interpreter/runtime identity enforcement with replacement/symlink tests; document the resource trust-unit invalidation strategy.
-- [ ] 1.5 Prove denied Jort database/WAL/recovery/settings/app access, credentials, IPC impersonation, Apple Events, debugging, environment/descriptor leakage, and network denial in the no-network profile.
-- [ ] 1.6 Prove process restrictions, no surviving descendants, termination/reaping, and cleanup under supervisor death; reject process-group-only cleanup as sufficient evidence.
-- [ ] 1.7 Review prototype evidence and make an explicit go/no-go decision. Stop and revise design/specs if any required boundary cannot be enforced; do not proceed with an unsandboxed fallback.
+- [x] 1.1 Decide and record the optional local absolute-interpreter override storage/UI and minimal non-Python dispatch rules. Preserve default Python execution without profiles or mandatory interpreter setup; do not add a shell-command API or note-supplied interpreter configuration.
+- [x] 1.2 Define and document numeric JSON depth/byte, stdout byte/line, stderr, total-call, global admission/queue, timeout, overall invocation, and termination-grace bounds. Allow one outstanding exec per invocation initially and preserve existing JavaScript compute limits across host waiting.
+- [x] 1.3 Define compatible negotiated capability frames and bounded payload/result/error contracts with peer/nonce/invocation/generation/call correlation and encoding-overhead checks. Choose protocol/schema changes against current main, preserving protocol-v2, contract-one adaptation, and existing action/result bounds.
 
-## 2. Contracts and local authorization
+## 2. Local permission and launch policy
 
-- [ ] 2.1 Add a nonconflicting opt-in manifest schema for bounded script declarations/selectors and requested network profile; preserve all current package schemas and model behavior.
-- [ ] 2.2 Define primitive exec payload/result/error and protocol-v3 frame contracts with exact fields, lengths including escaping overhead, IDs, phase, sequence, and existing correlation identity.
-- [ ] 2.3 Implement local approval persistence bound to tool/script/interpreter/runtime/profile identities, with no automatic approvals on import, migration, save, or restore.
-- [ ] 2.4 Implement exact selector lookup, immutable script capture, approved-resource overlap rejection, launch identity verification, and fail-closed reapproval handling.
-- [ ] 2.5 Add contract/authorization tests covering unknown fields, path syntax, malformed/oversized values, stale approvals, resource changes, revocation, and denied model usage.
+- [ ] 2.1 Implement the local per-tool “Allow this tool to execute local scripts” toggle with default denial, host-side dispatch checks, and revocation cancellation. Package import/save/enable/restore must not grant permission; do not add per-script approvals, hashes, edit-triggered reapproval, or separate network permission.
+- [ ] 2.2 Implement default python3 discovery through `/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`, optional absolute interpreter override, fixed argument-vector launch, absolute/leading-tilde script resolution, script-directory cwd, and documented user-context environment. Do not discover shell PATH, open Terminal.app, activate venvs, interpolate commands, or bundle/manage Python; report actionable missing-runtime errors.
+- [ ] 2.3 Add permission and launch-policy tests for persistence, no implicit grants, explicit invocation without permission, revocation, edits without reapproval, default/override Python resolution, non-executable `.py` convenience, venv paths, direct native-executable and Node/shebang launch, rejection without shell fallback or `.js` interpreter inference, invalid/missing paths, environment/cwd, and payload metacharacters remaining JSON data.
 
-## 3. External supervisor and disposable runner
+## 3. Host-side subprocess runner
 
-- [ ] 3.1 Turn the accepted prototype into signed private helper targets/profiles with explicit entitlements and mutually authenticated XPC; keep the feature disabled.
-- [ ] 3.2 Implement fixed supported interpreter adapters, minimal cwd/environment, descriptor hygiene, scoped read authority, per-run scratch, and verified limits before input delivery.
-- [ ] 3.3 Implement concurrent bounded stdin/stdout/stderr handling, UTF-8/line/byte validation, exit interpretation, raw-stderr discard, and sensitive-data-free typed diagnostics.
-- [ ] 3.4 Implement two-run global admission, bounded cancellable FIFO, one outstanding/four total calls per invocation, shared 25-second external and at-most-30-second overall deadlines, and 20-second runner CPU caps.
-- [ ] 3.5 Implement cancellation/revocation/overflow/watchdog termination, escalation, reaping, supervisor-loss behavior, and exactly one terminal outcome without retry.
-- [ ] 3.6 Add signed runner tests for normal/empty/nonzero/crash/hang/flood/invalid-output cases, inherited authority, descendants, and bootstrap/setup failure.
+- [ ] 3.1 Implement app-side ordinary user-permission subprocess execution with concurrent bounded stdin writing and stdout/stderr draining, stdin closure, UTF-8/byte/line validation, successful-exit interpretation, frozen stdout-only reply data, bounded typed failures, and sensitive-data-free diagnostics. Do not add containment helpers, resource grants, snapshots as authorization, or executable identity enforcement.
+- [ ] 3.2 Implement bounded admission/queueing, shared invocation deadlines, cancellation/revocation/channel-loss handling, direct-child termination/escalation/reaping, one terminal outcome, and stale-result rejection. Bound collection when descendants retain pipes; do not prohibit child programs or promise arbitrary descendant cleanup after cancellation or app failure.
+- [ ] 3.3 Test normal/empty output, failed launch, nonzero exit/crash, invalid encoding, hangs, simultaneous stream floods, output before stdin consumption, queued/running cancellation races, permission revocation, and legitimate child-program launch/retained-pipe behavior without partial successful output or retry.
 
-## 4. JavaScript asynchronous capability bridge
+### Partial implementation checkpoint
 
-- [ ] 4.1 Add negotiated v3 capability request/reply framing through worker, broker, transport, and independent host policy router; retain protocol-v2 contract-2 and contract-1-adapter one-request/one-result behavior, maximum captured-data bounds, and typed action semantics.
-- [ ] 4.2 Add execution-only frozen `jort.exec` with strict JSON snapshot serialization that avoids getters/custom serialization and rejects cycles/unsupported types/depth/size violations.
-- [ ] 4.3 Refactor QuickJS promise pumping to await bounded authenticated completions when local jobs are empty while preserving cancellation, CPU/heap/stack limits, and no direct OS bindings.
-- [ ] 4.4 Integrate invocation/generation ownership and phase gating; reject module-initialization/validation calls, duplicates, forged approvals, stale replies, parallel calls, and excess call counts before effects.
-- [ ] 4.5 Add adversarial protocol/async tests, no-output-on-failure assertions, broker-loss handling, and existing pure-JavaScript/model/native-action regression coverage, including maximum-size contract-2 metadata and contract-1 adaptation.
+- Internal `ExternalScriptRunner` now launches validated argument-vector plans with bounded nonblocking JSON stdin/stdout/stderr, monotonic deadlines, direct-child termination/escalation/reaping, retained-pipe collection bounds, and streaming stdout line limits. It is not connected to tool dispatch.
+- Cancellation and spawn share a serialized launch boundary; pipe endpoints are normalized above standard descriptors and unrelated app descriptors are not inherited.
+- Internal `ExternalScriptAdmissionController.shared` now bounds active calls to four and queued calls to sixteen, serves FIFO, removes cancelled/expired queued calls without spawning, preserves acceptance-time deadlines after dequeue, and holds active slots until runner cleanup/reaping completes. It is not yet wired into host-authorized tool dispatch.
+- Current evidence: `./scripts/validate focused foundation --only JortToolRuntimeTests/ExternalScriptAdmissionTests --only JortToolRuntimeTests/ExternalScriptRunnerTests` passed the selected admission and runner suites; summary `.build-validation/20261029T020459Z-97291/summary.json`. Scoped admission review found no implementation defect and requested dequeue-deadline regression coverage, which was added and passed. No full gate has run for these slices.
+- Tasks 3.1–3.3 remain open: host permission/revocation/channel and invocation/generation integration, frozen JavaScript reply construction, and remaining race/flood/boundary scenarios are not complete. Native getter-free JSON capture/depth/traversal enforcement remains in task 4.2. The runner currently checks byte size, UTF-8, and JSON validity only.
 
-## 5. Tools Settings and explicit effect-aware execution
+## 4. Async JavaScript bridge
 
-- [ ] 5.1 Add local script/interpreter/resource selection and approval/revocation UI showing tool identity, input scope, outbound-network breadth, unsupported runtimes, and external-effect warnings.
-- [ ] 5.2 Require explicit user submission for external-capable tools, including zero-argument generators; ensure completion acceptance, previews, validation, save, restore, rendering, Merge, and Undo/Redo never dispatch.
-- [ ] 5.3 Add interrupted/unknown external-outcome presentation and explicit-rerun duplicate-effect warning; keep document undo and external effects separate.
-- [ ] 5.4 Add UI/lifecycle tests for consent changes, generation edits, queued cancellation, late replies, document restoration, and no implicit retries/replays.
-- [ ] 5.5 Document the API, supported-runtime matrix, user-owned integration secret configuration, restrictions, error semantics, and a Python JSON-stdin/stdout Slack-sync example without embedded credentials.
+- [ ] 4.1 Extend worker pipes, broker relay, and app transport for negotiated bounded capability request/reply traffic before one terminal response. Independently enforce host permission, explicit submission, JavaScript executor identity, execution phase, live generation, call ownership, launch policy, and limits without expanding broker/worker OS authority or changing legacy framing.
+- [ ] 4.2 Implement execution-phase `jort.exec(path, payload)`, bounded JSON capture rejecting unsupported/cyclic/unsafe custom serialization behavior, and QuickJS host-wait/promise settlement on the engine-owning thread. Initialization/validation must never dispatch; empty local job queues may wait only for an owned host operation within cancellation/deadline limits.
+- [ ] 4.3 Add async/protocol tests for phase denial, forged permission assertions, malformed/oversized/unknown frames, stale/duplicate/unsolicited calls/replies, call/admission bounds, broker/worker loss, cancellation during wait, unresolved promises without host work, and preservation of JavaScript compute/heap/stack limits.
 
-## 6. Release evidence and final integration
+## 5. Integration, documentation, and validation
 
-- [ ] 6.1 Extend signing/entitlement/dependency audits and validation-dispatched native containment probes for both external profiles while retaining the existing JavaScript denial suite.
-- [ ] 6.2 Run focused checks through `./scripts/validate` during implementation and inspect bounded summaries; verify every new spec scenario has test evidence.
-- [ ] 6.3 Obtain independent security review of prototype evidence, approved-resource lifetime/identity, duplex IPC, consent, lifecycle cleanup, and fail-closed paths; resolve blocking findings before enabling.
-- [ ] 6.4 Enable only supported configurations after release-like evidence passes; verify rollback disables dispatch/cancels work without migrating existing tools or replaying effects.
-- [ ] 6.5 After the final implementation change, run `./scripts/validate gate` once and record current results plus signed/manual evidence and any unsupported-runtime limitations.
+- [ ] 5.1 Integrate explicit submission for external-capable tools, including zero-argument tools; show ordinary-user-permission and external-effect warnings, potentially unknown outcomes after interruption, and duplicate-effect warnings on explicit rerun. Never retry, restore-rerun, or reconnect-replay automatically; Undo/Redo cannot reverse external effects.
+- [ ] 5.2 Add lifecycle/inert-stdout regressions proving no script dispatch during initialization, validation, preview, completion acceptance, Settings operations, restore, rendering, Merge, or Undo/Redo, and no automatic action interpretation of stdout. Preserve legacy captured-data/result/action behavior, contract-one adaptation, model tools without exec, and existing JavaScript sandbox/dependency/entitlement checks without new external containment release gates.
+- [ ] 5.3 Document the API and Python JSON-stdin/stdout example, required local toggle plus explicit invocation, default PATH, optional interpreter/venv override, cwd/environment, limits/errors, user-owned integration credentials, ordinary file/network/program/OS access including Jort files, absent document bridge, direct-child cleanup limitations, and nontransactional external effects. Include no embedded secrets or containment claims.
+- [ ] 5.4 Run focused implementation checks through `./scripts/validate`, inspect bounded current summaries, and map new spec scenarios to test evidence. After the final implementation change, run `./scripts/validate gate` once and record results and remaining limitations; do not add a signed external containment prototype or independent security review as a release gate.
