@@ -70,6 +70,57 @@ final class SettingsTests: StoreTestCase {
     try await reopened.close()
   }
 
+  func testExternalScriptPreferencesFailClosedAndKeepInterpreterErrorsVisible() {
+    let id = ToolID("user.local-script")
+    XCTAssertFalse(SettingsSnapshot().externalScriptPreferences(for: id).isAllowed)
+    let permissionKey = ExternalScriptPreferences.permissionKey(for: id)
+    let interpreterKey = ExternalScriptPreferences.interpreterKey(for: id)
+    for value in ["", "false", "TRUE", "1", " true", "true "] {
+      let snapshot = SettingsSnapshot(preferences: [permissionKey: value])
+      XCTAssertFalse(snapshot.externalScriptPreferences(for: id).isAllowed, value)
+    }
+    let snapshot = SettingsSnapshot(preferences: [
+      permissionKey: "true", interpreterKey: "relative",
+    ])
+    XCTAssertTrue(snapshot.externalScriptPreferences(for: id).isAllowed)
+    XCTAssertEqual(snapshot.externalScriptPreferences(for: id).pythonInterpreterPath, "relative")
+    XCTAssertFalse(snapshot.externalScriptPreferences(for: ToolID("other")).isAllowed)
+    XCTAssertNil(
+      SettingsSnapshot(preferences: [interpreterKey: ""])
+        .externalScriptPreferences(for: id).pythonInterpreterPath)
+  }
+
+  func testExternalScriptPreferencesPersistIndependentlyOfToolEditsAndEnablement() async throws {
+    let directory = try root()
+    let store = ownStore(SQLiteSettingsStore(directory: directory, templates: [template]))
+    var snapshot = try await store.load()
+    XCTAssertFalse(snapshot.externalScriptPreferences(for: template.id).isAllowed)
+    snapshot = try await store.setTemplateEnabled(id: template.id, enabled: true)
+    XCTAssertFalse(snapshot.externalScriptPreferences(for: template.id).isAllowed)
+    let tool = UserToolDefinition(
+      displayName: "Local", commandName: "local", source: "return 'local';", isEnabled: true)
+    snapshot = try await store.save(tool, expectedRevision: nil)
+    XCTAssertFalse(snapshot.externalScriptPreferences(for: tool.id).isAllowed)
+    _ = try await store.setPreference(
+      key: ExternalScriptPreferences.permissionKey(for: tool.id), value: "true")
+    _ = try await store.setPreference(
+      key: ExternalScriptPreferences.interpreterKey(for: tool.id), value: "/venv/bin/python")
+    var edited = try XCTUnwrap(snapshot.customTools.first)
+    edited.source = "return 'edited';"
+    snapshot = try await store.save(edited, expectedRevision: edited.revision)
+    XCTAssertTrue(snapshot.externalScriptPreferences(for: tool.id).isAllowed)
+    try await store.close()
+    let reopened = ownStore(SQLiteSettingsStore(directory: directory, templates: [template]))
+    snapshot = try await reopened.load()
+    XCTAssertTrue(snapshot.externalScriptPreferences(for: tool.id).isAllowed)
+    XCTAssertEqual(
+      snapshot.externalScriptPreferences(for: tool.id).pythonInterpreterPath, "/venv/bin/python")
+    snapshot = try await reopened.setPreference(
+      key: ExternalScriptPreferences.permissionKey(for: tool.id), value: "false")
+    XCTAssertFalse(snapshot.externalScriptPreferences(for: tool.id).isAllowed)
+    try await reopened.close()
+  }
+
   func testFailedTransactionRollsBackAndDoesNotPublish() async throws {
     let root = try root(),
       seed = ownStore(SQLiteSettingsStore(directory: root, templates: [template]))
